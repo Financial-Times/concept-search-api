@@ -28,7 +28,7 @@ func newElasticClient(accessKey string, secretKey string, endpoint *string, regi
 		HTTPClient: &http.Client{
 			Timeout: 60 * time.Second,
 			Transport: &http.Transport{
-				MaxIdleConnsPerHost: 100,
+				MaxIdleConnsPerHost: 30,
 				Dial: (&net.Dialer{
 					KeepAlive: 30 * time.Second,
 				}).Dial,
@@ -42,6 +42,6 @@ func newElasticClient(accessKey string, secretKey string, endpoint *string, regi
 		elastic.SetScheme("https"),
 		elastic.SetHttpClient(signingClient),
 		elastic.SetSniff(false), //needs to be disabled due to EAS behavior.
-		//elastic.SetMaxRetries(3),
+		elastic.SetMaxRetries(3),
 	)
 }
