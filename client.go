@@ -1,26 +1,27 @@
 package main
 
 import (
-	awsauth "github.com/smartystreets/go-aws-auth"
-	"gopkg.in/olivere/elastic.v3"
 	"net"
 	"net/http"
 	"time"
+
+	awsauth "github.com/smartystreets/go-aws-auth"
+	"gopkg.in/olivere/elastic.v3"
 )
 
-type AWSSigningTransport struct {
+type awsSigningTransport struct {
 	HTTPClient  *http.Client
 	Credentials awsauth.Credentials
 }
 
 // RoundTrip implementation
-func (a AWSSigningTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (a awsSigningTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return a.HTTPClient.Do(awsauth.Sign4(req, a.Credentials))
 }
 
 func newElasticClient(accessKey string, secretKey string, endpoint *string, region *string) (*elastic.Client, error) {
 
-	signingTransport := AWSSigningTransport{
+	signingTransport := awsSigningTransport{
 		Credentials: awsauth.Credentials{
 			AccessKeyID:     accessKey,
 			SecretAccessKey: secretKey,

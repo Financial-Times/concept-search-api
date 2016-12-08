@@ -56,7 +56,7 @@ func main() {
 			esRegion:   *esRegion,
 		}
 
-		elasticReader, err := NewESSearcherService(&accessConfig, *esIndex)
+		elasticReader, err := newESSearcherService(&accessConfig, *esIndex)
 
 		if err != nil {
 			log.Errorf("Concept search API failed to start: %v\n", err)

@@ -3,10 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"gopkg.in/olivere/elastic.v3"
 	"net/http"
 	"strconv"
+
+	log "github.com/Sirupsen/logrus"
+	"gopkg.in/olivere/elastic.v3"
 )
 
 type esSearcherService struct {
@@ -21,10 +22,10 @@ type esAccessConfig struct {
 	esRegion   string
 }
 
-func NewESSearcherService(accessConfig *esAccessConfig, indexName string) (*esSearcherService, error) {
+func newESSearcherService(accessConfig *esAccessConfig, indexName string) (*esSearcherService, error) {
 	elasticClient, err := newElasticClient(accessConfig.accessKey, accessConfig.secretKey, &accessConfig.esEndpoint, &accessConfig.esRegion)
 	if err != nil {
-		return &esSearcherService{}, fmt.Errorf("Creating elasticsearch client failed with error=[%v]\n", err)
+		return &esSearcherService{}, fmt.Errorf("creating elasticsearch client failed with error=[%v]", err)
 	}
 
 	elasticSearcher := esSearcherService{elasticClient: elasticClient, indexName: indexName}
@@ -78,16 +79,16 @@ func (service *esSearcherService) SearchConcept(writer http.ResponseWriter, requ
 func getSearchedConcepts(searchResult *elastic.SearchResult, isScoreIncluded bool) []concept {
 	var searchedConcepts []concept
 	for _, hit := range searchResult.Hits.Hits {
-		var concept concept
-		err := json.Unmarshal(*hit.Source, &concept)
+		var searchedConcept concept
+		err := json.Unmarshal(*hit.Source, &searchedConcept)
 		if err != nil {
 			log.Errorf("Unable to unmarshall concept, error=[%s]\n", err)
 		} else {
 			if isScoreIncluded {
 				score := *hit.Score
-				concept.Score = score
+				searchedConcept.Score = score
 			}
-			searchedConcepts = append(searchedConcepts, concept)
+			searchedConcepts = append(searchedConcepts, searchedConcept)
 		}
 	}
 	return searchedConcepts
