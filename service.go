@@ -10,8 +10,8 @@ import (
 )
 
 type esSearcherService struct {
-	elasticClient *elastic.Client
-	indexName     string
+	elasticClient     *elastic.Client
+	indexName         string
 	searchResultLimit int
 }
 

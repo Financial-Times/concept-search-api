@@ -48,9 +48,9 @@ func main() {
 		EnvVar: "ELASTICSEARCH_INDEX",
 	})
 	searchResultLimit := app.Int(cli.IntOpt{
-		Name: "search-result-limit",
-		Value: 50,
-		Desc: "The maximum number of search results returned",
+		Name:   "search-result-limit",
+		Value:  50,
+		Desc:   "The maximum number of search results returned",
 		EnvVar: "RESULT_LIMIT",
 	})
 	app.Action = func() {
