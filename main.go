@@ -47,6 +47,12 @@ func main() {
 		Desc:   "Elasticsearch index",
 		EnvVar: "ELASTICSEARCH_INDEX",
 	})
+	searchResultLimit := app.Int(cli.IntOpt{
+		Name: "search-result-limit",
+		Value: 50,
+		Desc: "The maximum number of search results returned",
+		EnvVar: "RESULT_LIMIT",
+	})
 	app.Action = func() {
 
 		accessConfig := esAccessConfig{
@@ -56,7 +62,7 @@ func main() {
 			esRegion:   *esRegion,
 		}
 
-		elasticReader, err := NewESSearcherService(&accessConfig, *esIndex)
+		elasticReader, err := NewESSearcherService(&accessConfig, *esIndex, searchResultLimit)
 
 		if err != nil {
 			log.Errorf("Concept search API failed to start: %v\n", err)
