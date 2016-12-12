@@ -9,6 +9,10 @@ import (
 	"gopkg.in/olivere/elastic.v3"
 )
 
+type esClient struct {
+	elastiClient *elastic.Client
+}
+
 type awsSigningTransport struct {
 	HTTPClient  *http.Client
 	Credentials awsauth.Credentials
@@ -19,7 +23,7 @@ func (a awsSigningTransport) RoundTrip(req *http.Request) (*http.Response, error
 	return a.HTTPClient.Do(awsauth.Sign4(req, a.Credentials))
 }
 
-func newElasticClient(accessKey string, secretKey string, endpoint *string, region *string) (*elastic.Client, error) {
+func newElasticClient(accessKey string, secretKey string, endpoint *string, region *string) (*esClient, error) {
 
 	signingTransport := awsSigningTransport{
 		Credentials: awsauth.Credentials{
@@ -38,11 +42,20 @@ func newElasticClient(accessKey string, secretKey string, endpoint *string, regi
 	}
 	signingClient := &http.Client{Transport: http.RoundTripper(signingTransport)}
 
-	return elastic.NewClient(
+	elasticClient, err := elastic.NewClient(
 		elastic.SetURL(*endpoint),
 		elastic.SetScheme("https"),
 		elastic.SetHttpClient(signingClient),
 		elastic.SetSniff(false), //needs to be disabled due to EAS behavior.
 		elastic.SetMaxRetries(3),
 	)
+	return &esClient{elastiClient: elasticClient}, err
+}
+
+func (ec *esClient) query(indexName string, query elastic.Query, resultLimit int) (*elastic.SearchResult, error) {
+	return ec.elastiClient.Search().Index(indexName).Query(query).Size(resultLimit).Do()
+}
+
+func (ec *esClient) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
+	return ec.elastiClient.ClusterHealth().Do()
 }
