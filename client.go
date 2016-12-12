@@ -9,7 +9,12 @@ import (
 	"gopkg.in/olivere/elastic.v3"
 )
 
-type esClient struct {
+type esClient interface {
+	query(indexName string, query elastic.Query, resultLimit int) (*elastic.SearchResult, error)
+	getClusterHealth() (*elastic.ClusterHealthResponse, error)
+}
+
+type esClientWrapper struct {
 	elastiClient *elastic.Client
 }
 
@@ -23,7 +28,7 @@ func (a awsSigningTransport) RoundTrip(req *http.Request) (*http.Response, error
 	return a.HTTPClient.Do(awsauth.Sign4(req, a.Credentials))
 }
 
-func newElasticClient(accessKey string, secretKey string, endpoint *string, region *string) (*esClient, error) {
+func newElasticClient(accessKey string, secretKey string, endpoint *string, region *string) (esClient, error) {
 
 	signingTransport := awsSigningTransport{
 		Credentials: awsauth.Credentials{
@@ -49,13 +54,13 @@ func newElasticClient(accessKey string, secretKey string, endpoint *string, regi
 		elastic.SetSniff(false), //needs to be disabled due to EAS behavior.
 		elastic.SetMaxRetries(3),
 	)
-	return &esClient{elastiClient: elasticClient}, err
+	return &esClientWrapper{elastiClient: elasticClient}, err
 }
 
-func (ec *esClient) query(indexName string, query elastic.Query, resultLimit int) (*elastic.SearchResult, error) {
+func (ec esClientWrapper) query(indexName string, query elastic.Query, resultLimit int) (*elastic.SearchResult, error) {
 	return ec.elastiClient.Search().Index(indexName).Query(query).Size(resultLimit).Do()
 }
 
-func (ec *esClient) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
+func (ec esClientWrapper) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
 	return ec.elastiClient.ClusterHealth().Do()
 }

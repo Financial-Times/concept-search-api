@@ -12,14 +12,14 @@ import (
 )
 
 type esHealthService struct {
-	client *esClient
+	client esClient
 }
 
 func (service esHealthService) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
 	return service.client.getClusterHealth()
 }
 
-func newEsHealthService(client *esClient) *esHealthService {
+func newEsHealthService(client esClient) *esHealthService {
 	return &esHealthService{client: client}
 }
 

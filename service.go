@@ -14,7 +14,7 @@ type conceptFinder interface {
 }
 
 type esConceptFinder struct {
-	client            *esClient
+	client            esClient
 	indexName         string
 	searchResultLimit int
 }
