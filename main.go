@@ -54,37 +54,25 @@ func main() {
 		Desc:   "The maximum number of search results returned",
 		EnvVar: "RESULT_LIMIT",
 	})
+
+	accessConfig := esAccessConfig{
+		accessKey:  *accessKey,
+		secretKey:  *secretKey,
+		esEndpoint: *esEndpoint,
+		esRegion:   *esRegion,
+	}
+
 	app.Action = func() {
-
-		accessConfig := esAccessConfig{
-			accessKey:  *accessKey,
-			secretKey:  *secretKey,
-			esEndpoint: *esEndpoint,
-			esRegion:   *esRegion,
-		}
-
-		conceptFinder, err := newEsConceptFinder(&accessConfig, *esIndex, *searchResultLimit)
-
+		client, err := newElasticClient(accessConfig.accessKey, accessConfig.secretKey, &accessConfig.esEndpoint, &accessConfig.esRegion)
 		if err != nil {
-			log.Errorf("Concept search API failed to start: %v\n", err)
+			log.Fatalf("Creating elasticsearch client failed with error=[%v]", err)
 		}
-
-		servicesRouter := mux.NewRouter()
-		http.HandleFunc("/_search", conceptFinder.FindConcept)
-
-		healthService := newEsHealthService(conceptFinder.elasticClient)
-		http.HandleFunc("/__health", v1a.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", healthService.connectivityHealthyCheck(), healthService.clusterIsHealthyCheck()))
-		http.HandleFunc("/__health-details", healthService.healthDetails)
-		http.HandleFunc("/__gtg", healthService.goodToGo)
-
-		var monitoringRouter http.Handler = servicesRouter
-		monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
-		monitoringRouter = httphandlers.HTTPMetricsHandler(metrics.DefaultRegistry, monitoringRouter)
-		http.Handle("/", monitoringRouter)
-
-		if err := http.ListenAndServe(":"+*port, nil); err != nil {
-			log.Fatalf("Unable to start: %v", err)
+		conceptFinder := esConceptFinder{
+			client:            client,
+			indexName:         *esIndex,
+			searchResultLimit: *searchResultLimit,
 		}
+		routeRequest(port, conceptFinder, newEsHealthService(client))
 	}
 
 	log.SetLevel(log.InfoLevel)
@@ -92,5 +80,25 @@ func main() {
 	if err != nil {
 		log.Errorf("App could not start, error=[%s]\n", err)
 		return
+	}
+}
+
+func routeRequest(port *string, conceptFinder conceptFinder, healthService *esHealthService) {
+	servicesRouter := mux.NewRouter()
+	servicesRouter.HandleFunc("/search", conceptFinder.FindConcept).Methods("POST")
+
+	var monitoringRouter http.Handler = servicesRouter
+	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
+	monitoringRouter = httphandlers.HTTPMetricsHandler(metrics.DefaultRegistry, monitoringRouter)
+
+	http.HandleFunc("/__health", v1a.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", healthService.connectivityHealthyCheck(), healthService.clusterIsHealthyCheck()))
+	http.HandleFunc("/__health-details", healthService.healthDetails)
+	http.HandleFunc("/__gtg", healthService.goodToGo)
+
+	http.Handle("/", monitoringRouter)
+
+	log.Info("Concept Search API starting up...")
+	if err := http.ListenAndServe(":"+*port, nil); err != nil {
+		log.Fatalf("Unable to start: %v", err)
 	}
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -11,11 +10,11 @@ import (
 )
 
 type conceptFinder interface {
-	findConcept(writer http.ResponseWriter, request *http.Request)
+	FindConcept(writer http.ResponseWriter, request *http.Request)
 }
 
 type esConceptFinder struct {
-	elasticClient     *elastic.Client
+	client            *esClient
 	indexName         string
 	searchResultLimit int
 }
@@ -27,17 +26,8 @@ type esAccessConfig struct {
 	esRegion   string
 }
 
-func newEsConceptFinder(accessConfig *esAccessConfig, indexName string, searchResultLimit int) (*esConceptFinder, error) {
-	elasticClient, err := newElasticClient(accessConfig.accessKey, accessConfig.secretKey, &accessConfig.esEndpoint, &accessConfig.esRegion)
-	if err != nil {
-		return &esConceptFinder{}, fmt.Errorf("creating elasticsearch client failed with error=[%v]", err)
-	}
-	elasticSearcher := esConceptFinder{elasticClient: elasticClient, indexName: indexName, searchResultLimit: searchResultLimit}
-	return &elasticSearcher, nil
-}
-
-func (service *esConceptFinder) FindConcept(writer http.ResponseWriter, request *http.Request) {
-	if service.elasticClient == nil {
+func (service esConceptFinder) FindConcept(writer http.ResponseWriter, request *http.Request) {
+	if service.client == nil {
 		log.Errorf("Elasticsearch client is not created.")
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
@@ -56,11 +46,8 @@ func (service *esConceptFinder) FindConcept(writer http.ResponseWriter, request 
 	defer request.Body.Close()
 
 	query := elastic.NewMultiMatchQuery(criteria.Term, "prefLabel.raw", "aliases.raw", "prefLabel", "aliases").Type("most_fields")
-	searchResult, err := service.elasticClient.Search().
-		Index(service.indexName).
-		Query(query).
-		Size(service.searchResultLimit).
-		Do()
+
+	searchResult, err := service.client.query(service.indexName, query, service.searchResultLimit)
 
 	if err != nil {
 		log.Errorf("There was an error executing the query on ES: %s", err.Error())
