@@ -72,9 +72,10 @@ func main() {
 		servicesRouter := mux.NewRouter()
 		http.HandleFunc("/_search", elasticFinder.SearchConcept)
 
-		http.HandleFunc("/__health", v1a.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", elasticFinder.connectivityHealthyCheck(), elasticFinder.clusterIsHealthyCheck()))
-		http.HandleFunc("/__health-details", elasticFinder.HealthDetails)
-		http.HandleFunc("/__gtg", elasticFinder.GoodToGo)
+		healthService := newEsHealthService(elasticFinder.elasticClient)
+		http.HandleFunc("/__health", v1a.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", healthService.connectivityHealthyCheck(), healthService.clusterIsHealthyCheck()))
+		http.HandleFunc("/__health-details", healthService.healthDetails)
+		http.HandleFunc("/__gtg", healthService.goodToGo)
 
 		var monitoringRouter http.Handler = servicesRouter
 		monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
