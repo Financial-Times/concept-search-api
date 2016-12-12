@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Financial-Times/go-fthealth/v1a"
 	"github.com/Financial-Times/http-handlers-go/httphandlers"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
@@ -47,6 +48,12 @@ func main() {
 		Desc:   "Elasticsearch index",
 		EnvVar: "ELASTICSEARCH_INDEX",
 	})
+	searchResultLimit := app.Int(cli.IntOpt{
+		Name:   "search-result-limit",
+		Value:  50,
+		Desc:   "The maximum number of search results returned",
+		EnvVar: "RESULT_LIMIT",
+	})
 	app.Action = func() {
 
 		accessConfig := esAccessConfig{
@@ -56,18 +63,22 @@ func main() {
 			esRegion:   *esRegion,
 		}
 
-		elasticReader, err := NewESSearcherService(&accessConfig, *esIndex)
+		elasticFinder, err := NewESSearcherService(&accessConfig, *esIndex, *searchResultLimit)
 
 		if err != nil {
 			log.Errorf("Concept search API failed to start: %v\n", err)
 		}
 
 		servicesRouter := mux.NewRouter()
+		http.HandleFunc("/_search", elasticFinder.SearchConcept)
+
+		http.HandleFunc("/__health", v1a.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", elasticFinder.connectivityHealthyCheck(), elasticFinder.clusterIsHealthyCheck()))
+		http.HandleFunc("/__health-details", elasticFinder.HealthDetails)
+		http.HandleFunc("/__gtg", elasticFinder.GoodToGo)
+
 		var monitoringRouter http.Handler = servicesRouter
 		monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
 		monitoringRouter = httphandlers.HTTPMetricsHandler(metrics.DefaultRegistry, monitoringRouter)
-
-		http.HandleFunc("/_search", elasticReader.SearchConcept)
 		http.Handle("/", monitoringRouter)
 
 		if err := http.ListenAndServe(":"+*port, nil); err != nil {

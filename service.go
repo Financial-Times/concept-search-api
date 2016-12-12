@@ -10,8 +10,9 @@ import (
 )
 
 type esSearcherService struct {
-	elasticClient *elastic.Client
-	indexName     string
+	elasticClient     *elastic.Client
+	indexName         string
+	searchResultLimit int
 }
 
 type esAccessConfig struct {
@@ -21,13 +22,13 @@ type esAccessConfig struct {
 	esRegion   string
 }
 
-func NewESSearcherService(accessConfig *esAccessConfig, indexName string) (*esSearcherService, error) {
+func NewESSearcherService(accessConfig *esAccessConfig, indexName string, searchResultLimit int) (*esSearcherService, error) {
 	elasticClient, err := newElasticClient(accessConfig.accessKey, accessConfig.secretKey, &accessConfig.esEndpoint, &accessConfig.esRegion)
 	if err != nil {
 		return &esSearcherService{}, fmt.Errorf("Creating elasticsearch client failed with error=[%v]\n", err)
 	}
 
-	elasticSearcher := esSearcherService{elasticClient: elasticClient, indexName: indexName}
+	elasticSearcher := esSearcherService{elasticClient: elasticClient, indexName: indexName, searchResultLimit: searchResultLimit}
 
 	return &elasticSearcher, nil
 }
@@ -56,7 +57,7 @@ func (service *esSearcherService) SearchConcept(writer http.ResponseWriter, requ
 	searchResult, err := service.elasticClient.Search().
 		Index(service.indexName).
 		Query(query).
-		Size(50).
+		Size(service.searchResultLimit).
 		Do()
 
 	if err != nil {
