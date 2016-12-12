@@ -63,7 +63,7 @@ func main() {
 			esRegion:   *esRegion,
 		}
 
-		elasticFinder, err := NewESSearcherService(&accessConfig, *esIndex, *searchResultLimit)
+		elasticFinder, err := newESSearcherService(&accessConfig, *esIndex, *searchResultLimit)
 
 		if err != nil {
 			log.Errorf("Concept search API failed to start: %v\n", err)

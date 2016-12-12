@@ -1,3 +1,4 @@
 *.iml
+*.exe
 .idea
 concept-search-api
