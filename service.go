@@ -55,6 +55,7 @@ func (service esConceptFinder) FindConcept(writer http.ResponseWriter, request *
 		return
 	}
 
+	//TODO check result
 	if searchResult.Hits.TotalHits > 0 {
 		writer.Header().Add("Content-Type", "application/json")
 		foundConcepts := getFoundConcepts(searchResult, isScoreIncluded(request))
