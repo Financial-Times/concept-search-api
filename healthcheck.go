@@ -8,9 +8,22 @@ import (
 	"github.com/Financial-Times/go-fthealth/v1a"
 	log "github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
+	"gopkg.in/olivere/elastic.v3"
 )
 
-func (service *esSearcherService) clusterIsHealthyCheck() v1a.Check {
+type esHealthService struct {
+	client *elastic.Client
+}
+
+func (service esHealthService) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
+	return service.client.ClusterHealth().Do()
+}
+
+func newEsHealthService(client *elastic.Client) *esHealthService {
+	return &esHealthService{client: client}
+}
+
+func (service *esHealthService) clusterIsHealthyCheck() v1a.Check {
 	return v1a.Check{
 		BusinessImpact:   "Full or partial degradation in serving requests from Elasticsearch",
 		Name:             "Check Elasticsearch cluster health",
@@ -21,9 +34,9 @@ func (service *esSearcherService) clusterIsHealthyCheck() v1a.Check {
 	}
 }
 
-func (service *esSearcherService) healthChecker() (string, error) {
-	if service.elasticClient != nil {
-		output, err := service.elasticClient.ClusterHealth().Do()
+func (service *esHealthService) healthChecker() (string, error) {
+	if service.client != nil {
+		output, err := service.getClusterHealth()
 		if err != nil {
 			return "Cluster is not healthy: ", err
 		} else if output.Status != "green" {
@@ -35,7 +48,7 @@ func (service *esSearcherService) healthChecker() (string, error) {
 	return "Couldn't check the cluster's health.", errors.New("Couldn't establish connectivity.")
 }
 
-func (service *esSearcherService) connectivityHealthyCheck() v1a.Check {
+func (service *esHealthService) connectivityHealthyCheck() v1a.Check {
 	return v1a.Check{
 		BusinessImpact:   "Could not connect to Elasticsearch",
 		Name:             "Check connectivity to the Elasticsearch cluster",
@@ -46,8 +59,8 @@ func (service *esSearcherService) connectivityHealthyCheck() v1a.Check {
 	}
 }
 
-func (service *esSearcherService) connectivityChecker() (string, error) {
-	if service.elasticClient == nil {
+func (service *esHealthService) connectivityChecker() (string, error) {
+	if service.client == nil {
 		return "", errors.New("Could not connect to elasticsearch, please check the application parameters/env variables, and restart the service.")
 	}
 
@@ -55,23 +68,23 @@ func (service *esSearcherService) connectivityChecker() (string, error) {
 }
 
 //GoodToGo returns a 503 if the healthcheck fails - suitable for use from varnish to check availability of a node
-func (service *esSearcherService) GoodToGo(writer http.ResponseWriter, req *http.Request) {
+func (service *esHealthService) goodToGo(writer http.ResponseWriter, req *http.Request) {
 	if _, err := service.healthChecker(); err != nil {
 		writer.WriteHeader(http.StatusServiceUnavailable)
 	}
 }
 
 //HealthDetails returns the response from elasticsearch service /__health endpoint - describing the cluster health
-func (service *esSearcherService) HealthDetails(writer http.ResponseWriter, req *http.Request) {
+func (service *esHealthService) healthDetails(writer http.ResponseWriter, req *http.Request) {
 
 	writer.Header().Set("Content-Type", "application/json")
 
-	if writer == nil || service.elasticClient == nil {
+	if writer == nil || service.client == nil {
 		writer.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
 
-	output, err := service.elasticClient.ClusterHealth().Do()
+	output, err := service.getClusterHealth()
 	if err != nil {
 		writer.WriteHeader(http.StatusServiceUnavailable)
 		return
