@@ -63,16 +63,16 @@ func main() {
 			esRegion:   *esRegion,
 		}
 
-		elasticFinder, err := newESSearcherService(&accessConfig, *esIndex, *searchResultLimit)
+		conceptFinder, err := newEsConceptFinder(&accessConfig, *esIndex, *searchResultLimit)
 
 		if err != nil {
 			log.Errorf("Concept search API failed to start: %v\n", err)
 		}
 
 		servicesRouter := mux.NewRouter()
-		http.HandleFunc("/_search", elasticFinder.SearchConcept)
+		http.HandleFunc("/_search", conceptFinder.FindConcept)
 
-		healthService := newEsHealthService(elasticFinder.elasticClient)
+		healthService := newEsHealthService(conceptFinder.elasticClient)
 		http.HandleFunc("/__health", v1a.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", healthService.connectivityHealthyCheck(), healthService.clusterIsHealthyCheck()))
 		http.HandleFunc("/__health-details", healthService.healthDetails)
 		http.HandleFunc("/__gtg", healthService.goodToGo)
