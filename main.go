@@ -72,6 +72,8 @@ func main() {
 			indexName:         *esIndex,
 			searchResultLimit: *searchResultLimit,
 		}
+		log.Infof("Concept Search API uses the following config port=%v, elasticsearch-endpoint=%v, elasticsearch-region=%v, "+
+			"elasticsearch-index=%v, search-result-limit=%v", *port, *esEndpoint, *esRegion, *esIndex, *searchResultLimit)
 		routeRequest(port, conceptFinder, newEsHealthService(client))
 	}
 
