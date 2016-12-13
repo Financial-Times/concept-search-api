@@ -14,12 +14,7 @@ import (
 	elastic "gopkg.in/olivere/elastic.v3"
 )
 
-var validRequestBody = `{"term":"Foobar"}`
-var invalidRequestBody = `{"term":"Foobar}`
-var defaultRequestURL = "http://nothing/at/all"
-var requestURLWithScore = "http://nothing/at/all?include_score=true"
-
-func TestConceptFinderErrorCases(t *testing.T) {
+func TestConceptFinder(t *testing.T) {
 
 	testCases := []struct {
 		client        esClient
@@ -34,24 +29,21 @@ func TestConceptFinderErrorCases(t *testing.T) {
 			http.StatusInternalServerError,
 			defaultRequestURL,
 			validRequestBody,
-			nil,
-			nil,
+			nil, nil,
 		},
 		{
 			failClient{},
 			http.StatusBadRequest,
 			defaultRequestURL,
 			invalidRequestBody,
-			nil,
-			nil,
+			nil, nil,
 		},
 		{
 			failClient{},
 			http.StatusInternalServerError,
 			defaultRequestURL,
 			validRequestBody,
-			nil,
-			nil,
+			nil, nil,
 		},
 		{
 			mockClient{
@@ -70,8 +62,7 @@ func TestConceptFinderErrorCases(t *testing.T) {
 			http.StatusNotFound,
 			defaultRequestURL,
 			validRequestBody,
-			nil,
-			nil,
+			nil, nil,
 		},
 		{
 			mockClient{
@@ -85,13 +76,21 @@ func TestConceptFinderErrorCases(t *testing.T) {
 		},
 		{
 			mockClient{
-				queryResponse: invalidResponse,
+				queryResponse: invalidResponseBadHits,
 			},
 			http.StatusInternalServerError,
 			defaultRequestURL,
 			validRequestBody,
-			nil,
-			nil,
+			nil, nil,
+		},
+		{
+			mockClient{
+				queryResponse: invvalidResponseBadConcept,
+			},
+			http.StatusInternalServerError,
+			defaultRequestURL,
+			validRequestBody,
+			nil, nil,
 		},
 	}
 
@@ -103,23 +102,29 @@ func TestConceptFinderErrorCases(t *testing.T) {
 		}
 		req, _ := http.NewRequest("POST", testCase.requestURL, strings.NewReader(testCase.requestBody))
 		w := httptest.NewRecorder()
-		conceptFinder.FindConcept(w, req)
-		assert.Equal(t, testCase.returnCode, w.Code, "Expected return code %d but got %d", testCase.returnCode, w.Code)
 
-		if testCase.returnCode == http.StatusOK {
-			var searchResults []concept
-			err := json.Unmarshal(w.Body.Bytes(), &searchResults)
-			assert.Equal(t, nil, err)
-			assert.Equal(t, len(testCase.expectedUUIDs), len(searchResults))
-			for i, uuid := range testCase.expectedUUIDs {
-				assert.True(t, strings.Contains(searchResults[i].ID, uuid))
-			}
-			if testCase.requestURL == requestURLWithScore {
-				for i, score := range testCase.expectedScore {
-					assert.Equal(t, score, searchResults[i].Score)
-				}
+		conceptFinder.FindConcept(w, req)
+
+		assert.Equal(t, testCase.returnCode, w.Code, "Expected return code %d but got %d", testCase.returnCode, w.Code)
+		if testCase.returnCode != http.StatusOK {
+			continue
+		}
+
+		var searchResults []concept
+		err := json.Unmarshal(w.Body.Bytes(), &searchResults)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, len(testCase.expectedUUIDs), len(searchResults))
+
+		for i, uuid := range testCase.expectedUUIDs {
+			assert.True(t, strings.Contains(searchResults[i].ID, uuid))
+		}
+
+		if testCase.requestURL == requestURLWithScore {
+			for i, score := range testCase.expectedScore {
+				assert.Equal(t, score, searchResults[i].Score)
 			}
 		}
+
 	}
 
 }
@@ -150,6 +155,12 @@ func (mc mockClient) query(indexName string, query elastic.Query, resultLimit in
 func (mc mockClient) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
 	return &elastic.ClusterHealthResponse{}, nil
 }
+
+const validRequestBody = `{"term":"Foobar"}`
+const invalidRequestBody = `{"term":"Foobar}`
+
+const defaultRequestURL = "http://nothing/at/all"
+const requestURLWithScore = "http://nothing/at/all?include_score=true"
 
 const validResponse = `{
   "took": 111,
@@ -200,11 +211,7 @@ const validResponse = `{
           "directType": "http://www.ft.com/ontology/organisation/Organisation",
           "aliases": [
             "Foobar GMBH"
-          ]
-        }
-      }
-    ]
-  }
+          ]}}]}
 }`
 
 const emptyResponse = `{
@@ -222,8 +229,8 @@ const emptyResponse = `{
   }
 }`
 
-const invalidResponse = `{
-  "took": 111,
+const invalidResponseBadHits = `{
+  "took": 222,
   "timed_out": false,
   "_shards: {
     "total": 5,
@@ -231,6 +238,24 @@ const invalidResponse = `{
     "failed": 0
   },
   "hits: {
+    "total": 999,
+    "max_score": 9.992676,
+    "hits": [
+      {
+        "_index": "concept",
+        "_type": "organisations",
+        "_id": "9a0dd8b8-2ae4-34ca-8639-cfef69711eb9",
+}`
+
+const invvalidResponseBadConcept = `{
+  "took": 111,
+  "timed_out": false,
+  "_shards": {
+    "total": 5,
+    "successful": 5,
+    "failed": 0
+  },
+  "hits": {
     "total": 540,
     "max_score": 9.992676,
     "hits": [
@@ -238,4 +263,6 @@ const invalidResponse = `{
         "_index": "concept",
         "_type": "organisations",
         "_id": "9a0dd8b8-2ae4-34ca-8639-cfef69711eb9",
+        "_score: 9.992676,
+        }}]}
 }`
