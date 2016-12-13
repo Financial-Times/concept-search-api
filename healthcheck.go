@@ -64,6 +64,10 @@ func (service *esHealthService) connectivityChecker() (string, error) {
 		return "", errors.New("Could not connect to elasticsearch, please check the application parameters/env variables, and restart the service.")
 	}
 
+	_, err := service.getClusterHealth()
+	if err != nil {
+		return "Could not connect to elasticsearch", err
+	}
 	return "Successfully connected to the cluster", nil
 }
 
