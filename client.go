@@ -15,7 +15,7 @@ type esClient interface {
 }
 
 type esClientWrapper struct {
-	elastiClient *elastic.Client
+	elasticClient *elastic.Client
 }
 
 type awsSigningTransport struct {
@@ -54,13 +54,13 @@ func newElasticClient(accessKey string, secretKey string, endpoint *string, regi
 		elastic.SetSniff(false), //needs to be disabled due to EAS behavior.
 		elastic.SetMaxRetries(3),
 	)
-	return &esClientWrapper{elastiClient: elasticClient}, err
+	return &esClientWrapper{elasticClient: elasticClient}, err
 }
 
 func (ec esClientWrapper) query(indexName string, query elastic.Query, resultLimit int) (*elastic.SearchResult, error) {
-	return ec.elastiClient.Search().Index(indexName).Query(query).Size(resultLimit).Do()
+	return ec.elasticClient.Search().Index(indexName).Query(query).Size(resultLimit).Do()
 }
 
 func (ec esClientWrapper) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
-	return ec.elastiClient.ClusterHealth().Do()
+	return ec.elasticClient.ClusterHealth().Do()
 }

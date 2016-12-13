@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"strings"
+
 	"gopkg.in/olivere/elastic.v3"
 )
 
@@ -80,7 +82,7 @@ func TestHealthDetailsReturnsError(t *testing.T) {
 	}
 
 	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
+		t.Error("Response body should be empty")
 	}
 }
 
@@ -108,7 +110,7 @@ func TestGoodToGoHealthyCluster(t *testing.T) {
 	}
 
 	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
+		t.Error("Response body should be empty")
 	}
 }
 
@@ -136,7 +138,7 @@ func TestGoodToGoUnhealthyCluster(t *testing.T) {
 	}
 
 	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
+		t.Error("Response body should be empty")
 	}
 }
 
@@ -146,7 +148,7 @@ func TestHealthServiceConnectivityChecker(t *testing.T) {
 	message, err := healthService.connectivityChecker()
 
 	assert.Equal(t, "Successfully connected to the cluster", message)
-	assert.Equal(t, err, nil)
+	assert.Equal(t, nil, err)
 }
 
 func TestHealthServiceConnectivityCheckerForFailedConnection(t *testing.T) {
@@ -156,6 +158,75 @@ func TestHealthServiceConnectivityCheckerForFailedConnection(t *testing.T) {
 
 	assert.Equal(t, "Could not connect to elasticsearch", message)
 	assert.NotNil(t, err)
+}
+
+func TestHealthServiceConnectivityCheckerNilClient(t *testing.T) {
+	healthService := newEsHealthService(nil)
+
+	_, err := healthService.connectivityChecker()
+
+	assert.NotNil(t, err)
+	assert.True(t, strings.Contains(err.Error(), "Could not connect to elasticsearch"))
+}
+
+func TestHealthServiceHealthCheckerNilClient(t *testing.T) {
+	healthService := newEsHealthService(nil)
+
+	_, err := healthService.healthChecker()
+
+	assert.NotNil(t, err)
+	assert.True(t, strings.Contains(err.Error(), "Couldn't establish connectivity"))
+}
+
+func TestHealthServiceHealthCheckerNotHealthyClient(t *testing.T) {
+	healthService := newEsHealthService(hcClient{healthy: false})
+
+	message, err := healthService.healthChecker()
+
+	assert.Nil(t, err)
+	assert.True(t, strings.Contains(message, "red"))
+}
+
+func TestHealthServiceHealthDetailClientNil(t *testing.T) {
+	healthService := newEsHealthService(hcClient{healthy: false})
+
+	message, err := healthService.healthChecker()
+
+	assert.Nil(t, err)
+	assert.True(t, strings.Contains(message, "red"))
+}
+
+func TestHealthDetailsNilClient(t *testing.T) {
+
+	//create a request to pass to our handler
+	req, err := http.NewRequest("GET", "/__health-details", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	healthService := newEsHealthService(nil)
+
+	//create a responseRecorder
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(healthService.healthDetails)
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Series of verifications:
+	if status := rr.Code; status != http.StatusServiceUnavailable {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusServiceUnavailable)
+	}
+
+	if contentType := rr.HeaderMap.Get("Content-Type"); contentType != "application/json" {
+		t.Errorf("handler returned wrong content type: got %v want %v",
+			contentType, "application/json")
+	}
+
+	if rr.Body.Bytes() != nil {
+		t.Errorf("Response body should be empty")
+	}
 }
 
 type hcClient struct {
