@@ -2,3 +2,5 @@
 *.exe
 .idea
 concept-search-api
+coverage.html
+coverage.json

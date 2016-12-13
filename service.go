@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -14,7 +15,7 @@ type conceptFinder interface {
 }
 
 type esConceptFinder struct {
-	client            *esClient
+	client            esClient
 	indexName         string
 	searchResultLimit int
 }
@@ -54,6 +55,14 @@ func (service esConceptFinder) FindConcept(writer http.ResponseWriter, request *
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	defer func() {
+		// searchResult.Hits.TotalHits call panics if the result from ES is not a valid JSON, this handles it
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in findConcept", r)
+			writer.WriteHeader(http.StatusInternalServerError)
+		}
+	}()
 
 	if searchResult.Hits.TotalHits > 0 {
 		writer.Header().Add("Content-Type", "application/json")
