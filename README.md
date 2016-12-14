@@ -30,18 +30,18 @@ Other parameters:
 
 ## Available DATA endpoints:
 
-### POST /search
+### POST /concept/search
 
 The endpoint is used for searching concepts. The payload is a JSON with a field called `term`. The value of this field represents the search criteria. For example searching for _FOO_ looks like this:
 ```
-curl {concept-search-api-url}/search -d '{"term":"FOO"}'
+curl {concept-search-api-url}/concept/search -d '{"term":"FOO"}'
 ```
 
 The matching concepts are returned ordered by the strength of their match. However the actual score is not included.
 
 To include the score you need to add the query parameter `include_score` with the value `true`. If the parameter has a value other than `true` the score will not be included. The score is a field that appears in each concept alongside the data that represents the actual concept. For example searching for _FOO_ with scoring looks like this:
 ```
-curl {concept-search-api-url}/search?include_score=true -d '{"term":"FOO"}'
+curl {concept-search-api-url}/concept/search?include_score=true -d '{"term":"FOO"}'
 ```
 
 Exact matches are preferred over partial ones and an example of search results with scoring would look like this:
