@@ -92,6 +92,13 @@ func TestConceptFinder(t *testing.T) {
 			validRequestBody,
 			nil, nil,
 		},
+		{
+			failClient{},
+			http.StatusBadRequest,
+			defaultRequestURL,
+			missingTermRequestBody,
+			nil, nil,
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -158,6 +165,7 @@ func (mc mockClient) getClusterHealth() (*elastic.ClusterHealthResponse, error) 
 
 const validRequestBody = `{"term":"Foobar"}`
 const invalidRequestBody = `{"term":"Foobar}`
+const missingTermRequestBody = `{"ter":"Foobar"}`
 
 const defaultRequestURL = "http://nothing/at/all"
 const requestURLWithScore = "http://nothing/at/all?include_score=true"
