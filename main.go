@@ -85,7 +85,7 @@ func main() {
 
 func routeRequest(port *string, conceptFinder conceptFinder, healthService *esHealthService) {
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/search", conceptFinder.FindConcept).Methods("POST")
+	servicesRouter.HandleFunc("/concept/search", conceptFinder.FindConcept).Methods("POST")
 
 	var monitoringRouter http.Handler = servicesRouter
 	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
