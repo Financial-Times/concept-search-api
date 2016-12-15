@@ -44,6 +44,13 @@ func (service esConceptFinder) FindConcept(writer http.ResponseWriter, request *
 		return
 	}
 
+	if criteria.Term == nil {
+		log.Error("The search criteria was not provided. Check that the JSON contains the 'term' field that is used to provide " +
+			"the search criteria")
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	defer request.Body.Close()
 
 	query := elastic.NewMultiMatchQuery(criteria.Term, "prefLabel.raw", "aliases.raw", "prefLabel", "aliases").Type("most_fields")
