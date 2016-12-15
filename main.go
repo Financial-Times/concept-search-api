@@ -63,6 +63,7 @@ func main() {
 	}
 
 	app.Action = func() {
+		logStartupConfig(port, esEndpoint, esRegion, esIndex, searchResultLimit)
 		client, err := newElasticClient(accessConfig.accessKey, accessConfig.secretKey, &accessConfig.esEndpoint, &accessConfig.esRegion)
 		if err != nil {
 			log.Fatalf("Creating elasticsearch client failed with error=[%v]", err)
@@ -73,12 +74,6 @@ func main() {
 			searchResultLimit: *searchResultLimit,
 		}
 
-		log.Infof("Concept Search API uses the following configurations:")
-		log.Infof("port: %v", *port)
-		log.Infof("elasticsearch-endpoint: %v", *esEndpoint)
-		log.Infof("elasticsearch-region: %v", *esRegion)
-		log.Infof("elasticsearch-index: %v", *esIndex)
-		log.Infof("search-result-limit: %v", *searchResultLimit)
 		routeRequest(port, conceptFinder, newEsHealthService(client))
 	}
 
@@ -88,6 +83,15 @@ func main() {
 		log.Errorf("App could not start, error=[%s]\n", err)
 		return
 	}
+}
+
+func logStartupConfig(port, esEndpoint, esRegion, esIndex *string, searchResultLimit *int) {
+	log.Info("Concept Search API uses the following configurations:")
+	log.Infof("port: %v", *port)
+	log.Infof("elasticsearch-endpoint: %v", *esEndpoint)
+	log.Infof("elasticsearch-region: %v", *esRegion)
+	log.Infof("elasticsearch-index: %v", *esIndex)
+	log.Infof("search-result-limit: %v", *searchResultLimit)
 }
 
 func routeRequest(port *string, conceptFinder conceptFinder, healthService *esHealthService) {
