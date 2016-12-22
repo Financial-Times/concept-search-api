@@ -57,7 +57,9 @@ func (service esConceptFinder) FindConcept(writer http.ResponseWriter, request *
 	transactionID := transactionidutils.GetTransactionIDFromRequest(request)
 	log.Infof("Performing concept search for term=%v, transaction_id=%v", *criteria.Term, transactionID)
 
-	query := elastic.NewMultiMatchQuery(criteria.Term, "prefLabel.raw", "aliases.raw", "prefLabel", "aliases").Type("most_fields")
+	query := conceptQuery{
+		Term: *criteria.Term,
+	}
 
 	searchResult, err := service.client.query(service.indexName, query, service.searchResultLimit)
 
