@@ -32,7 +32,6 @@ func main() {
 	})
 	esEndpoint := app.String(cli.StringOpt{
 		Name:   "elasticsearch-endpoint",
-		Value:  "search-concept-search-mvp-k2vkgwhfgjv63nu6jvortpggha.eu-west-1.es.amazonaws.com",
 		Desc:   "AES endpoint",
 		EnvVar: "ELASTICSEARCH_ENDPOINT",
 	})
