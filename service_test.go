@@ -117,18 +117,18 @@ func TestConceptFinder(t *testing.T) {
 			continue
 		}
 
-		var searchResults []concept
+		var searchResults searchResult
 		err := json.Unmarshal(w.Body.Bytes(), &searchResults)
 		assert.Equal(t, nil, err)
-		assert.Equal(t, len(testCase.expectedUUIDs), len(searchResults))
+		assert.Equal(t, len(testCase.expectedUUIDs), len(searchResults.Results))
 
 		for i, uuid := range testCase.expectedUUIDs {
-			assert.True(t, strings.Contains(searchResults[i].ID, uuid))
+			assert.True(t, strings.Contains(searchResults.Results[i].ID, uuid))
 		}
 
 		if testCase.requestURL == requestURLWithScore {
 			for i, score := range testCase.expectedScore {
-				assert.Equal(t, score, searchResults[i].Score)
+				assert.Equal(t, score, searchResults.Results[i].Score)
 			}
 		}
 

@@ -57,9 +57,13 @@ func (service esConceptFinder) FindConcept(writer http.ResponseWriter, request *
 	transactionID := transactionidutils.GetTransactionIDFromRequest(request)
 	log.Infof("Performing concept search for term=%v, transaction_id=%v", *criteria.Term, transactionID)
 
-	query := elastic.NewMultiMatchQuery(criteria.Term, "prefLabel.raw", "aliases.raw", "prefLabel", "aliases").Type("most_fields")
+	multiMatchQuery := elastic.NewMultiMatchQuery(criteria.Term, "prefLabel", "aliases").Type("most_fields")
+	termQueryForPreflabelExactMatches := elastic.NewTermQuery("prefLabel.raw", criteria.Term).Boost(2)
+	termQueryForAliasesExactMatches := elastic.NewTermQuery("aliases.raw", criteria.Term).Boost(2)
 
-	searchResult, err := service.client.query(service.indexName, query, service.searchResultLimit)
+	finalQuery := elastic.NewBoolQuery().Should(multiMatchQuery, termQueryForPreflabelExactMatches, termQueryForAliasesExactMatches)
+
+	searchResult, err := service.client.query(service.indexName, finalQuery, service.searchResultLimit)
 
 	if err != nil {
 		log.Errorf("There was an error executing the query on ES: %s", err.Error())
@@ -88,9 +92,9 @@ func (service esConceptFinder) FindConcept(writer http.ResponseWriter, request *
 	}
 }
 
-func getFoundConcepts(searchResult *elastic.SearchResult, isScoreIncluded bool) []concept {
+func getFoundConcepts(elasticResult *elastic.SearchResult, isScoreIncluded bool) searchResult {
 	var foundConcepts []concept
-	for _, hit := range searchResult.Hits.Hits {
+	for _, hit := range elasticResult.Hits.Hits {
 		var foundConcept concept
 		err := json.Unmarshal(*hit.Source, &foundConcept)
 		if err != nil {
@@ -103,7 +107,7 @@ func getFoundConcepts(searchResult *elastic.SearchResult, isScoreIncluded bool) 
 			foundConcepts = append(foundConcepts, foundConcept)
 		}
 	}
-	return foundConcepts
+	return searchResult{Results: foundConcepts}
 }
 
 func isScoreIncluded(request *http.Request) bool {

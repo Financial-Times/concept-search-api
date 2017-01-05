@@ -13,3 +13,7 @@ type concept struct {
 	Aliases    []string `json:"aliases,omitempty"`
 	Score      float64  `json:"score,omitempty"`
 }
+
+type searchResult struct {
+	Results []concept `json:"results"`
+}
