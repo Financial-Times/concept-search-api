@@ -40,7 +40,7 @@ func (service *esHealthService) healthChecker() (string, error) {
 		if err != nil {
 			return "Cluster is not healthy: ", err
 		} else if output.Status != "green" {
-			return fmt.Sprintf("Cluster is %v", output.Status), nil
+			return fmt.Sprintf("Cluster is %v", output.Status), errors.New(fmt.Sprintf("Cluster is %v", output.Status))
 		}
 		return "Cluster is healthy", nil
 	}
