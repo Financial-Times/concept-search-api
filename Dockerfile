@@ -1,6 +1,6 @@
 FROM alpine:3.4
 
-ADD *.go /concept-search-api/
+COPY . /concept-search-api/
 
 RUN apk add --update bash \
   && apk --update add git bzr go ca-certificates \
