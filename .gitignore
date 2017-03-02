@@ -1,6 +1,7 @@
 *.iml
 *.exe
 .idea
+vendor/*/
 concept-search-api
 coverage.html
 coverage.json
