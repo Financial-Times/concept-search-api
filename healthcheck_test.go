@@ -183,16 +183,7 @@ func TestHealthServiceHealthCheckerNotHealthyClient(t *testing.T) {
 
 	message, err := healthService.healthChecker()
 
-	assert.Nil(t, err)
-	assert.True(t, strings.Contains(message, "red"))
-}
-
-func TestHealthServiceHealthDetailClientNil(t *testing.T) {
-	healthService := newEsHealthService(hcClient{healthy: false})
-
-	message, err := healthService.healthChecker()
-
-	assert.Nil(t, err)
+	assert.NotNil(t, err)
 	assert.True(t, strings.Contains(message, "red"))
 }
 
@@ -225,7 +216,7 @@ func TestHealthDetailsNilClient(t *testing.T) {
 	}
 
 	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
+		t.Error("Response body should be empty")
 	}
 }
 
