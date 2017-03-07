@@ -23,7 +23,7 @@ test:
   override:
     - mkdir -p $CIRCLE_TEST_REPORTS/golang
     - cd $GO_PROJECT_PATH && govendor test -race -v +local | go-junit-report > $CIRCLE_TEST_REPORTS/golang/junit.xml
-    - cd $GO_PROJECT_PATH && govendor test -v -cover -race -coverprofile +local=$CIRCLE_ARTIFACTS/coverage.out ./...
+    - cd $GO_PROJECT_PATH && govendor test -v -cover -race -coverprofile=$CIRCLE_ARTIFACTS/coverage.out +local
     - cd $CIRCLE_ARTIFACTS && sed -i '1d' *.out
     - |
       echo "mode: atomic" > $CIRCLE_ARTIFACTS/overall-coverage.result
