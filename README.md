@@ -12,9 +12,14 @@ The taken approach to access AES (Amazon Elasticsearch Service):
 - Use https://github.com/olivere/elastic library to any ES request, after passing in the above created client
 
 ## How to run
+Make sure you have govendor on your local machine. Run the following command to install it otherwise:
+```
+go get -u github.com/kardianos/govendor
+```
 
 ```
 go get -u github.com/Financial-Times/concept-search-api
+govendor sync
 go build
 ./concept-search-api --aws-access-key="{access key}" --aws-secret-access-key="{secret key}"
 ```
