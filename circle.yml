@@ -1,16 +1,20 @@
+machine:
+  environment:
+    GOPATH: "${HOME}/.go_workspace:/usr/local/go_workspace:${HOME}/.go_project"
+    GO_PROJECT_PATH: "${HOME}/.go_project/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}"
+
 checkout:
   post:
-    - mkdir -p $HOME/.go_project/src/github.com/$CIRCLE_PROJECT_USERNAME
-    - ln -fs $HOME/$CIRCLE_PROJECT_REPONAME $HOME/.go_project/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
+    - mkdir -p $(dirname ${GO_PROJECT_PATH})
+    - ln -fs $HOME/$CIRCLE_PROJECT_REPONAME $GO_PROJECT_PATH
 
 dependencies:
   pre:
     - go get -u github.com/kardianos/govendor
   override:
-    - cd $HOME/.go_project/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
-    - govendor sync
-    - go get -t -d -v ./...
-    - go build -v
+    - cd $GO_PROJECT_PATH && govendor sync
+    - cd $GO_PROJECT_PATH && go get -t -d -v ./...
+    - cd $GO_PROJECT_PATH && go build -v
 
 test:
   pre:
@@ -18,8 +22,8 @@ test:
     - go get -u github.com/mattn/goveralls
   override:
     - mkdir -p $CIRCLE_TEST_REPORTS/golang
-    - govendor test -race -v +local | go-junit-report > $CIRCLE_TEST_REPORTS/golang/junit.xml
-    - govendor test -v -cover -race -coverprofile +local=$CIRCLE_ARTIFACTS/coverage.out ./...
+    - cd $GO_PROJECT_PATH && govendor test -race -v +local | go-junit-report > $CIRCLE_TEST_REPORTS/golang/junit.xml
+    - cd $GO_PROJECT_PATH && govendor test -v -cover -race -coverprofile +local=$CIRCLE_ARTIFACTS/coverage.out ./...
     - cd $CIRCLE_ARTIFACTS && sed -i '1d' *.out
     - |
       echo "mode: atomic" > $CIRCLE_ARTIFACTS/overall-coverage.result
