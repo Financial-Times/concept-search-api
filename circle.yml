@@ -8,18 +8,18 @@ dependencies:
     - go get -u github.com/kardianos/govendor
   override:
     - cd $HOME/.go_project/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
-	- govendor sync
-	- go get -t -d -v ./...
-	- go build -v
+    - govendor sync
+    - go get -t -d -v ./...
+    - go build -v
 
 test:
   pre:
     - go get -u github.com/jstemmer/go-junit-report
-	- go get -u github.com/mattn/goveralls
+    - go get -u github.com/mattn/goveralls
   override:
     - mkdir -p $CIRCLE_TEST_REPORTS/golang
-    - govendor test -race -v ./... | go-junit-report > $CIRCLE_TEST_REPORTS/golang/junit.xml
-    - govendor test -v -cover -race -coverprofile=$CIRCLE_ARTIFACTS/coverage.out ./...
+    - govendor test -race -v +local | go-junit-report > $CIRCLE_TEST_REPORTS/golang/junit.xml
+    - govendor test -v -cover -race -coverprofile +local=$CIRCLE_ARTIFACTS/coverage.out ./...
     - cd $CIRCLE_ARTIFACTS && sed -i '1d' *.out
     - |
       echo "mode: atomic" > $CIRCLE_ARTIFACTS/overall-coverage.result
