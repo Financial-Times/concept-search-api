@@ -1,6 +1,6 @@
 # Concept Search API
 
-[![Circle CI](https://circleci.com/gh/Financial-Times/concept-search-api/tree/master.png?style=shield)](https://circleci.com/gh/Financial-Times/concept-search-api/tree/master) [![Go Report Card](https://goreportcard.com/badge/github.com/Financial-Times/concept-search-api)](https://goreportcard.com/report/github.com/Financial-Times/concept-search-api) [![Coverage Status](https://coveralls.io/repos/github/Financial-Times/concept-search-api/badge.svg?branch=master)](https://coveralls.io/github/Financial-Times/concept-search-api?branch=master)
+[![CircleCI](https://circleci.com/gh/Financial-Times/concept-search-api.svg?style=shield)](https://circleci.com/gh/Financial-Times/concept-search-api) [![Go Report Card](https://goreportcard.com/badge/github.com/Financial-Times/concept-search-api)](https://goreportcard.com/report/github.com/Financial-Times/concept-search-api) [![Coverage Status](https://coveralls.io/repos/github/Financial-Times/concept-search-api/badge.svg)](https://coveralls.io/github/Financial-Times/concept-search-api)
 
 API for searching concepts in an Amazon Elasticsearch domain.
 
@@ -12,9 +12,14 @@ The taken approach to access AES (Amazon Elasticsearch Service):
 - Use https://github.com/olivere/elastic library to any ES request, after passing in the above created client
 
 ## How to run
+Make sure you have govendor on your local machine. Run the following command to install it otherwise:
+```
+go get -u github.com/kardianos/govendor
+```
 
 ```
 go get -u github.com/Financial-Times/concept-search-api
+govendor sync
 go build
 ./concept-search-api --aws-access-key="{access key}" --aws-secret-access-key="{secret key}"
 ```
