@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Financial-Times/concept-search-api/resources"
+	"github.com/Financial-Times/concept-search-api/service"
 	"github.com/Financial-Times/go-fthealth/v1a"
 	"github.com/Financial-Times/http-handlers-go/httphandlers"
 	log "github.com/Sirupsen/logrus"
@@ -32,12 +34,13 @@ func main() {
 	})
 	esEndpoint := app.String(cli.StringOpt{
 		Name:   "elasticsearch-endpoint",
+		Value:  "http://localhost:9200",
 		Desc:   "AES endpoint",
 		EnvVar: "ELASTICSEARCH_ENDPOINT",
 	})
 	esRegion := app.String(cli.StringOpt{
 		Name:   "elasticsearch-region",
-		Value:  "eu-west-1",
+		Value:  "local",
 		Desc:   "AES region",
 		EnvVar: "ELASTICSEARCH_REGION",
 	})
@@ -54,26 +57,26 @@ func main() {
 		EnvVar: "RESULT_LIMIT",
 	})
 
-	accessConfig := esAccessConfig{
-		accessKey:  *accessKey,
-		secretKey:  *secretKey,
-		esEndpoint: *esEndpoint,
-		esRegion:   *esRegion,
-	}
+	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)
+
+	log.SetLevel(log.InfoLevel)
 
 	app.Action = func() {
 		logStartupConfig(port, esEndpoint, esRegion, esIndex, searchResultLimit)
-		client, err := newElasticClient(accessConfig.accessKey, accessConfig.secretKey, &accessConfig.esEndpoint, &accessConfig.esRegion)
+		esClient, err := service.NewElasticClient(*esRegion, accessConfig /*accessConfig.accessKey, accessConfig.secretKey, &accessConfig.esEndpoint, &accessConfig.esRegion*/)
 		if err != nil {
 			log.Fatalf("Creating elasticsearch client failed with error=[%v]", err)
 		}
+		client := &esClientWrapper{elasticClient: esClient}
 		conceptFinder := esConceptFinder{
 			client:            client,
 			indexName:         *esIndex,
 			searchResultLimit: *searchResultLimit,
 		}
+		search := service.NewEsConceptSearchService(esClient, *esIndex)
+		handler := resources.NewHandler(search)
 
-		routeRequest(port, conceptFinder, newEsHealthService(client))
+		routeRequest(port, conceptFinder, handler, newEsHealthService(client))
 	}
 
 	log.SetLevel(log.InfoLevel)
@@ -93,9 +96,10 @@ func logStartupConfig(port, esEndpoint, esRegion, esIndex *string, searchResultL
 	log.Infof("search-result-limit: %v", *searchResultLimit)
 }
 
-func routeRequest(port *string, conceptFinder conceptFinder, healthService *esHealthService) {
+func routeRequest(port *string, conceptFinder conceptFinder, handler *resources.Handler, healthService *esHealthService) {
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/concept/search", conceptFinder.FindConcept).Methods("POST")
+	servicesRouter.HandleFunc("/concepts", handler.ConceptSearch).Methods("GET")
 
 	var monitoringRouter http.Handler = servicesRouter
 	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)

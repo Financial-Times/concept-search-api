@@ -21,13 +21,6 @@ type esConceptFinder struct {
 	searchResultLimit int
 }
 
-type esAccessConfig struct {
-	accessKey  string
-	secretKey  string
-	esEndpoint string
-	esRegion   string
-}
-
 func (service esConceptFinder) FindConcept(writer http.ResponseWriter, request *http.Request) {
 	if service.client == nil {
 		log.Errorf("Elasticsearch client is not created.")
