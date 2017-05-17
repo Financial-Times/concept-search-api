@@ -1,19 +1,20 @@
 machine:
   environment:
-    GOPATH: "${HOME}/.go_workspace:/usr/local/go_workspace:${HOME}/.go_project"
-    GO_PROJECT_PATH: "${HOME}/.go_project/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}"
+    PROJECT_GOPATH: "${HOME}/.go_project"
+    PROJECT_PARENT_PATH: "${PROJECT_GOPATH}/src/github.com/${CIRCLE_PROJECT_USERNAME}"
+    PROJECT_PATH: "${PROJECT_PARENT_PATH}/${CIRCLE_PROJECT_REPONAME}"
+    GOPATH: "${HOME}/.go_workspace:${PROJECT_GOPATH}"
 
 checkout:
   post:
+    - rsync -avC "${HOME}/${CIRCLE_PROJECT_REPONAME}/" "${PROJECT_PATH}"
     - mkdir -p $(dirname ${GO_PROJECT_PATH})
-    - ln -fs $HOME/$CIRCLE_PROJECT_REPONAME $GO_PROJECT_PATH
 
 dependencies:
   pre:
     - go get -u github.com/kardianos/govendor
   override:
     - cd $GO_PROJECT_PATH && govendor sync
-    - cd $GO_PROJECT_PATH && go get -t -d -v ./...
     - cd $GO_PROJECT_PATH && go build -v
 
 test:
@@ -22,8 +23,8 @@ test:
     - go get -u github.com/mattn/goveralls
   override:
     - mkdir -p $CIRCLE_TEST_REPORTS/golang
-    - cd $GO_PROJECT_PATH && govendor test -race -v +local | go-junit-report > $CIRCLE_TEST_REPORTS/golang/junit.xml
-    - cd $GO_PROJECT_PATH && govendor test -v -cover -race -coverprofile=$CIRCLE_ARTIFACTS/coverage.out +local
+    - cd $GO_PROJECT_PATH && govendor test -race -v +local ./... | go-junit-report > $CIRCLE_TEST_REPORTS/golang/junit.xml
+    - cd $GO_PROJECT_PATH && go list ./... | grep -v vendor | awk -F/ '{print $4}' | xargs -I {} govendor test -v -cover -race +local -coverprofile=$CIRCLE_ARTIFACTS/{}.out ./{}
     - cd $CIRCLE_ARTIFACTS && sed -i '1d' *.out
     - |
       echo "mode: atomic" > $CIRCLE_ARTIFACTS/overall-coverage.result
