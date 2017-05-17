@@ -5,7 +5,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	awsauth "github.com/smartystreets/go-aws-auth"
-	"gopkg.in/olivere/elastic.v3"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 type EsAccessConfig struct {

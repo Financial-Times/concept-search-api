@@ -2,12 +2,13 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"sort"
 
 	log "github.com/Sirupsen/logrus"
-	"gopkg.in/olivere/elastic.v3"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 var (
@@ -47,7 +48,7 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string) ([]Co
 	}
 
 	concepts := Concepts{}
-	result, err := s.esClient.Search(s.index).Type(t).Size(50).Do()
+	result, err := s.esClient.Search(s.index).Type(t).Size(50).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 	} else {

@@ -3,81 +3,81 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "FUhczVSvt/VQAlWfzATo1YLez2E=",
+			"checksumSHA1": "4gy/7n/lgtdi5efuHXwFcIe1ZI8=",
 			"path": "github.com/Financial-Times/go-fthealth/v1a",
 			"revision": "f9074331b3ab48bca0e6d0afc211a673d88ac925",
 			"revisionTime": "2016-06-16T09:04:59Z"
 		},
 		{
-			"checksumSHA1": "zUpINnstJChGK0LAtkt7jBc3RY0=",
+			"checksumSHA1": "lBOK1zbqMz1rLNilYkkjPrjW+Qk=",
 			"path": "github.com/Financial-Times/http-handlers-go/httphandlers",
 			"revision": "bb69c454da9050fe1c4b92fe1345a01583ee70be",
 			"revisionTime": "2016-08-03T10:40:03Z"
 		},
 		{
-			"checksumSHA1": "ddLGmQTKn5BeEsKYFOGAH33sEfg=",
+			"checksumSHA1": "I/p6g4/ZiQhlPLRa9fFjzwuevwc=",
 			"path": "github.com/Financial-Times/transactionid-utils-go",
 			"revision": "a2b1163e7c2f6c77add74ca2c7fc7422323a2d78",
 			"revisionTime": "2016-02-12T16:38:35Z"
 		},
 		{
-			"checksumSHA1": "0Tugz8gj9KqqVj6JLkXUA7BXas4=",
+			"checksumSHA1": "ZCUKm9qDmTTGd+qutKuIdNsMS1Y=",
 			"path": "github.com/Sirupsen/logrus",
 			"revision": "0208149b40d863d2c1a2f8fe5753096a9cf2cc8b",
 			"revisionTime": "2017-02-27T12:44:09Z"
 		},
 		{
-			"checksumSHA1": "Lf3uUXTkKK5DJ37BxQvxO1Fq+K8=",
+			"checksumSHA1": "VgdO95xKa54YWKwGrKWvVnDXVOc=",
 			"origin": "github.com/stretchr/testify/vendor/github.com/davecgh/go-spew/spew",
 			"path": "github.com/davecgh/go-spew/spew",
 			"revision": "976c720a22c8eb4eb6a0b4348ad85ad12491a506",
 			"revisionTime": "2016-09-25T22:06:09Z"
 		},
 		{
-			"checksumSHA1": "iIUYZyoanCQQTUaWsu8b+iOSPt4=",
+			"checksumSHA1": "rk/QFSfmdW9TPNUWU6p5FUBIL3U=",
 			"path": "github.com/gorilla/context",
 			"revision": "aed02d124ae4a0e94fea4541c8effd05bf0c8296",
 			"revisionTime": "2016-05-25T20:33:19Z"
 		},
 		{
-			"checksumSHA1": "Ek5SW7pswB7YzX1Dr0bTSFCNOtc=",
+			"checksumSHA1": "cNq/Fd4f293e22341FG9VHGSZ+4=",
 			"path": "github.com/gorilla/mux",
 			"revision": "999ef73f5d50979cf6d12afed1726325b63f9570",
 			"revisionTime": "2017-02-23T20:25:54Z"
 		},
 		{
-			"checksumSHA1": "pYoO37aSFZl2uJAXpePBDnGItZc=",
+			"checksumSHA1": "rW0QSLVB0eUCzMdIL7yigeLBQ54=",
 			"path": "github.com/jawher/mow.cli",
 			"revision": "d3ffbc2f98b83e09dc8efd55ecec75eb5fd656ec",
 			"revisionTime": "2017-02-20T22:51:54Z"
 		},
 		{
-			"checksumSHA1": "ynJSWoF6v+3zMnh9R0QmmG6iGV8=",
+			"checksumSHA1": "iwLqOY6Nr1BitBUex4K0Wep3JL8=",
 			"path": "github.com/pkg/errors",
 			"revision": "248dadf4e9068a0b3e79f02ed0a610d935de5302",
 			"revisionTime": "2016-10-29T09:36:37Z"
 		},
 		{
-			"checksumSHA1": "zKKp5SZ3d3ycKe4EKMNT0BqAWBw=",
+			"checksumSHA1": "+oyIJwPyeof36XCkY8awrNfxaNM=",
 			"origin": "github.com/stretchr/testify/vendor/github.com/pmezard/go-difflib/difflib",
 			"path": "github.com/pmezard/go-difflib/difflib",
 			"revision": "976c720a22c8eb4eb6a0b4348ad85ad12491a506",
 			"revisionTime": "2016-09-25T22:06:09Z"
 		},
 		{
-			"checksumSHA1": "KAzbLjI9MzW2tjfcAsK75lVRp6I=",
+			"checksumSHA1": "DIjooF5+DLH5JSOjqnBlfNh9dFU=",
 			"path": "github.com/rcrowley/go-metrics",
 			"revision": "1f30fe9094a513ce4c700b9a54458bbb0c96996c",
 			"revisionTime": "2016-11-28T21:05:44Z"
 		},
 		{
-			"checksumSHA1": "iy7TNc01LWFOGwRwD6v0iDRqtLU=",
+			"checksumSHA1": "oNcjSQf1zGY27b9xipsqb2L4/RY=",
 			"path": "github.com/smartystreets/go-aws-auth",
 			"revision": "2043e6d0bb7e4c18464a7bba562acbe482e3cabd",
 			"revisionTime": "2016-07-22T04:48:03Z"
 		},
 		{
-			"checksumSHA1": "Q2V7Zs3diLmLfmfbiuLpSxETSuY=",
+			"checksumSHA1": "6RKpV2fKzhXl7aay5lelpiPljCY=",
 			"path": "github.com/stretchr/testify/assert",
 			"revision": "976c720a22c8eb4eb6a0b4348ad85ad12491a506",
 			"revisionTime": "2016-09-25T22:06:09Z"
@@ -95,22 +95,12 @@
 			"revisionTime": "2017-02-23T22:05:28Z"
 		},
 		{
-			"checksumSHA1": "hKfNq5lN9Sh3NpNZ3BBih0W+5yM=",
-			"path": "gopkg.in/olivere/elastic.v3",
-			"revision": "060365a7e27c56c938b234824ef7f9a3a7834b99",
-			"revisionTime": "2016-11-26T12:16:23Z"
-		},
-		{
-			"checksumSHA1": "lLdKOn9RPtFoTtPUNq5+sIInAiE=",
-			"path": "gopkg.in/olivere/elastic.v3/backoff",
-			"revision": "060365a7e27c56c938b234824ef7f9a3a7834b99",
-			"revisionTime": "2016-11-26T12:16:23Z"
-		},
-		{
-			"checksumSHA1": "XQg6xG6l15Ke43KolthYYnVDCYo=",
-			"path": "gopkg.in/olivere/elastic.v3/uritemplates",
-			"revision": "060365a7e27c56c938b234824ef7f9a3a7834b99",
-			"revisionTime": "2016-11-26T12:16:23Z"
+			"checksumSHA1": "qntQNbS1rti6r6O9SKw2Kfoc0kA=",
+			"path": "gopkg.in/olivere/elastic.v5",
+			"revision": "3f49414dc29d45ba96fde19ba72bc646077dbffd",
+			"revisionTime": "2017-05-15T15:52:10Z",
+			"version": "v5.0.38",
+			"versionExact": "v5.0.38"
 		}
 	],
 	"rootPath": "github.com/Financial-Times/concept-search-api"
