@@ -24,7 +24,7 @@ test:
   override:
     - mkdir -p $CIRCLE_TEST_REPORTS/golang
     - cd $PROJECT_PATH && govendor test -race -v +local ./... | go-junit-report > $CIRCLE_TEST_REPORTS/golang/junit.xml
-    - cd $PROJECT_PATH && go list ./... | grep -v vendor | awk -F/ '{print $4}' | xargs -I {} go test -v -cover -race +local -coverprofile=$CIRCLE_ARTIFACTS/{}.out ./{}
+    - cd $PROJECT_PATH && go list ./... | grep -v vendor | awk -F/ '{print $4}' | xargs -I {} go test -v -cover -race -coverprofile=$CIRCLE_ARTIFACTS/{}.out ./{}
     - cd $CIRCLE_ARTIFACTS && sed -i '1d' *.out
     - |
       echo "mode: atomic" > $CIRCLE_ARTIFACTS/overall-coverage.result
