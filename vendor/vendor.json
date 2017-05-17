@@ -101,7 +101,15 @@
 			"revisionTime": "2017-05-15T15:52:10Z",
 			"version": "v5.0.38",
 			"versionExact": "v5.0.38"
-		}
+		},
+		{
+            "checksumSHA1": "pCApZfp2CeDnWbNVsyzNO62ZUXA=",
+            "path": "gopkg.in/olivere/elastic.v5/uritemplates",
+            "revision": "3f49414dc29d45ba96fde19ba72bc646077dbffd",
+            "revisionTime": "2017-05-15T15:52:10Z",
+            "version": "v5.0.38",
+            "versionExact": "v5.0.38"
+        }
 	],
 	"rootPath": "github.com/Financial-Times/concept-search-api"
 }
