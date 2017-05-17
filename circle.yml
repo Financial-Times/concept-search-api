@@ -14,8 +14,8 @@ dependencies:
   pre:
     - go get -u github.com/kardianos/govendor
   override:
-    - cd $GO_PROJECT_PATH && govendor sync
-    - cd $GO_PROJECT_PATH && go build -v
+    - cd $PROJECT_PATH && govendor sync
+    - cd $PROJECT_PATH && go build -v
 
 test:
   pre:
@@ -23,8 +23,8 @@ test:
     - go get -u github.com/mattn/goveralls
   override:
     - mkdir -p $CIRCLE_TEST_REPORTS/golang
-    - cd $GO_PROJECT_PATH && govendor test -race -v +local ./... | go-junit-report > $CIRCLE_TEST_REPORTS/golang/junit.xml
-    - cd $GO_PROJECT_PATH && go list ./... | grep -v vendor | awk -F/ '{print $4}' | xargs -I {} govendor test -v -cover -race +local -coverprofile=$CIRCLE_ARTIFACTS/{}.out ./{}
+    - cd $PROJECT_PATH && govendor test -race -v +local ./... | go-junit-report > $CIRCLE_TEST_REPORTS/golang/junit.xml
+    - cd $PROJECT_PATH && go list ./... | grep -v vendor | awk -F/ '{print $4}' | xargs -I {} govendor test -v -cover -race +local -coverprofile=$CIRCLE_ARTIFACTS/{}.out ./{}
     - cd $CIRCLE_ARTIFACTS && sed -i '1d' *.out
     - |
       echo "mode: atomic" > $CIRCLE_ARTIFACTS/overall-coverage.result
