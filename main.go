@@ -63,7 +63,7 @@ func main() {
 
 	app.Action = func() {
 		logStartupConfig(port, esEndpoint, esRegion, esIndex, searchResultLimit)
-		esClient, err := service.NewElasticClient(*esRegion, accessConfig /*accessConfig.accessKey, accessConfig.secretKey, &accessConfig.esEndpoint, &accessConfig.esRegion*/)
+		esClient, err := service.NewElasticClient(*esRegion, accessConfig)
 		if err != nil {
 			log.Fatalf("Creating elasticsearch client failed with error=[%v]", err)
 		}
