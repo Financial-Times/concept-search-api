@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/Financial-Times/concept-search-api/service"
-	log "github.com/Sirupsen/logrus"
 )
 
 type Handler struct {
@@ -18,29 +17,32 @@ func NewHandler(service service.ConceptSearchService) *Handler {
 
 func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	query := req.URL.Query()
-	log.Infof("query: %v", query)
 
 	values := query["q"]
 	conceptTypes := query["type"]
-	var concepts []service.Concept
+	response := make(map[string]interface{})
 	var err error
 
 	if len(conceptTypes) > 0 && conceptTypes[0] != "" && len(values) == 0 {
+		var concepts []service.Concept
 		concepts, err = h.service.FindAllConceptsByType(conceptTypes[0])
+		if err == nil {
+			response["concepts"] = concepts
+		}
 	} else {
 		err = service.ErrInvalidConceptType
 	}
 
+	w.Header().Add("Content-Type", "application/json")
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		response["message"] = err.Error()
 
-		by, e2 := json.Marshal(map[string]string{"error": err.Error()})
-		if e2 != nil {
-			w.Write(by)
+		if err == service.ErrInvalidConceptType {
+			w.WriteHeader(http.StatusBadRequest)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
 		}
-
-		return
 	}
 
-	json.NewEncoder(w).Encode(concepts)
+	json.NewEncoder(w).Encode(response)
 }
