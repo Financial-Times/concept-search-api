@@ -12,12 +12,14 @@ import (
 )
 
 var (
-	ErrNoElasticClient    error = errors.New("No ElasticSearch client available")
-	ErrInvalidConceptType       = errors.New("Invalid concept type")
+	ErrNoElasticClient    error = errors.New("no ElasticSearch client available")
+	ErrInvalidConceptType       = errors.New("invalid concept type")
+	ErrEmptyTextParameter       = errors.New("empty text parameter")
 )
 
 type ConceptSearchService interface {
 	FindAllConceptsByType(conceptType string) ([]Concept, error)
+	SuggestConceptByText(textQuery string) ([]Concept, error)
 }
 
 type esConceptSearchService struct {
@@ -47,26 +49,51 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string) ([]Co
 		return nil, err
 	}
 
-	concepts := Concepts{}
 	result, err := s.esClient.Search(s.index).Type(t).Size(50).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
-	} else {
-		for _, c := range result.Hits.Hits {
-			by, err := (*c.Source).MarshalJSON()
-			if err != nil {
-				log.Warnf("unmarshallable response from ElasticSearch: %v", err)
-				continue
-			}
-
-			esConcept := EsConceptModel{}
-			json.NewDecoder(bytes.NewReader(by)).Decode(&esConcept)
-
-			concept := ConvertToSimpleConcept(esConcept, c.Type)
-			concepts = append(concepts, concept)
-		}
+		return nil, err
 	}
-	sort.Sort(concepts)
 
+	concepts := searchResultToConcepts(result)
+	sort.Sort(concepts)
+	return concepts, nil
+}
+
+func searchResultToConcepts(result *elastic.SearchResult) Concepts {
+	concepts := Concepts{}
+	for _, c := range result.Hits.Hits {
+		by, err := (*c.Source).MarshalJSON()
+		if err != nil {
+			log.Warnf("unmarshallable response from ElasticSearch: %v", err)
+			continue
+		}
+
+		esConcept := EsConceptModel{}
+		json.NewDecoder(bytes.NewReader(by)).Decode(&esConcept)
+
+		concept := ConvertToSimpleConcept(esConcept, c.Type)
+		concepts = append(concepts, concept)
+	}
+	return concepts
+}
+
+func (s *esConceptSearchService) SuggestConceptByText(textQuery string) ([]Concept, error) {
+	if textQuery == "" {
+		return nil, ErrEmptyTextParameter
+	}
+
+	if err := s.checkElasticClient(); err != nil {
+		return nil, err
+	}
+
+	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.indexCompletion").Size(50)
+	result, err := s.esClient.Search(s.index).Suggester(completionSuggester).Do(context.Background())
+	if err != nil {
+		log.Errorf("error: %v", err)
+		return nil, err
+	}
+
+	concepts := searchResultToConcepts(result)
 	return concepts, nil
 }
