@@ -2,13 +2,10 @@ package service
 
 import (
 	"context"
-	//	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
-	//	"sync"
 	"testing"
-	//	"time"
 
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"

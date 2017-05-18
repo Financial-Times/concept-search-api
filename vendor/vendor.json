@@ -71,6 +71,14 @@
 			"revisionTime": "2016-11-28T21:05:44Z"
 		},
 		{
+			"checksumSHA1": "kg+yk3GiS678Sc6Xc+xrmGZRKxw=",
+			"path": "github.com/satori/go.uuid",
+			"revision": "f9ab0dce87d815821e221626b772e3475a0d2749",
+			"revisionTime": "2016-03-24T11:22:44Z",
+			"version": "v1.1.0",
+			"versionExact": "v1.1.0"
+		},
+		{
 			"checksumSHA1": "oNcjSQf1zGY27b9xipsqb2L4/RY=",
 			"path": "github.com/smartystreets/go-aws-auth",
 			"revision": "2043e6d0bb7e4c18464a7bba562acbe482e3cabd",
@@ -103,13 +111,13 @@
 			"versionExact": "v5.0.38"
 		},
 		{
-            "checksumSHA1": "pCApZfp2CeDnWbNVsyzNO62ZUXA=",
-            "path": "gopkg.in/olivere/elastic.v5/uritemplates",
-            "revision": "3f49414dc29d45ba96fde19ba72bc646077dbffd",
-            "revisionTime": "2017-05-15T15:52:10Z",
-            "version": "v5.0.38",
-            "versionExact": "v5.0.38"
-        }
+			"checksumSHA1": "pCApZfp2CeDnWbNVsyzNO62ZUXA=",
+			"path": "gopkg.in/olivere/elastic.v5/uritemplates",
+			"revision": "3f49414dc29d45ba96fde19ba72bc646077dbffd",
+			"revisionTime": "2017-05-15T15:52:10Z",
+			"version": "v5.0.38",
+			"versionExact": "v5.0.38"
+		}
 	],
 	"rootPath": "github.com/Financial-Times/concept-search-api"
 }
