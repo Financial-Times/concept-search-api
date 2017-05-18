@@ -5,3 +5,4 @@ vendor/*/
 concept-search-api
 coverage.html
 coverage.json
+/.project
