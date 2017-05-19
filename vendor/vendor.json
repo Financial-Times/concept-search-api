@@ -107,6 +107,14 @@
 			"versionExact": "v1.1.4"
 		},
 		{
+			"checksumSHA1": "NtqQXT/XuYBUDnOCC0kn4SXilkA=",
+			"path": "github.com/stretchr/testify/suite",
+			"revision": "4d4bfba8f1d1027c4fdbe371823030df51419987",
+            "revisionTime": "2016-09-25T01:54:16Z",
+            "version": "v1.1.4",
+            "versionExact": "v1.1.4"
+		},
+		{
 			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
 			"path": "golang.org/x/net/context",
 			"revision": "10c134ea0df15f7e34d789338c7a2d76cc7a3ab9",

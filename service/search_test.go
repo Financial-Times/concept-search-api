@@ -9,14 +9,15 @@ import (
 
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 	"gopkg.in/olivere/elastic.v5"
 )
 
 const (
-	apiBaseUrl  = "http://test.api.ft.com"
-	indexName   = "concept"
-	conceptType = "genres"
-	ftGenreType = "http://www.ft.com/ontology/Genre"
+	apiBaseUrl    = "http://test.api.ft.com"
+	testIndexName = "test-index"
+	conceptType   = "genres"
+	ftGenreType   = "http://www.ft.com/ontology/Genre"
 )
 
 func TestNoElasticClient(t *testing.T) {
@@ -25,6 +26,33 @@ func TestNoElasticClient(t *testing.T) {
 	_, err := service.FindAllConceptsByType(ftGenreType)
 
 	assert.Equal(t, ErrNoElasticClient, err, "error response")
+}
+
+type EsConceptSearchServiceTestSuite struct {
+	suite.Suite
+	esURL string
+	ec    *elastic.Client
+}
+
+func TestEsConceptSearchServiceSuite(t *testing.T) {
+	suite.Run(t, new(EsConceptSearchServiceTestSuite))
+}
+
+func (s *EsConceptSearchServiceTestSuite) SetupSuite() {
+	s.esURL = getElasticSearchTestURL(s.T())
+
+	ec, err := elastic.NewClient(
+		elastic.SetURL(s.esURL),
+		elastic.SetSniff(false),
+	)
+	assert.NoError(s.T(), err, "expected no error for ES client")
+
+	s.ec = ec
+	_ = writeTestConcepts(s.ec)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TearDownSuite() {
+	s.ec.DeleteIndex(testIndexName).Do(context.Background())
 }
 
 func getElasticSearchTestURL(t *testing.T) string {
@@ -56,7 +84,7 @@ func writeTestConcepts(ec *elastic.Client) []string {
 		}
 
 		ec.Index().
-			Index(indexName).
+			Index(testIndexName).
 			Type(conceptType).
 			Id(u).
 			BodyJson(payload).
@@ -66,49 +94,31 @@ func writeTestConcepts(ec *elastic.Client) []string {
 	}
 
 	// ensure test data is immediately available from the index
-	ec.Refresh(indexName).Do(context.Background())
+	ec.Refresh(testIndexName).Do(context.Background())
 
 	return uuids
 }
 
-func TestFindAllConceptsByType(t *testing.T) {
-	esURL := getElasticSearchTestURL(t)
-
-	ec, err := elastic.NewClient(
-		elastic.SetURL(esURL),
-		elastic.SetSniff(false),
-	)
-	assert.NoError(t, err, "expected no error for ES client")
-
-	_ = writeTestConcepts(ec)
-
-	service := NewEsConceptSearchService(ec, indexName)
+func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByType() {
+	service := NewEsConceptSearchService(s.ec, testIndexName)
 	concepts, err := service.FindAllConceptsByType(ftGenreType)
 
-	assert.NoError(t, err, "expected no error for ES read")
-	assert.True(t, len(concepts) > 1, "there should be at least two genres")
+	assert.NoError(s.T(), err, "expected no error for ES read")
+	assert.True(s.T(), len(concepts) > 1, "there should be at least two genres")
 
 	var prev string
 	for i := range concepts {
 		if i > 0 {
-			assert.Equal(t, -1, strings.Compare(prev, concepts[i].PrefLabel), "concepts should be ordered")
+			assert.Equal(s.T(), -1, strings.Compare(prev, concepts[i].PrefLabel), "concepts should be ordered")
 		}
 
 		prev = concepts[i].PrefLabel
 	}
 }
 
-func TestFindAllConceptsByTypeInvalid(t *testing.T) {
-	esURL := getElasticSearchTestURL(t)
+func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeInvalid() {
+	service := NewEsConceptSearchService(s.ec, testIndexName)
+	_, err := service.FindAllConceptsByType("http://www.ft.com/ontology/Foo")
 
-	ec, err := elastic.NewClient(
-		elastic.SetURL(esURL),
-		elastic.SetSniff(false),
-	)
-	assert.NoError(t, err, "expected no error for ES client")
-
-	service := NewEsConceptSearchService(ec, indexName)
-	_, err = service.FindAllConceptsByType("http://www.ft.com/ontology/Foo")
-
-	assert.Equal(t, ErrInvalidConceptType, err, "expected error for ES read")
+	assert.Equal(s.T(), ErrInvalidConceptType, err, "expected error for ES read")
 }
