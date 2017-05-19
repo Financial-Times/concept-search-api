@@ -111,7 +111,7 @@ func routeRequest(port *string, conceptFinder conceptFinder, handler *resources.
 
 	http.Handle("/", monitoringRouter)
 
-	log.Info("Concept Search API starting up...")
+	log.Infof("Concept Search API listening on port %v...", *port)
 	if err := http.ListenAndServe(":"+*port, nil); err != nil {
 		log.Fatalf("Unable to start: %v", err)
 	}
