@@ -85,6 +85,12 @@
 			"revisionTime": "2016-07-22T04:48:03Z"
 		},
 		{
+			"checksumSHA1": "ofNmmhhJAxYL1Mh09iq+utdfHIM=",
+			"path": "github.com/stretchr/objx",
+			"revision": "1a9d0bb9f541897e62256577b352fdbc1fb4fd94",
+			"revisionTime": "2015-09-28T12:21:52Z"
+		},
+		{
 			"checksumSHA1": "6RKpV2fKzhXl7aay5lelpiPljCY=",
 			"path": "github.com/stretchr/testify/assert",
 			"revision": "976c720a22c8eb4eb6a0b4348ad85ad12491a506",
