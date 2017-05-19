@@ -23,7 +23,7 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	response := make(map[string]interface{})
 	var err error
 
-	if len(conceptTypes) > 0 && conceptTypes[0] != "" && len(values) == 0 {
+	if len(conceptTypes) == 1 && conceptTypes[0] != "" && len(values) == 0 {
 		var concepts []service.Concept
 		concepts, err = h.service.FindAllConceptsByType(conceptTypes[0])
 		if err == nil {
