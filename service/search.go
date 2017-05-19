@@ -1,7 +1,6 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -53,14 +52,12 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string) ([]Co
 		log.Errorf("error: %v", err)
 	} else {
 		for _, c := range result.Hits.Hits {
-			by, err := (*c.Source).MarshalJSON()
+			esConcept := EsConceptModel{}
+			err := json.Unmarshal(*c.Source, &esConcept)
 			if err != nil {
 				log.Warnf("unmarshallable response from ElasticSearch: %v", err)
 				continue
 			}
-
-			esConcept := EsConceptModel{}
-			json.NewDecoder(bytes.NewReader(by)).Decode(&esConcept)
 
 			concept := ConvertToSimpleConcept(esConcept, c.Type)
 			concepts = append(concepts, concept)
@@ -68,5 +65,5 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string) ([]Co
 	}
 	sort.Sort(concepts)
 
-	return concepts, nil
+	return concepts, err
 }
