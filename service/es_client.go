@@ -25,7 +25,23 @@ type AWSSigningTransport struct {
 
 // RoundTrip implementation
 func (a AWSSigningTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	return a.HTTPClient.Do(awsauth.Sign4(req, a.Credentials))
+	return a.HTTPClient.Do(awsauth.Sign4(cloneRequest(req), a.Credentials))
+}
+
+// cloneRequest returns a clone of the provided *http.Request.
+// The clone is a shallow copy of the struct and its Header map.
+// Taken from https://github.com/golang/oauth2/blob/master/transport.go
+// to comply with the RoundTripper stipulation that "RoundTrip should not modify the request".
+func cloneRequest(r *http.Request) *http.Request {
+	// shallow copy of the struct
+	r2 := new(http.Request)
+	*r2 = *r
+	// deep copy of the Header
+	r2.Header = make(http.Header, len(r.Header))
+	for k, s := range r.Header {
+		r2.Header[k] = append([]string(nil), s...)
+	}
+	return r2
 }
 
 func newAmazonClient(config EsAccessConfig) (*elastic.Client, error) {
