@@ -18,9 +18,7 @@ dependencies:
     - cd $PROJECT_PATH && go build -v
   post:
     # We are using 5.1.x at the moment
-    - wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.1.2.tar.gz
-    - tar -xvf elasticsearch-5.1.2.tar.gz
-    - elasticsearch-5.1.2/bin/elasticsearch: {background: true}
+    - docker run -d -p 9200:9200 -p 9300:9300 elasticsearch5.1
     # Make sure that Elasticsearch is up before running tests:
     - sleep 10 && wget --waitretry=5 --retry-connrefused -v http://127.0.0.1:9200/
 
@@ -40,6 +38,8 @@ test:
     - |
       echo "mode: atomic" > $CIRCLE_ARTIFACTS/overall-coverage.result
     - cd $CIRCLE_ARTIFACTS && cat *.out >> overall-coverage.result
+    - docker build --rm=false -t test/csa .
+    - docker run -d -p 9900:8080 test/csa; sleep 3
+    - curl --retry 10 --retry-delay 5 -v http://localhost:9900/__health
   post:
     - goveralls -coverprofile=$CIRCLE_ARTIFACTS/overall-coverage.result -service=circle-ci -repotoken=$COVERALLS_TOKEN
-    
