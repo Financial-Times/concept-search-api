@@ -22,6 +22,14 @@ func (s *dummyConceptSearchService) FindAllConceptsByType(conceptType string) ([
 	return s.concepts, s.err
 }
 
+func (s *dummyConceptSearchService) SuggestConceptByText(textQuery string) ([]service.Concept, error) {
+	return s.concepts, s.err
+}
+
+func (s *dummyConceptSearchService) SuggestConceptByTextAndType(textQuery string, conceptType string) ([]service.Concept, error) {
+	return s.concepts, s.err
+}
+
 func TestConceptSearchByType(t *testing.T) {
 	req, err := http.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre", nil)
 	if err != nil {

@@ -20,6 +20,7 @@ var (
 type ConceptSearchService interface {
 	FindAllConceptsByType(conceptType string) ([]Concept, error)
 	SuggestConceptByText(textQuery string) ([]Concept, error)
+	SuggestConceptByTextAndType(textQuery string, conceptType string) ([]Concept, error)
 }
 
 type esConceptSearchService struct {
@@ -63,19 +64,40 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string) ([]Co
 func searchResultToConcepts(result *elastic.SearchResult) Concepts {
 	concepts := Concepts{}
 	for _, c := range result.Hits.Hits {
-		by, err := (*c.Source).MarshalJSON()
+		concept, err := transformToConcept(c.Source, c.Type)
 		if err != nil {
 			log.Warnf("unmarshallable response from ElasticSearch: %v", err)
 			continue
 		}
+		concepts = append(concepts, concept)
+	}
 
-		esConcept := EsConceptModel{}
-		json.NewDecoder(bytes.NewReader(by)).Decode(&esConcept)
+	return concepts
+}
 
-		concept := ConvertToSimpleConcept(esConcept, c.Type)
+func suggestResultToConcepts(result *elastic.SearchResult) Concepts {
+	concepts := Concepts{}
+	for _, c := range result.Suggest["conceptSuggestion"][0].Options {
+		concept, err := transformToConcept(c.Source, c.Type)
+		if err != nil {
+			log.Warnf("unmarshallable response from ElasticSearch: %v", err)
+			continue
+		}
 		concepts = append(concepts, concept)
 	}
 	return concepts
+}
+
+func transformToConcept(source *json.RawMessage, esType string) (Concept, error) {
+	by, err := (source).MarshalJSON()
+	if err != nil {
+		return Concept{}, nil
+	}
+
+	esConcept := EsConceptModel{}
+	json.NewDecoder(bytes.NewReader(by)).Decode(&esConcept)
+
+	return ConvertToSimpleConcept(esConcept, esType), nil
 }
 
 func (s *esConceptSearchService) SuggestConceptByText(textQuery string) ([]Concept, error) {
@@ -94,6 +116,32 @@ func (s *esConceptSearchService) SuggestConceptByText(textQuery string) ([]Conce
 		return nil, err
 	}
 
-	concepts := searchResultToConcepts(result)
+	concepts := suggestResultToConcepts(result)
+	return concepts, nil
+}
+
+func (s *esConceptSearchService) SuggestConceptByTextAndType(textQuery string, conceptType string) ([]Concept, error) {
+	if textQuery == "" {
+		return nil, ErrEmptyTextParameter
+	}
+
+	t := esType(conceptType)
+	if t == "" {
+		return nil, ErrInvalidConceptType
+	}
+
+	if err := s.checkElasticClient(); err != nil {
+		return nil, err
+	}
+
+	typeContext := elastic.NewSuggesterCategoryQuery("typeContext", t)
+	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.completionByContext").ContextQuery(typeContext).Size(50)
+	result, err := s.esClient.Search(s.index).Suggester(completionSuggester).Do(context.Background())
+	if err != nil {
+		log.Errorf("error: %v", err)
+		return nil, err
+	}
+
+	concepts := suggestResultToConcepts(result)
 	return concepts, nil
 }
