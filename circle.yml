@@ -22,7 +22,7 @@ dependencies:
     # We are using 5.1.x at the moment
     - docker run -d -p 9200:9200 -p 9300:9300 elasticsearch:5.1
     # Make sure that Elasticsearch is up before running tests:
-    - sleep 10 && wget --waitretry=5 --retry-connrefused -v http://127.0.0.1:9200/
+    - sleep 12 && wget --waitretry=5 --retry-connrefused -v http://127.0.0.1:9200/
 
 test:
   pre:

@@ -63,7 +63,7 @@ func main() {
 
 	app.Action = func() {
 		logStartupConfig(port, esEndpoint, esRegion, esIndex, searchResultLimit)
-		esClient, err := service.NewElasticClient(*esRegion, accessConfig /*accessConfig.accessKey, accessConfig.secretKey, &accessConfig.esEndpoint, &accessConfig.esRegion*/)
+		esClient, err := service.NewElasticClient(*esRegion, accessConfig)
 		if err != nil {
 			log.Fatalf("Creating elasticsearch client failed with error=[%v]", err)
 		}
@@ -111,7 +111,7 @@ func routeRequest(port *string, conceptFinder conceptFinder, handler *resources.
 
 	http.Handle("/", monitoringRouter)
 
-	log.Info("Concept Search API starting up...")
+	log.Infof("Concept Search API listening on port %v...", *port)
 	if err := http.ListenAndServe(":"+*port, nil); err != nil {
 		log.Fatalf("Unable to start: %v", err)
 	}

@@ -27,11 +27,11 @@
 			"revisionTime": "2017-02-27T12:44:09Z"
 		},
 		{
-			"checksumSHA1": "Lf3uUXTkKK5DJ37BxQvxO1Fq+K8=",
+			"checksumSHA1": "OFu4xJEIjiI8Suu+j/gabfp+y6Q=",
 			"origin": "github.com/stretchr/testify/vendor/github.com/davecgh/go-spew/spew",
 			"path": "github.com/davecgh/go-spew/spew",
-			"revision": "976c720a22c8eb4eb6a0b4348ad85ad12491a506",
-			"revisionTime": "2016-09-25T22:06:09Z"
+			"revision": "cbd71e7dd4212e1fd8a2401873da279ebab0dca8",
+			"revisionTime": "2016-09-25T01:54:16Z"
 		},
 		{
 			"checksumSHA1": "iIUYZyoanCQQTUaWsu8b+iOSPt4=",
@@ -62,7 +62,7 @@
 			"origin": "github.com/stretchr/testify/vendor/github.com/pmezard/go-difflib/difflib",
 			"path": "github.com/pmezard/go-difflib/difflib",
 			"revision": "976c720a22c8eb4eb6a0b4348ad85ad12491a506",
-			"revisionTime": "2016-09-25T22:06:09Z"
+			"revisionTime": "2016-09-25T01:54:16Z"
 		},
 		{
 			"checksumSHA1": "KAzbLjI9MzW2tjfcAsK75lVRp6I=",
@@ -83,10 +83,42 @@
 			"revisionTime": "2016-07-22T04:48:03Z"
 		},
 		{
+			"checksumSHA1": "K0crHygPTP42i1nLKWphSlvOQJw=",
+			"path": "github.com/stretchr/objx",
+			"revision": "1a9d0bb9f541897e62256577b352fdbc1fb4fd94",
+			"revisionTime": "2015-09-28T12:21:52Z"
+		},
+		{
 			"checksumSHA1": "Q2V7Zs3diLmLfmfbiuLpSxETSuY=",
 			"path": "github.com/stretchr/testify/assert",
 			"revision": "976c720a22c8eb4eb6a0b4348ad85ad12491a506",
-			"revisionTime": "2016-09-25T22:06:09Z"
+			"revisionTime": "2016-09-25T01:54:16Z",
+			"version": "v1.1.4",
+			"versionExact": "v1.1.4"
+		},
+		{
+			"checksumSHA1": "WGwMB6WljaeGKzuNCX5M4E8LADE=",
+			"path": "github.com/stretchr/testify/mock",
+			"revision": "4d4bfba8f1d1027c4fdbe371823030df51419987",
+			"revisionTime": "2016-09-25T01:54:16Z",
+			"version": "v1.1.4",
+			"versionExact": "v1.1.4"
+		},
+		{
+			"checksumSHA1": "2PpOCNkWnshDrXeCVH2kp3VHhIM=",
+			"path": "github.com/stretchr/testify/require",
+			"revision": "4d4bfba8f1d1027c4fdbe371823030df51419987",
+			"revisionTime": "2016-09-25T01:54:16Z",
+			"version": "v1.1.4",
+			"versionExact": "v1.1.4"
+		},
+		{
+			"checksumSHA1": "Dp8TnT65nINpRF/PrxrgmnYLsyA=",
+			"path": "github.com/stretchr/testify/suite",
+			"revision": "4d4bfba8f1d1027c4fdbe371823030df51419987",
+			"revisionTime": "2016-09-25T01:54:16Z",
+			"version": "v1.1.4",
+			"versionExact": "v1.1.4"
 		},
 		{
 			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
