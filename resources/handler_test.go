@@ -33,7 +33,7 @@ func (s *mockConceptSearchService) SuggestConceptByTextAndType(textQuery string,
 	return args.Get(0).([]service.Concept), args.Error(1)
 }
 
-func dummyGenres() []service.Concept {
+func dummyConcepts() []service.Concept {
 	return []service.Concept{
 		service.Concept{
 			Id:          "http://api.ft.com/things/1",
@@ -53,9 +53,9 @@ func dummyGenres() []service.Concept {
 func TestConceptSearchByType(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre", nil)
 
-	genres := dummyGenres()
+	concepts := dummyConcepts()
 	svc := mockConceptSearchService{}
-	svc.On("FindAllConceptsByType", "http://www.ft.com/ontology/Genre").Return(genres, nil)
+	svc.On("FindAllConceptsByType", "http://www.ft.com/ontology/Genre").Return(concepts, nil)
 	endpoint := NewHandler(&svc)
 
 	router := mux.NewRouter()
@@ -74,7 +74,7 @@ func TestConceptSearchByType(t *testing.T) {
 	}
 
 	assert.Len(t, respObject["concepts"], 2, "concepts")
-	assert.True(t, reflect.DeepEqual(respObject["concepts"], genres))
+	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
 }
 
 func TestConceptSearchByTypeClientError(t *testing.T) {
@@ -227,4 +227,58 @@ func TestConceptSeachByTypeAndValue(t *testing.T) {
 
 	assert.Equal(t, service.ErrInvalidConceptType.Error(), respObject["message"], "error message")
 	svc.AssertExpectations(t)
+}
+
+func TestTypeaheadConceptSearchByText(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?q=lucy&mode=autocomplete", nil)
+
+	concepts := dummyConcepts()
+	svc := mockConceptSearchService{}
+	svc.On("SuggestConceptByText", "lucy").Return(concepts, nil)
+	endpoint := NewHandler(&svc)
+
+	router := mux.NewRouter()
+	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
+
+	actual := httptest.NewRecorder()
+	router.ServeHTTP(actual, req)
+
+	assert.Equal(t, http.StatusOK, actual.Code, "http status")
+	assert.Equal(t, "application/json", actual.Header().Get("Content-Type"), "content-type")
+
+	respObject := make(map[string][]service.Concept)
+	err := json.Unmarshal(actual.Body.Bytes(), &respObject)
+	if err != nil {
+		t.Errorf("Unmarshalling request response failed. %v", err)
+	}
+
+	assert.Len(t, respObject["concepts"], 2, "concepts")
+	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
+}
+
+func TestTypeaheadConceptSearchByTextAndType(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&q=lucy&mode=autocomplete", nil)
+
+	concepts := dummyConcepts()
+	svc := mockConceptSearchService{}
+	svc.On("SuggestConceptByTextAndType", "lucy", "http://www.ft.com/product/Brand").Return(concepts, nil)
+	endpoint := NewHandler(&svc)
+
+	router := mux.NewRouter()
+	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
+
+	actual := httptest.NewRecorder()
+	router.ServeHTTP(actual, req)
+
+	assert.Equal(t, http.StatusOK, actual.Code, "http status")
+	assert.Equal(t, "application/json", actual.Header().Get("Content-Type"), "content-type")
+
+	respObject := make(map[string][]service.Concept)
+	err := json.Unmarshal(actual.Body.Bytes(), &respObject)
+	if err != nil {
+		t.Errorf("Unmarshalling request response failed. %v", err)
+	}
+
+	assert.Len(t, respObject["concepts"], 2, "concepts")
+	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
 }
