@@ -19,7 +19,6 @@ var (
 
 type ConceptSearchService interface {
 	FindAllConceptsByType(conceptType string) ([]Concept, error)
-	SuggestConceptByText(textQuery string) ([]Concept, error)
 	SuggestConceptByTextAndType(textQuery string, conceptType string) ([]Concept, error)
 }
 
@@ -98,26 +97,6 @@ func transformToConcept(source *json.RawMessage, esType string) (Concept, error)
 	json.NewDecoder(bytes.NewReader(by)).Decode(&esConcept)
 
 	return ConvertToSimpleConcept(esConcept, esType), nil
-}
-
-func (s *esConceptSearchService) SuggestConceptByText(textQuery string) ([]Concept, error) {
-	if textQuery == "" {
-		return nil, ErrEmptyTextParameter
-	}
-
-	if err := s.checkElasticClient(); err != nil {
-		return nil, err
-	}
-
-	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.indexCompletion").Size(50)
-	result, err := s.esClient.Search(s.index).Suggester(completionSuggester).Do(context.Background())
-	if err != nil {
-		log.Errorf("error: %v", err)
-		return nil, err
-	}
-
-	concepts := suggestResultToConcepts(result)
-	return concepts, nil
 }
 
 func (s *esConceptSearchService) SuggestConceptByTextAndType(textQuery string, conceptType string) ([]Concept, error) {

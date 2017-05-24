@@ -23,11 +23,6 @@ func (s *mockConceptSearchService) FindAllConceptsByType(conceptType string) ([]
 	return args.Get(0).([]service.Concept), args.Error(1)
 }
 
-func (s *mockConceptSearchService) SuggestConceptByText(textQuery string) ([]service.Concept, error) {
-	args := s.Called(textQuery)
-	return args.Get(0).([]service.Concept), args.Error(1)
-}
-
 func (s *mockConceptSearchService) SuggestConceptByTextAndType(textQuery string, conceptType string) ([]service.Concept, error) {
 	args := s.Called(textQuery, conceptType)
 	return args.Get(0).([]service.Concept), args.Error(1)
@@ -232,9 +227,7 @@ func TestConceptSeachByTypeAndValue(t *testing.T) {
 func TestTypeaheadConceptSearchByText(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?q=lucy&mode=autocomplete", nil)
 
-	concepts := dummyConcepts()
 	svc := mockConceptSearchService{}
-	svc.On("SuggestConceptByText", "lucy").Return(concepts, nil)
 	endpoint := NewHandler(&svc)
 
 	router := mux.NewRouter()
@@ -243,17 +236,16 @@ func TestTypeaheadConceptSearchByText(t *testing.T) {
 	actual := httptest.NewRecorder()
 	router.ServeHTTP(actual, req)
 
-	assert.Equal(t, http.StatusOK, actual.Code, "http status")
+	assert.Equal(t, http.StatusBadRequest, actual.Code, "http status")
 	assert.Equal(t, "application/json", actual.Header().Get("Content-Type"), "content-type")
 
-	respObject := make(map[string][]service.Concept)
+	respObject := make(map[string]string)
 	err := json.Unmarshal(actual.Body.Bytes(), &respObject)
 	if err != nil {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Len(t, respObject["concepts"], 2, "concepts")
-	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
+	assert.Equal(t, service.ErrInvalidConceptType.Error(), respObject["message"], "error message")
 }
 
 func TestTypeaheadConceptSearchByTextAndType(t *testing.T) {
