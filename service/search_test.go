@@ -11,6 +11,7 @@ import (
 
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/olivere/elastic.v5"
 )
@@ -54,17 +55,19 @@ func (s *EsConceptSearchServiceTestSuite) SetupSuite() {
 		elastic.SetURL(s.esURL),
 		elastic.SetSniff(false),
 	)
-	assert.NoError(s.T(), err, "expected no error for ES client")
+	require.NoError(s.T(), err, "expected no error for ES client")
 
 	s.ec = ec
 
 	err = createIndex(s.ec, mappingURL)
-	assert.NoError(s.T(), err, "expected no error in creating index")
+	require.NoError(s.T(), err, "expected no error in creating index")
 
-	_ = writeTestConcepts(s.ec, esGenreType, ftGenreType, 4)
-	_ = writeTestConcepts(s.ec, esBrandType, ftBrandType, 4)
-	_ = writeTestConcepts(s.ec, esPeopleType, ftPeopleType, 4)
-
+	writeTestConcepts(s.ec, esGenreType, ftGenreType, 4)
+	require.NoError(s.T(), err, "expected no error in adding genres")
+	err = writeTestConcepts(s.ec, esBrandType, ftBrandType, 4)
+	require.NoError(s.T(), err, "expected no error in adding brands")
+	err = writeTestConcepts(s.ec, esPeopleType, ftPeopleType, 4)
+	require.NoError(s.T(), err, "expected no error in adding people")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TearDownSuite() {
@@ -101,9 +104,7 @@ func createIndex(ec *elastic.Client, mappingURL string) error {
 	return nil
 }
 
-func writeTestConcepts(ec *elastic.Client, esConceptType string, ftConceptType string, amount int) []string {
-	uuids := []string{}
-
+func writeTestConcepts(ec *elastic.Client, esConceptType string, ftConceptType string, amount int) error {
 	for i := 0; i < amount; i++ {
 		uuid := uuid.NewV4().String()
 
@@ -116,20 +117,23 @@ func writeTestConcepts(ec *elastic.Client, esConceptType string, ftConceptType s
 			Aliases:    []string{},
 		}
 
-		ec.Index().
+		_, err := ec.Index().
 			Index(testIndexName).
 			Type(esConceptType).
 			Id(uuid).
 			BodyJson(payload).
 			Do(context.Background())
-
-		uuids = append(uuids, uuid)
+		if err != nil {
+			return err
+		}
 	}
 
 	// ensure test data is immediately available from the index
-	ec.Refresh(testIndexName).Do(context.Background())
-
-	return uuids
+	_, err := ec.Refresh(testIndexName).Do(context.Background())
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByType() {
