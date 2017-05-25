@@ -95,7 +95,9 @@ func createIndex(ec *elastic.Client, mappingURL string) error {
 		return err
 	}
 	_, err = ec.CreateIndex(testIndexName).Body(string(body)).Do(context.Background())
-	fmt.Println(err)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
