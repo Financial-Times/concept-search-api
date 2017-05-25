@@ -144,7 +144,7 @@ func TestConceptSeachByTypeNoType(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, service.ErrInvalidConceptType.Error(), respObject["message"], "error message")
+	assert.Equal(t, "invalid or missing parameters for concept search", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
 
@@ -152,6 +152,7 @@ func TestConceptSeachByTypeBlankType(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=", nil)
 
 	svc := mockConceptSearchService{}
+	svc.On("FindAllConceptsByType", "").Return([]service.Concept{}, service.ErrInvalidConceptType)
 	endpoint := NewHandler(&svc)
 
 	router := mux.NewRouter()
@@ -195,7 +196,7 @@ func TestConceptSeachByTypeMultipleTypes(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, service.ErrInvalidConceptType.Error(), respObject["message"], "error message")
+	assert.Equal(t, "specified multiple type query parameters in the URL", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
 
@@ -220,7 +221,7 @@ func TestConceptSeachByTypeAndValue(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, service.ErrInvalidConceptType.Error(), respObject["message"], "error message")
+	assert.Equal(t, "invalid or missing parameters for concept search", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
 
@@ -245,7 +246,7 @@ func TestTypeaheadConceptSearchByText(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, service.ErrInvalidConceptType.Error(), respObject["message"], "error message")
+	assert.Equal(t, "invalid or missing parameters for autocomplete concept search", respObject["message"], "error message")
 }
 
 func TestTypeaheadConceptSearchByTextAndType(t *testing.T) {
@@ -273,4 +274,54 @@ func TestTypeaheadConceptSearchByTextAndType(t *testing.T) {
 
 	assert.Len(t, respObject["concepts"], 2, "concepts")
 	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
+}
+
+func TestTypeaheadConceptSearchByTextAndMultipleType(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=lucy&mode=autocomplete", nil)
+
+	svc := mockConceptSearchService{}
+	endpoint := NewHandler(&svc)
+
+	router := mux.NewRouter()
+	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
+
+	actual := httptest.NewRecorder()
+	router.ServeHTTP(actual, req)
+
+	assert.Equal(t, http.StatusBadRequest, actual.Code, "http status")
+	assert.Equal(t, "application/json", actual.Header().Get("Content-Type"), "content-type")
+
+	respObject := make(map[string]string)
+	err := json.Unmarshal(actual.Body.Bytes(), &respObject)
+	if err != nil {
+		t.Errorf("Unmarshalling request response failed. %v", err)
+	}
+
+	assert.Equal(t, "specified multiple type query parameters in the URL", respObject["message"], "error message")
+	svc.AssertExpectations(t)
+}
+
+func TestTypeaheadConceptSearchByMultipleTextAndType(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&q=pippo&q=lucy&mode=autocomplete", nil)
+
+	svc := mockConceptSearchService{}
+	endpoint := NewHandler(&svc)
+
+	router := mux.NewRouter()
+	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
+
+	actual := httptest.NewRecorder()
+	router.ServeHTTP(actual, req)
+
+	assert.Equal(t, http.StatusBadRequest, actual.Code, "http status")
+	assert.Equal(t, "application/json", actual.Header().Get("Content-Type"), "content-type")
+
+	respObject := make(map[string]string)
+	err := json.Unmarshal(actual.Body.Bytes(), &respObject)
+	if err != nil {
+		t.Errorf("Unmarshalling request response failed. %v", err)
+	}
+
+	assert.Equal(t, "specified multiple q query parameters in the URL", respObject["message"], "error message")
+	svc.AssertExpectations(t)
 }
