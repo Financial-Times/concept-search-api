@@ -142,7 +142,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByType() {
 		if i > 0 {
 			assert.Equal(s.T(), -1, strings.Compare(prev, concepts[i].PrefLabel), "concepts should be ordered")
 		}
-		assert.Equal(s.T(), ftGenreType, concepts[i].ConceptType, "Results should be of type FT Brand")
+		assert.Equal(s.T(), ftGenreType, concepts[i].ConceptType, "Results should be of type FT Genre")
 		prev = concepts[i].PrefLabel
 	}
 }
