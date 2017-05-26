@@ -52,16 +52,12 @@
 			"revisionTime": "2016-09-25T01:54:16Z"
 		},
 		{
-			"checksumSHA1": "rk/QFSfmdW9TPNUWU6p5FUBIL3U=",
-			"path": "github.com/gorilla/context",
-			"revision": "aed02d124ae4a0e94fea4541c8effd05bf0c8296",
-			"revisionTime": "2016-05-25T20:33:19Z"
-		},
-		{
-			"checksumSHA1": "cNq/Fd4f293e22341FG9VHGSZ+4=",
-			"path": "github.com/gorilla/mux",
-			"revision": "999ef73f5d50979cf6d12afed1726325b63f9570",
-			"revisionTime": "2017-02-23T20:25:54Z"
+			"checksumSHA1": "SMzlemr5ZYGgJTTbl+R9MAVm4ns=",
+			"path": "github.com/husobee/vestigo",
+			"revision": "9dfd4d2384383143ae77e2dd52fe0cdb71470b98",
+			"revisionTime": "2016-01-28T13:45:06Z",
+			"version": "v1.0.1",
+			"versionExact": "v1.0.1"
 		},
 		{
 			"checksumSHA1": "rW0QSLVB0eUCzMdIL7yigeLBQ54=",
