@@ -1,7 +1,6 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -90,11 +89,14 @@ func suggestResultToConcepts(result *elastic.SearchResult) Concepts {
 func transformToConcept(source *json.RawMessage, esType string) (Concept, error) {
 	by, err := (source).MarshalJSON()
 	if err != nil {
-		return Concept{}, nil
+		return Concept{}, err
 	}
 
 	esConcept := EsConceptModel{}
-	json.NewDecoder(bytes.NewReader(by)).Decode(&esConcept)
+	err = json.Unmarshal(by, &esConcept)
+	if err != nil {
+		return Concept{}, err
+	}
 
 	return ConvertToSimpleConcept(esConcept, esType), nil
 }
