@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -17,15 +16,15 @@ import (
 )
 
 const (
-	apiBaseURL    = "http://test.api.ft.com"
-	testIndexName = "test-index"
-	esGenreType   = "genres"
-	esBrandType   = "brands"
-	esPeopleType  = "people"
-	ftGenreType   = "http://www.ft.com/ontology/Genre"
-	ftBrandType   = "http://www.ft.com/ontology/product/Brand"
-	ftPeopleType  = "http://www.ft.com/ontology/person/Person"
-	mappingURL    = "https://raw.githubusercontent.com/Financial-Times/concept-rw-elasticsearch/Add_mappings_for_brand_people_typeahed/mapping.json"
+	apiBaseURL      = "http://test.api.ft.com"
+	testIndexName   = "test-index"
+	esGenreType     = "genres"
+	esBrandType     = "brands"
+	esPeopleType    = "people"
+	ftGenreType     = "http://www.ft.com/ontology/Genre"
+	ftBrandType     = "http://www.ft.com/ontology/product/Brand"
+	ftPeopleType    = "http://www.ft.com/ontology/person/Person"
+	testMappingFile = "test/mapping.json"
 )
 
 func TestNoElasticClient(t *testing.T) {
@@ -59,7 +58,7 @@ func (s *EsConceptSearchServiceTestSuite) SetupSuite() {
 
 	s.ec = ec
 
-	err = createIndex(s.ec, mappingURL)
+	err = createIndex(s.ec, testMappingFile)
 	require.NoError(s.T(), err, "expected no error in creating index")
 
 	writeTestConcepts(s.ec, esGenreType, ftGenreType, 4)
@@ -87,17 +86,12 @@ func getElasticSearchTestURL(t *testing.T) string {
 	return esURL
 }
 
-func createIndex(ec *elastic.Client, mappingURL string) error {
-	resp, err := http.Get(mappingURL)
+func createIndex(ec *elastic.Client, mappingFile string) error {
+	mapping, err := ioutil.ReadFile(mappingFile)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	_, err = ec.CreateIndex(testIndexName).Body(string(body)).Do(context.Background())
+	_, err = ec.CreateIndex(testIndexName).Body(string(mapping)).Do(context.Background())
 	if err != nil {
 		return err
 	}

@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	ErrNoElasticClient    error = errors.New("no ElasticSearch client available")
-	ErrInvalidConceptType       = errors.New("invalid concept type")
-	ErrEmptyTextParameter       = errors.New("empty text parameter")
+	ErrNoElasticClient    = errors.New("no ElasticSearch client available")
+	ErrInvalidConceptType = errors.New("invalid concept type")
+	ErrEmptyTextParameter = errors.New("empty text parameter")
 )
 
 type ConceptSearchService interface {
