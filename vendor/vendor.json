@@ -52,12 +52,10 @@
 			"revisionTime": "2016-09-25T01:54:16Z"
 		},
 		{
-			"checksumSHA1": "SMzlemr5ZYGgJTTbl+R9MAVm4ns=",
+			"checksumSHA1": "u6iTu7n+362sfMROLFN7unXGCw4=",
 			"path": "github.com/husobee/vestigo",
-			"revision": "9dfd4d2384383143ae77e2dd52fe0cdb71470b98",
-			"revisionTime": "2016-01-28T13:45:06Z",
-			"version": "v1.0.1",
-			"versionExact": "v1.0.1"
+			"revision": "bc768a4cce10c89efc128b1d7b5b1eb66f7f0fab",
+			"revisionTime": "2017-05-25T14:09:23Z"
 		},
 		{
 			"checksumSHA1": "rW0QSLVB0eUCzMdIL7yigeLBQ54=",

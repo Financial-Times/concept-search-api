@@ -100,7 +100,7 @@ func logStartupConfig(port, esEndpoint, esRegion, esIndex *string, searchResultL
 func routeRequest(port *string, conceptFinder conceptFinder, handler *resources.Handler, healthService *esHealthService) {
 	servicesRouter := vestigo.NewRouter()
 	servicesRouter.Post("/concept/search", conceptFinder.FindConcept)
-	servicesRouter.Get("/concepts", handler.ConceptSearch)
+	servicesRouter.Get("/concepts", handler.ConceptSearch, &resources.AcceptInterceptor{})
 
 	var monitoringRouter http.Handler = servicesRouter
 	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
