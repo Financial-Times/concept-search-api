@@ -15,6 +15,24 @@
 			"revisionTime": "2016-08-03T10:40:03Z"
 		},
 		{
+			"checksumSHA1": "lQfsRf7gWYQDNoI3IOZuwNGUwRo=",
+			"path": "github.com/Financial-Times/service-status-go/buildinfo",
+			"revision": "3f5199736a3d7ae52394c63aac36834786825e21",
+			"revisionTime": "2016-03-23T11:15:42Z"
+		},
+		{
+			"checksumSHA1": "7QAsTdXi/6nTkDhqKy54YIc69d4=",
+			"path": "github.com/Financial-Times/service-status-go/gtg",
+			"revision": "3f5199736a3d7ae52394c63aac36834786825e21",
+			"revisionTime": "2016-03-23T11:15:42Z"
+		},
+		{
+			"checksumSHA1": "YxgjuCI4TJyfQujUeQk3V+gypzo=",
+			"path": "github.com/Financial-Times/service-status-go/httphandlers",
+			"revision": "3f5199736a3d7ae52394c63aac36834786825e21",
+			"revisionTime": "2016-03-23T11:15:42Z"
+		},
+		{
 			"checksumSHA1": "I/p6g4/ZiQhlPLRa9fFjzwuevwc=",
 			"path": "github.com/Financial-Times/transactionid-utils-go",
 			"revision": "a2b1163e7c2f6c77add74ca2c7fc7422323a2d78",
@@ -110,9 +128,9 @@
 			"checksumSHA1": "oqDuQM/+8vHvSt7f8w7WJfmHqws=",
 			"path": "github.com/stretchr/testify/require",
 			"revision": "4d4bfba8f1d1027c4fdbe371823030df51419987",
-            "revisionTime": "2016-09-25T01:54:16Z",
-            "version": "v1.1.4",
-            "versionExact": "v1.1.4"
+			"revisionTime": "2016-09-25T01:54:16Z",
+			"version": "v1.1.4",
+			"versionExact": "v1.1.4"
 		},
 		{
 			"checksumSHA1": "NtqQXT/XuYBUDnOCC0kn4SXilkA=",
