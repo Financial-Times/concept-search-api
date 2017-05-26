@@ -11,7 +11,7 @@ import (
 	"log"
 
 	"github.com/stretchr/testify/assert"
-	elastic "gopkg.in/olivere/elastic.v3"
+	elastic "gopkg.in/olivere/elastic.v5"
 )
 
 func TestConceptFinder(t *testing.T) {

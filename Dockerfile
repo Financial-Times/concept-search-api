@@ -1,8 +1,8 @@
-FROM alpine:3.4
+FROM alpine:3.5
 
 COPY . /concept-search-api/
 
-RUN apk --update add bash git bzr go ca-certificates \
+RUN apk --update add bash git bzr go libc-dev ca-certificates \
   && export GOPATH=/gopath \
   && REPO_PATH="github.com/Financial-Times/concept-search-api" \
   && mkdir -p $GOPATH/src/${REPO_PATH} \

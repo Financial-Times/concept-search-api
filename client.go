@@ -1,12 +1,13 @@
 package main
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"time"
 
 	awsauth "github.com/smartystreets/go-aws-auth"
-	"gopkg.in/olivere/elastic.v3"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 type esClient interface {
@@ -58,9 +59,9 @@ func newElasticClient(accessKey string, secretKey string, endpoint *string, regi
 }
 
 func (ec esClientWrapper) query(indexName string, query elastic.Query, resultLimit int) (*elastic.SearchResult, error) {
-	return ec.elasticClient.Search().Index(indexName).Query(query).Size(resultLimit).Do()
+	return ec.elasticClient.Search().Index(indexName).Query(query).Size(resultLimit).Do(context.Background())
 }
 
 func (ec esClientWrapper) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
-	return ec.elasticClient.ClusterHealth().Do()
+	return ec.elasticClient.ClusterHealth().Do(context.Background())
 }

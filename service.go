@@ -8,7 +8,7 @@ import (
 
 	"github.com/Financial-Times/transactionid-utils-go"
 	log "github.com/Sirupsen/logrus"
-	"gopkg.in/olivere/elastic.v3"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 type conceptFinder interface {
@@ -19,13 +19,6 @@ type esConceptFinder struct {
 	client            esClient
 	indexName         string
 	searchResultLimit int
-}
-
-type esAccessConfig struct {
-	accessKey  string
-	secretKey  string
-	esEndpoint string
-	esRegion   string
 }
 
 func (service esConceptFinder) FindConcept(writer http.ResponseWriter, request *http.Request) {
