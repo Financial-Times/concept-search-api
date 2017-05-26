@@ -52,6 +52,12 @@
 			"revisionTime": "2016-09-25T01:54:16Z"
 		},
 		{
+			"checksumSHA1": "KJqRW8jfPoHquMAd6FI7x92JxFs=",
+			"path": "github.com/hashicorp/go-version",
+			"revision": "03c5bf6be031b6dd45afec16b1cf94fc8938bc77",
+			"revisionTime": "2017-02-02T08:07:59Z"
+		},
+		{
 			"checksumSHA1": "u6iTu7n+362sfMROLFN7unXGCw4=",
 			"path": "github.com/husobee/vestigo",
 			"revision": "bc768a4cce10c89efc128b1d7b5b1eb66f7f0fab",
