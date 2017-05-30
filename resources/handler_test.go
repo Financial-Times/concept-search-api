@@ -3,6 +3,7 @@ package resources
 import (
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -56,14 +57,16 @@ func TestConceptSearchByType(t *testing.T) {
 	router := mux.NewRouter()
 	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
 
-	actual := httptest.NewRecorder()
-	router.ServeHTTP(actual, req)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
 
-	assert.Equal(t, http.StatusOK, actual.Code, "http status")
-	assert.Equal(t, "application/json", actual.Header().Get("Content-Type"), "content-type")
+	assert.Equal(t, http.StatusOK, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
 	respObject := make(map[string][]service.Concept)
-	err := json.Unmarshal(actual.Body.Bytes(), &respObject)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
 	if err != nil {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
@@ -82,14 +85,16 @@ func TestConceptSearchByTypeClientError(t *testing.T) {
 	router := mux.NewRouter()
 	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
 
-	actual := httptest.NewRecorder()
-	router.ServeHTTP(actual, req)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
 
-	assert.Equal(t, http.StatusBadRequest, actual.Code, "http status")
-	assert.Equal(t, "application/json", actual.Header().Get("Content-Type"), "content-type")
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
 	respObject := make(map[string]string)
-	err := json.Unmarshal(actual.Body.Bytes(), &respObject)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
 	if err != nil {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
@@ -108,14 +113,16 @@ func TestConceptSearchByTypeServerError(t *testing.T) {
 	router := mux.NewRouter()
 	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
 
-	actual := httptest.NewRecorder()
-	router.ServeHTTP(actual, req)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
 
-	assert.Equal(t, http.StatusInternalServerError, actual.Code, "http status")
-	assert.Equal(t, "application/json", actual.Header().Get("Content-Type"), "content-type")
+	assert.Equal(t, http.StatusInternalServerError, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
 	respObject := make(map[string]string)
-	err := json.Unmarshal(actual.Body.Bytes(), &respObject)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
 	if err != nil {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
@@ -132,14 +139,16 @@ func TestConceptSeachByTypeNoType(t *testing.T) {
 	router := mux.NewRouter()
 	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
 
-	actual := httptest.NewRecorder()
-	router.ServeHTTP(actual, req)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
 
-	assert.Equal(t, http.StatusBadRequest, actual.Code, "http status")
-	assert.Equal(t, "application/json", actual.Header().Get("Content-Type"), "content-type")
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
 	respObject := make(map[string]string)
-	err := json.Unmarshal(actual.Body.Bytes(), &respObject)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
 	if err != nil {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
@@ -158,14 +167,16 @@ func TestConceptSeachByTypeBlankType(t *testing.T) {
 	router := mux.NewRouter()
 	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
 
-	actual := httptest.NewRecorder()
-	router.ServeHTTP(actual, req)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
 
-	assert.Equal(t, http.StatusBadRequest, actual.Code, "http status")
-	assert.Equal(t, "application/json", actual.Header().Get("Content-Type"), "content-type")
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
 	respObject := make(map[string]string)
-	err := json.Unmarshal(actual.Body.Bytes(), &respObject)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
 	if err != nil {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
@@ -184,14 +195,16 @@ func TestConceptSeachByTypeMultipleTypes(t *testing.T) {
 	router := mux.NewRouter()
 	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
 
-	actual := httptest.NewRecorder()
-	router.ServeHTTP(actual, req)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
 
-	assert.Equal(t, http.StatusBadRequest, actual.Code, "http status")
-	assert.Equal(t, "application/json", actual.Header().Get("Content-Type"), "content-type")
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
 	respObject := make(map[string]string)
-	err := json.Unmarshal(actual.Body.Bytes(), &respObject)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
 	if err != nil {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
@@ -209,14 +222,16 @@ func TestConceptSeachByTypeAndValue(t *testing.T) {
 	router := mux.NewRouter()
 	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
 
-	actual := httptest.NewRecorder()
-	router.ServeHTTP(actual, req)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
 
-	assert.Equal(t, http.StatusBadRequest, actual.Code, "http status")
-	assert.Equal(t, "application/json", actual.Header().Get("Content-Type"), "content-type")
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
 	respObject := make(map[string]string)
-	err := json.Unmarshal(actual.Body.Bytes(), &respObject)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
 	if err != nil {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
@@ -234,14 +249,16 @@ func TestTypeaheadConceptSearchByText(t *testing.T) {
 	router := mux.NewRouter()
 	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
 
-	actual := httptest.NewRecorder()
-	router.ServeHTTP(actual, req)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
 
-	assert.Equal(t, http.StatusBadRequest, actual.Code, "http status")
-	assert.Equal(t, "application/json", actual.Header().Get("Content-Type"), "content-type")
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
 	respObject := make(map[string]string)
-	err := json.Unmarshal(actual.Body.Bytes(), &respObject)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
 	if err != nil {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
@@ -260,14 +277,16 @@ func TestTypeaheadConceptSearchByTextAndType(t *testing.T) {
 	router := mux.NewRouter()
 	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
 
-	actual := httptest.NewRecorder()
-	router.ServeHTTP(actual, req)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
 
-	assert.Equal(t, http.StatusOK, actual.Code, "http status")
-	assert.Equal(t, "application/json", actual.Header().Get("Content-Type"), "content-type")
+	assert.Equal(t, http.StatusOK, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
 	respObject := make(map[string][]service.Concept)
-	err := json.Unmarshal(actual.Body.Bytes(), &respObject)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
 	if err != nil {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
@@ -285,14 +304,16 @@ func TestTypeaheadConceptSearchByTextAndMultipleType(t *testing.T) {
 	router := mux.NewRouter()
 	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
 
-	actual := httptest.NewRecorder()
-	router.ServeHTTP(actual, req)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
 
-	assert.Equal(t, http.StatusBadRequest, actual.Code, "http status")
-	assert.Equal(t, "application/json", actual.Header().Get("Content-Type"), "content-type")
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
 	respObject := make(map[string]string)
-	err := json.Unmarshal(actual.Body.Bytes(), &respObject)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
 	if err != nil {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
@@ -310,14 +331,16 @@ func TestTypeaheadConceptSearchByMultipleTextAndType(t *testing.T) {
 	router := mux.NewRouter()
 	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
 
-	actual := httptest.NewRecorder()
-	router.ServeHTTP(actual, req)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
 
-	assert.Equal(t, http.StatusBadRequest, actual.Code, "http status")
-	assert.Equal(t, "application/json", actual.Header().Get("Content-Type"), "content-type")
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
 	respObject := make(map[string]string)
-	err := json.Unmarshal(actual.Body.Bytes(), &respObject)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
 	if err != nil {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}

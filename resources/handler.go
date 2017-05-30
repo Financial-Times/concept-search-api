@@ -93,7 +93,7 @@ func checkAndHandleParamErrors(w http.ResponseWriter, paramErrs ...error) bool {
 func writeHTTPError(w http.ResponseWriter, status int, err error) {
 	response := make(map[string]interface{})
 	response["message"] = err.Error()
-	w.WriteHeader(status)
 	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(response)
 }
