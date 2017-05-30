@@ -87,13 +87,8 @@ func suggestResultToConcepts(result *elastic.SearchResult) Concepts {
 }
 
 func transformToConcept(source *json.RawMessage, esType string) (Concept, error) {
-	by, err := (source).MarshalJSON()
-	if err != nil {
-		return Concept{}, err
-	}
-
 	esConcept := EsConceptModel{}
-	err = json.Unmarshal(by, &esConcept)
+	err := json.Unmarshal(*source, &esConcept)
 	if err != nil {
 		return Concept{}, err
 	}
