@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/satori/go.uuid"
@@ -21,7 +22,7 @@ const (
 )
 
 func TestNoElasticClient(t *testing.T) {
-	service := esConceptSearchService{nil, "test"}
+	service := esConceptSearchService{nil, "test", &sync.RWMutex{}}
 
 	_, err := service.FindAllConceptsByType(ftGenreType)
 
@@ -100,7 +101,9 @@ func writeTestConcepts(ec *elastic.Client) []string {
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByType() {
-	service := NewEsConceptSearchService(s.ec, testIndexName)
+	service := NewEsConceptSearchService(testIndexName)
+	service.SetElasticClient(s.ec)
+
 	concepts, err := service.FindAllConceptsByType(ftGenreType)
 
 	assert.NoError(s.T(), err, "expected no error for ES read")
@@ -117,7 +120,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByType() {
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeInvalid() {
-	service := NewEsConceptSearchService(s.ec, testIndexName)
+	service := NewEsConceptSearchService(testIndexName)
 	_, err := service.FindAllConceptsByType("http://www.ft.com/ontology/Foo")
 
 	assert.Equal(s.T(), ErrInvalidConceptType, err, "expected error for ES read")

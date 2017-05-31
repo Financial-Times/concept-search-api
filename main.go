@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/Financial-Times/concept-search-api/resources"
 	"github.com/Financial-Times/concept-search-api/service"
@@ -38,11 +39,11 @@ func main() {
 		Desc:   "AES endpoint",
 		EnvVar: "ELASTICSEARCH_ENDPOINT",
 	})
-	esRegion := app.String(cli.StringOpt{
-		Name:   "elasticsearch-region",
-		Value:  "local",
-		Desc:   "AES region",
-		EnvVar: "ELASTICSEARCH_REGION",
+	esAuth := app.String(cli.StringOpt{
+		Name:   "auth",
+		Value:  "aws",
+		Desc:   "Authentication method for ES cluster (aws or none)",
+		EnvVar: "AUTH",
 	})
 	esIndex := app.String(cli.StringOpt{
 		Name:   "elasticsearch-index",
@@ -57,26 +58,23 @@ func main() {
 		EnvVar: "RESULT_LIMIT",
 	})
 
-	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)
-
 	log.SetLevel(log.InfoLevel)
 
 	app.Action = func() {
-		logStartupConfig(port, esEndpoint, esRegion, esIndex, searchResultLimit)
-		esClient, err := service.NewElasticClient(*esRegion, accessConfig)
-		if err != nil {
-			log.Fatalf("Creating elasticsearch client failed with error=[%v]", err)
-		}
-		client := &esClientWrapper{elasticClient: esClient}
-		conceptFinder := esConceptFinder{
-			client:            client,
-			indexName:         *esIndex,
-			searchResultLimit: *searchResultLimit,
-		}
-		search := service.NewEsConceptSearchService(esClient, *esIndex)
-		handler := resources.NewHandler(search)
+		logStartupConfig(port, esEndpoint, esAuth, esIndex, searchResultLimit)
 
-		routeRequest(port, conceptFinder, handler, newEsHealthService(client))
+		search := service.NewEsConceptSearchService(*esIndex)
+		conceptFinder := newConceptFinder(*esIndex, *searchResultLimit)
+		healthcheck := newEsHealthService()
+
+		if *esAuth == "aws" {
+			go service.AWSClientSetup(*accessKey, *secretKey, *esEndpoint, time.Minute, search, conceptFinder, healthcheck)
+		} else {
+			go service.SimpleClientSetup(*esEndpoint, time.Minute, search, conceptFinder, healthcheck)
+		}
+
+		handler := resources.NewHandler(search)
+		routeRequest(port, conceptFinder, handler, healthcheck)
 	}
 
 	log.SetLevel(log.InfoLevel)
@@ -87,11 +85,11 @@ func main() {
 	}
 }
 
-func logStartupConfig(port, esEndpoint, esRegion, esIndex *string, searchResultLimit *int) {
+func logStartupConfig(port, esEndpoint, esAuth, esIndex *string, searchResultLimit *int) {
 	log.Info("Concept Search API uses the following configurations:")
 	log.Infof("port: %v", *port)
 	log.Infof("elasticsearch-endpoint: %v", *esEndpoint)
-	log.Infof("elasticsearch-region: %v", *esRegion)
+	log.Infof("elasticsearch-auth: %v", *esAuth)
 	log.Infof("elasticsearch-index: %v", *esIndex)
 	log.Infof("search-result-limit: %v", *searchResultLimit)
 }
