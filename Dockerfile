@@ -22,6 +22,7 @@ RUN apk --update add bash git bzr go libc-dev ca-certificates \
   && go get -t ./... \
   && go build -ldflags="${LDFLAGS}" \
   && mv concept-search-api /concept-search-api \
+  && mv ./api/api.yml / \
   && apk del go git bzr \
   && rm -rf $GOPATH /var/cache/apk/*
 

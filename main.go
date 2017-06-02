@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 
+	api "github.com/Financial-Times/api-endpoint"
 	"github.com/Financial-Times/concept-search-api/resources"
 	"github.com/Financial-Times/concept-search-api/service"
 	"github.com/Financial-Times/go-fthealth/v1a"
@@ -51,6 +52,12 @@ func main() {
 		Desc:   "Elasticsearch index",
 		EnvVar: "ELASTICSEARCH_INDEX",
 	})
+	apiYml := app.String(cli.StringOpt{
+		Name:   "api-yml",
+		Value:  "./api.yml",
+		Desc:   "Location of the API Swagger YML file.",
+		EnvVar: "API_YML",
+	})
 	searchResultLimit := app.Int(cli.IntOpt{
 		Name:   "search-result-limit",
 		Value:  50,
@@ -77,7 +84,7 @@ func main() {
 		search := service.NewEsConceptSearchService(esClient, *esIndex)
 		handler := resources.NewHandler(search)
 
-		routeRequest(port, conceptFinder, handler, newEsHealthService(client))
+		routeRequest(port, apiYml, conceptFinder, handler, newEsHealthService(client))
 	}
 
 	log.SetLevel(log.InfoLevel)
@@ -97,10 +104,19 @@ func logStartupConfig(port, esEndpoint, esRegion, esIndex *string, searchResultL
 	log.Infof("search-result-limit: %v", *searchResultLimit)
 }
 
-func routeRequest(port *string, conceptFinder conceptFinder, handler *resources.Handler, healthService *esHealthService) {
+func routeRequest(port *string, apiYml *string, conceptFinder conceptFinder, handler *resources.Handler, healthService *esHealthService) {
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/concept/search", conceptFinder.FindConcept).Methods("POST")
 	servicesRouter.HandleFunc("/concepts", handler.ConceptSearch).Methods("GET")
+
+	if apiYml != nil {
+		apiEndpoint, err := api.NewAPIEndpointForFile(*apiYml)
+		if err != nil {
+			log.WithError(err).WithField("file", apiYml).Warn("Failed to serve the API Endpoint for this service. Please validate the Swagger YML and the file location.")
+		} else {
+			servicesRouter.HandleFunc(api.DefaultPath, apiEndpoint.ServeHTTP).Methods("GET")
+		}
+	}
 
 	var monitoringRouter http.Handler = servicesRouter
 	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
