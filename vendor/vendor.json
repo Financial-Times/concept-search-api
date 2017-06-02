@@ -23,6 +23,24 @@
 			"revisionTime": "2016-08-03T10:40:03Z"
 		},
 		{
+			"checksumSHA1": "fqpohN7Qp2qj7TLMbUxh/cK4oH0=",
+			"path": "github.com/Financial-Times/service-status-go/buildinfo",
+			"revision": "3f5199736a3d7ae52394c63aac36834786825e21",
+			"revisionTime": "2016-03-23T11:15:42Z"
+		},
+		{
+			"checksumSHA1": "2rGNLXdRC3qr5n5ll7BpYt8HCK8=",
+			"path": "github.com/Financial-Times/service-status-go/gtg",
+			"revision": "3f5199736a3d7ae52394c63aac36834786825e21",
+			"revisionTime": "2016-03-23T11:15:42Z"
+		},
+		{
+			"checksumSHA1": "973POGyMCoyaKQuIYX2f7EKFwlQ=",
+			"path": "github.com/Financial-Times/service-status-go/httphandlers",
+			"revision": "3f5199736a3d7ae52394c63aac36834786825e21",
+			"revisionTime": "2016-03-23T11:15:42Z"
+		},
+		{
 			"checksumSHA1": "ddLGmQTKn5BeEsKYFOGAH33sEfg=",
 			"path": "github.com/Financial-Times/transactionid-utils-go",
 			"revision": "a2b1163e7c2f6c77add74ca2c7fc7422323a2d78",
@@ -52,6 +70,12 @@
 			"path": "github.com/gorilla/mux",
 			"revision": "999ef73f5d50979cf6d12afed1726325b63f9570",
 			"revisionTime": "2017-02-23T20:25:54Z"
+		},
+		{
+			"checksumSHA1": "tUGxc7rfX0cmhOOUDhMuAZ9rWsA=",
+			"path": "github.com/hashicorp/go-version",
+			"revision": "03c5bf6be031b6dd45afec16b1cf94fc8938bc77",
+			"revisionTime": "2017-02-02T08:07:59Z"
 		},
 		{
 			"checksumSHA1": "pYoO37aSFZl2uJAXpePBDnGItZc=",
