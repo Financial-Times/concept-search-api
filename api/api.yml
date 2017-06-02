@@ -79,15 +79,35 @@ paths:
          responses:
             200:
                description: Returns concepts based on the provided query parameters.
-               examples:
-                  application/json:
+               schema:
+                  type: object
+                  properties:
+                     results:
+                        type: array
+                        items:
+                           type: object
+                           properties:
+                              id:
+                                 type: string
+                              apiUrl:
+                                 type: string
+                              prefLabel:
+                                 type: string
+                              types:
+                                 type:
+                                    - array
+                                    - "null"
+                                 items:
+                                    type: string
+                              directType:
+                                 type: string
+                  required:
+                     - results
+                  example:
                      results:
                         -  id: http://api.ft.com/things/61d707b5-6fab-3541-b017-49b72de80772
                            apiUrl: http://api.ft.com/things/61d707b5-6fab-3541-b017-49b72de80772
                            prefLabel: Analysis
-                           types:
-                              - http://www.ft.com/ontology/Genre
-                           directType: http://www.ft.com/ontology/Genre
             500:
                description: Failed to search for concepts, usually caused by issues with ES.
             400:
