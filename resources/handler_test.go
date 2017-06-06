@@ -246,8 +246,8 @@ func TestTypeaheadConceptSearchByText(t *testing.T) {
 	svc := mockConceptSearchService{}
 	endpoint := NewHandler(&svc)
 
-	router := mux.NewRouter()
-	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
+	router := vestigo.NewRouter()
+	router.Get("/concepts", endpoint.ConceptSearch)
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -274,8 +274,8 @@ func TestTypeaheadConceptSearchByTextAndType(t *testing.T) {
 	svc.On("SuggestConceptByTextAndType", "lucy", "http://www.ft.com/product/Brand").Return(concepts, nil)
 	endpoint := NewHandler(&svc)
 
-	router := mux.NewRouter()
-	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
+	router := vestigo.NewRouter()
+	router.Get("/concepts", endpoint.ConceptSearch)
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -301,8 +301,8 @@ func TestTypeaheadConceptSearchByTextAndMultipleType(t *testing.T) {
 	svc := mockConceptSearchService{}
 	endpoint := NewHandler(&svc)
 
-	router := mux.NewRouter()
-	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
+	router := vestigo.NewRouter()
+	router.Get("/concepts", endpoint.ConceptSearch)
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -328,8 +328,8 @@ func TestTypeaheadConceptSearchByMultipleTextAndType(t *testing.T) {
 	svc := mockConceptSearchService{}
 	endpoint := NewHandler(&svc)
 
-	router := mux.NewRouter()
-	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
+	router := vestigo.NewRouter()
+	router.Get("/concepts", endpoint.ConceptSearch)
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
