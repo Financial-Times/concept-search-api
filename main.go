@@ -41,7 +41,7 @@ func main() {
 	})
 	esAuth := app.String(cli.StringOpt{
 		Name:   "auth",
-		Value:  "aws",
+		Value:  "none",
 		Desc:   "Authentication method for ES cluster (aws or none)",
 		EnvVar: "AUTH",
 	})
