@@ -153,7 +153,7 @@ func TestConceptSeachByTypeNoType(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, "invalid or missing parameters for concept search", respObject["message"], "error message")
+	assert.Equal(t, "invalid or missing parameters for concept search (no type)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
 
@@ -236,7 +236,7 @@ func TestConceptSeachByTypeAndValue(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, "invalid or missing parameters for concept search", respObject["message"], "error message")
+	assert.Equal(t, "invalid or missing parameters for concept search (no mode)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
 
@@ -263,7 +263,7 @@ func TestTypeaheadConceptSearchByText(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, "invalid or missing parameters for autocomplete concept search", respObject["message"], "error message")
+	assert.Equal(t, "invalid or missing parameters for autocomplete concept search (require type and q)", respObject["message"], "error message")
 }
 
 func TestTypeaheadConceptSearchByTextAndType(t *testing.T) {
