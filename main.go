@@ -6,7 +6,7 @@ import (
 
 	"github.com/Financial-Times/concept-search-api/resources"
 	"github.com/Financial-Times/concept-search-api/service"
-	"github.com/Financial-Times/go-fthealth/v1a"
+	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
 	"github.com/Financial-Times/http-handlers-go/httphandlers"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
@@ -105,7 +105,16 @@ func routeRequest(port *string, conceptFinder conceptFinder, handler *resources.
 	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
 	monitoringRouter = httphandlers.HTTPMetricsHandler(metrics.DefaultRegistry, monitoringRouter)
 
-	http.HandleFunc("/__health", v1a.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", healthService.connectivityHealthyCheck(), healthService.clusterIsHealthyCheck()))
+	healthCheck := fthealth.HealthCheck{
+		SystemCode:  "up-csa",
+		Name:        "Amazon Elasticsearch Service Healthcheck",
+		Description: "Checks for AES",
+		Checks: []fthealth.Check{
+			healthService.connectivityHealthyCheck(),
+			healthService.clusterIsHealthyCheck(),
+		},
+	}
+	http.HandleFunc("/__health", fthealth.Handler(healthCheck))
 	http.HandleFunc("/__health-details", healthService.healthDetails)
 	http.HandleFunc("/__gtg", healthService.goodToGo)
 

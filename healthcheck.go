@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Financial-Times/go-fthealth/v1a"
+	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
 	log "github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
 	"gopkg.in/olivere/elastic.v5"
@@ -27,8 +27,8 @@ func newEsHealthService(client esClient) *esHealthService {
 	return &esHealthService{client: client}
 }
 
-func (service *esHealthService) clusterIsHealthyCheck() v1a.Check {
-	return v1a.Check{
+func (service *esHealthService) clusterIsHealthyCheck() fthealth.Check {
+	return fthealth.Check{
 		BusinessImpact:   "Full or partial degradation in serving requests from Elasticsearch",
 		Name:             "Check Elasticsearch cluster health",
 		PanicGuide:       deweyUrl,
@@ -52,8 +52,8 @@ func (service *esHealthService) healthChecker() (string, error) {
 	return "Couldn't check the cluster's health.", errors.New("Couldn't establish connectivity.")
 }
 
-func (service *esHealthService) connectivityHealthyCheck() v1a.Check {
-	return v1a.Check{
+func (service *esHealthService) connectivityHealthyCheck() fthealth.Check {
+	return fthealth.Check{
 		BusinessImpact:   "Could not connect to Elasticsearch",
 		Name:             "Check connectivity to the Elasticsearch cluster",
 		PanicGuide:       deweyUrl,
