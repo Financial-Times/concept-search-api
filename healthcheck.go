@@ -11,6 +11,10 @@ import (
 	"gopkg.in/olivere/elastic.v5"
 )
 
+const (
+	deweyUrl = "https://dewey.ft.com/up-csa.html"
+)
+
 type esHealthService struct {
 	client esClient
 }
@@ -27,7 +31,7 @@ func (service *esHealthService) clusterIsHealthyCheck() v1a.Check {
 	return v1a.Check{
 		BusinessImpact:   "Full or partial degradation in serving requests from Elasticsearch",
 		Name:             "Check Elasticsearch cluster health",
-		PanicGuide:       "todo",
+		PanicGuide:       deweyUrl,
 		Severity:         1,
 		TechnicalSummary: "Elasticsearch cluster is not healthy. Details on /__health-details",
 		Checker:          service.healthChecker,
@@ -52,7 +56,7 @@ func (service *esHealthService) connectivityHealthyCheck() v1a.Check {
 	return v1a.Check{
 		BusinessImpact:   "Could not connect to Elasticsearch",
 		Name:             "Check connectivity to the Elasticsearch cluster",
-		PanicGuide:       "todo",
+		PanicGuide:       deweyUrl,
 		Severity:         1,
 		TechnicalSummary: "Connection to Elasticsearch cluster could not be created. Please check your AWS credentials.",
 		Checker:          service.connectivityChecker,
