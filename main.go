@@ -57,6 +57,12 @@ func main() {
 		Desc:   "The maximum number of search results returned",
 		EnvVar: "RESULT_LIMIT",
 	})
+	autoCompleteResultLimit := app.Int(cli.IntOpt{
+		Name:   "autocomplete-result-limit",
+		Value:  10,
+		Desc:   "The maximum number of autocomplete results returned",
+		EnvVar: "AUTOCOMPLETE_LIMIT",
+	})
 
 	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)
 
@@ -74,7 +80,7 @@ func main() {
 			indexName:         *esIndex,
 			searchResultLimit: *searchResultLimit,
 		}
-		search := service.NewEsConceptSearchService(esClient, *esIndex)
+		search := service.NewEsConceptSearchService(esClient, *esIndex, *searchResultLimit, *autoCompleteResultLimit)
 		handler := resources.NewHandler(search)
 
 		routeRequest(port, conceptFinder, handler, newEsHealthService(client))

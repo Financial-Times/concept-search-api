@@ -22,12 +22,14 @@ type ConceptSearchService interface {
 }
 
 type esConceptSearchService struct {
-	esClient *elastic.Client
-	index    string
+	esClient               *elastic.Client
+	index                  string
+	maxSearchResults       int
+	maxAutoCompleteResults int
 }
 
-func NewEsConceptSearchService(client *elastic.Client, index string) *esConceptSearchService {
-	return &esConceptSearchService{client, index}
+func NewEsConceptSearchService(client *elastic.Client, index string, maxSearchResults int, maxAutoCompleteResults int) *esConceptSearchService {
+	return &esConceptSearchService{client, index, maxSearchResults, maxAutoCompleteResults}
 }
 
 func (s *esConceptSearchService) checkElasticClient() error {
@@ -48,7 +50,7 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string) ([]Co
 		return nil, err
 	}
 
-	result, err := s.esClient.Search(s.index).Type(t).Size(50).Do(context.Background())
+	result, err := s.esClient.Search(s.index).Type(t).Size(s.maxSearchResults).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err
@@ -111,7 +113,7 @@ func (s *esConceptSearchService) SuggestConceptByTextAndType(textQuery string, c
 	}
 
 	typeContext := elastic.NewSuggesterCategoryQuery("typeContext", t)
-	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.completionByContext").ContextQuery(typeContext).Size(50)
+	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.completionByContext").ContextQuery(typeContext).Size(s.maxAutoCompleteResults)
 	result, err := s.esClient.Search(s.index).Suggester(completionSuggester).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
