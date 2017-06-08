@@ -8,8 +8,9 @@ import (
 	"github.com/Financial-Times/concept-search-api/service"
 	"github.com/Financial-Times/go-fthealth/v1a"
 	"github.com/Financial-Times/http-handlers-go/httphandlers"
+	status "github.com/Financial-Times/service-status-go/httphandlers"
 	log "github.com/Sirupsen/logrus"
-	"github.com/gorilla/mux"
+	"github.com/husobee/vestigo"
 	"github.com/jawher/mow.cli"
 	"github.com/rcrowley/go-metrics"
 )
@@ -97,9 +98,9 @@ func logStartupConfig(port, esEndpoint, esRegion, esIndex *string, searchResultL
 }
 
 func routeRequest(port *string, conceptFinder conceptFinder, handler *resources.Handler, healthService *esHealthService) {
-	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/concept/search", conceptFinder.FindConcept).Methods("POST")
-	servicesRouter.HandleFunc("/concepts", handler.ConceptSearch).Methods("GET")
+	servicesRouter := vestigo.NewRouter()
+	servicesRouter.Post("/concept/search", conceptFinder.FindConcept)
+	servicesRouter.Get("/concepts", handler.ConceptSearch, &resources.AcceptInterceptor{})
 
 	var monitoringRouter http.Handler = servicesRouter
 	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
@@ -107,7 +108,8 @@ func routeRequest(port *string, conceptFinder conceptFinder, handler *resources.
 
 	http.HandleFunc("/__health", v1a.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", healthService.connectivityHealthyCheck(), healthService.clusterIsHealthyCheck()))
 	http.HandleFunc("/__health-details", healthService.healthDetails)
-	http.HandleFunc("/__gtg", healthService.goodToGo)
+	http.HandleFunc(status.GTGPath, healthService.goodToGo)
+	http.HandleFunc(status.BuildInfoPath, status.BuildInfoHandler)
 
 	http.Handle("/", monitoringRouter)
 
