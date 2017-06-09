@@ -41,7 +41,7 @@ paths:
                examples:
                   application/json:
                      concepts:
-                        -  id: http://api.ft.com/things/61d707b5-6fab-3541-b017-49b72de80772
+                        -  id: http://www.ft.com/thing/61d707b5-6fab-3541-b017-49b72de80772
                            apiUrl: http://api.ft.com/things/61d707b5-6fab-3541-b017-49b72de80772
                            prefLabel: Analysis
                            type: http://www.ft.com/ontology/Genre
