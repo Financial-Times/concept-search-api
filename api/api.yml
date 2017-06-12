@@ -37,6 +37,7 @@ paths:
                description: The query text to use to find concepts.
                type: string
                required: false
+               x-example: analysis
             -  name: mode
                in: query
                description: The mode for the search request. Currently only supports a value of autocomplete, which will provide fast typeahead search functionality.
