@@ -4,6 +4,8 @@ info:
    title: Concept Search API
    description: A microservice that provides endpoints to query for UPP V2 Concepts
    version: 0.0.1
+   license:
+      name: MIT
    contact:
       name: Universal Publishing
       email: universal.publishing@ft.com

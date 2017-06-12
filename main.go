@@ -11,7 +11,7 @@ import (
 	"github.com/Financial-Times/http-handlers-go/httphandlers"
 	status "github.com/Financial-Times/service-status-go/httphandlers"
 	log "github.com/Sirupsen/logrus"
-	"github.com/gorilla/mux"
+	"github.com/husobee/vestigo"
 	"github.com/jawher/mow.cli"
 	"github.com/rcrowley/go-metrics"
 )
@@ -48,7 +48,7 @@ func main() {
 	})
 	esIndex := app.String(cli.StringOpt{
 		Name:   "elasticsearch-index",
-		Value:  "concept",
+		Value:  "concepts",
 		Desc:   "Elasticsearch index",
 		EnvVar: "ELASTICSEARCH_INDEX",
 	})
@@ -105,16 +105,16 @@ func logStartupConfig(port, esEndpoint, esRegion, esIndex *string, searchResultL
 }
 
 func routeRequest(port *string, apiYml *string, conceptFinder conceptFinder, handler *resources.Handler, healthService *esHealthService) {
-	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/concept/search", conceptFinder.FindConcept).Methods("POST")
-	servicesRouter.HandleFunc("/concepts", handler.ConceptSearch).Methods("GET")
+	servicesRouter := vestigo.NewRouter()
+	servicesRouter.Post("/concept/search", conceptFinder.FindConcept)
+	servicesRouter.Get("/concepts", handler.ConceptSearch, &resources.AcceptInterceptor{})
 
 	if apiYml != nil {
 		apiEndpoint, err := api.NewAPIEndpointForFile(*apiYml)
 		if err != nil {
 			log.WithError(err).WithField("file", apiYml).Warn("Failed to serve the API Endpoint for this service. Please validate the Swagger YML and the file location.")
 		} else {
-			servicesRouter.HandleFunc(api.DefaultPath, apiEndpoint.ServeHTTP).Methods("GET")
+			servicesRouter.Get(api.DefaultPath, apiEndpoint.ServeHTTP)
 		}
 	}
 

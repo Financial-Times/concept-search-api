@@ -3,12 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "1TT/hwB7xawt/X6xSxgfz4R/ync=",
+			"checksumSHA1": "1Oc3/DfHZZ2pX+OA0cR6lCfxGSY=",
 			"path": "github.com/Financial-Times/api-endpoint",
-			"revision": "5546a1489d034a5a013ff414a0df6f1b670c4a95",
-			"revisionTime": "2017-06-02T14:44:00Z",
-			"version": "0.0.1",
-			"versionExact": "0.0.1"
+			"revision": "d9f326a291cc08362746471b16b3533472b1d4da",
+			"revisionTime": "2017-06-12T09:59:45Z",
+			"version": "0.0.2",
+			"versionExact": "0.0.2"
 		},
 		{
 			"checksumSHA1": "FUhczVSvt/VQAlWfzATo1YLez2E=",
@@ -60,22 +60,16 @@
 			"revisionTime": "2016-09-25T01:54:16Z"
 		},
 		{
-			"checksumSHA1": "iIUYZyoanCQQTUaWsu8b+iOSPt4=",
-			"path": "github.com/gorilla/context",
-			"revision": "aed02d124ae4a0e94fea4541c8effd05bf0c8296",
-			"revisionTime": "2016-05-25T20:33:19Z"
-		},
-		{
-			"checksumSHA1": "Ek5SW7pswB7YzX1Dr0bTSFCNOtc=",
-			"path": "github.com/gorilla/mux",
-			"revision": "999ef73f5d50979cf6d12afed1726325b63f9570",
-			"revisionTime": "2017-02-23T20:25:54Z"
-		},
-		{
 			"checksumSHA1": "tUGxc7rfX0cmhOOUDhMuAZ9rWsA=",
 			"path": "github.com/hashicorp/go-version",
 			"revision": "03c5bf6be031b6dd45afec16b1cf94fc8938bc77",
 			"revisionTime": "2017-02-02T08:07:59Z"
+		},
+		{
+			"checksumSHA1": "l3yXJ4cwdt3SNkiBktj8C1sBwrY=",
+			"path": "github.com/husobee/vestigo",
+			"revision": "bc768a4cce10c89efc128b1d7b5b1eb66f7f0fab",
+			"revisionTime": "2017-05-25T14:09:23Z"
 		},
 		{
 			"checksumSHA1": "pYoO37aSFZl2uJAXpePBDnGItZc=",
@@ -103,12 +97,10 @@
 			"revisionTime": "2016-11-28T21:05:44Z"
 		},
 		{
-			"checksumSHA1": "cKNzpMpci3WUAzXpe+tVnBv2cjE=",
+			"checksumSHA1": "zmC8/3V4ls53DJlNTKDZwPSC/dA=",
 			"path": "github.com/satori/go.uuid",
-			"revision": "f9ab0dce87d815821e221626b772e3475a0d2749",
-			"revisionTime": "2016-03-24T11:22:44Z",
-			"version": "v1.1.0",
-			"versionExact": "v1.1.0"
+			"revision": "5bf94b69c6b68ee1b541973bb8e1144db23a194b",
+			"revisionTime": "2017-03-21T23:07:31Z"
 		},
 		{
 			"checksumSHA1": "iy7TNc01LWFOGwRwD6v0iDRqtLU=",

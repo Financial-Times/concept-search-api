@@ -2,6 +2,8 @@ package resources
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/Financial-Times/concept-search-api/service"
@@ -16,33 +18,82 @@ func NewHandler(service service.ConceptSearchService) *Handler {
 }
 
 func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
-	query := req.URL.Query()
-
-	values := query["q"]
-	conceptTypes := query["type"]
 	response := make(map[string]interface{})
-	var err error
+	var searchErr error
+	var concepts []service.Concept
 
-	if len(conceptTypes) == 1 && conceptTypes[0] != "" && len(values) == 0 {
-		var concepts []service.Concept
-		concepts, err = h.service.FindAllConceptsByType(conceptTypes[0])
-		if err == nil {
-			response["concepts"] = concepts
+	q, foundQ, qErr := getSingleValueQueryParameter(req, "q")
+	conceptType, foundConceptType, conceptTypeErr := getSingleValueQueryParameter(req, "type")
+
+	if isAutocompleteRequest(req) {
+		if foundQ && foundConceptType {
+			ok := checkAndHandleParamErrors(w, qErr, conceptTypeErr)
+			if !ok {
+				return
+			}
+			concepts, searchErr = h.service.SuggestConceptByTextAndType(q, conceptType)
+		} else {
+			writeHTTPError(w, http.StatusBadRequest, errors.New("invalid or missing parameters for autocomplete concept search"))
+			return
 		}
 	} else {
-		err = service.ErrInvalidConceptType
-	}
-
-	w.Header().Add("Content-Type", "application/json")
-	if err != nil {
-		response["message"] = err.Error()
-
-		if err == service.ErrInvalidConceptType {
-			w.WriteHeader(http.StatusBadRequest)
+		if foundConceptType && !foundQ {
+			ok := checkAndHandleParamErrors(w, conceptTypeErr)
+			if !ok {
+				return
+			}
+			concepts, searchErr = h.service.FindAllConceptsByType(conceptType)
 		} else {
-			w.WriteHeader(http.StatusInternalServerError)
+			writeHTTPError(w, http.StatusBadRequest, errors.New("invalid or missing parameters for concept search"))
+			return
 		}
 	}
 
+	if searchErr != nil {
+		if searchErr == service.ErrInvalidConceptType || searchErr == service.ErrEmptyTextParameter {
+			writeHTTPError(w, http.StatusBadRequest, searchErr)
+		} else {
+			writeHTTPError(w, http.StatusInternalServerError, searchErr)
+		}
+		return
+	}
+
+	response["concepts"] = concepts
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func isAutocompleteRequest(req *http.Request) bool {
+	mode, foundMode, _ := getSingleValueQueryParameter(req, "mode")
+	return foundMode && mode == "autocomplete"
+}
+
+func getSingleValueQueryParameter(req *http.Request, param string) (string, bool, error) {
+	query := req.URL.Query()
+	values, found := query[param]
+	if len(values) > 1 {
+		return "", found, fmt.Errorf("specified multiple %v query parameters in the URL", param)
+	}
+	if len(values) < 1 {
+		return "", found, nil
+	}
+	return values[0], found, nil
+}
+
+func checkAndHandleParamErrors(w http.ResponseWriter, paramErrs ...error) bool {
+	for _, err := range paramErrs {
+		if err != nil {
+			writeHTTPError(w, http.StatusBadRequest, err)
+			return false
+		}
+	}
+	return true
+}
+
+func writeHTTPError(w http.ResponseWriter, status int, err error) {
+	response := make(map[string]interface{})
+	response["message"] = err.Error()
+	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(response)
 }
