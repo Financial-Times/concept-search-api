@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
@@ -10,23 +11,31 @@ import (
 
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/olivere/elastic.v5"
 )
 
 const (
-	apiBaseUrl    = "http://test.api.ft.com"
-	testIndexName = "test-index"
-	conceptType   = "genres"
-	ftGenreType   = "http://www.ft.com/ontology/Genre"
+	apiBaseURL      = "http://test.api.ft.com"
+	testIndexName   = "test-index"
+	esGenreType     = "genres"
+	esBrandType     = "brands"
+	esPeopleType    = "people"
+	ftGenreType     = "http://www.ft.com/ontology/Genre"
+	ftBrandType     = "http://www.ft.com/ontology/product/Brand"
+	ftPeopleType    = "http://www.ft.com/ontology/person/Person"
+	testMappingFile = "test/mapping.json"
 )
 
 func TestNoElasticClient(t *testing.T) {
 	service := esConceptSearchService{nil, "test", &sync.RWMutex{}}
 
 	_, err := service.FindAllConceptsByType(ftGenreType)
+	assert.EqualError(t, err, ErrNoElasticClient.Error(), "error response")
 
-	assert.Equal(t, ErrNoElasticClient, err, "error response")
+	_, err = service.SuggestConceptByTextAndType("lucy", ftBrandType)
+	assert.EqualError(t, err, ErrNoElasticClient.Error(), "error response")
 }
 
 type EsConceptSearchServiceTestSuite struct {
@@ -46,10 +55,19 @@ func (s *EsConceptSearchServiceTestSuite) SetupSuite() {
 		elastic.SetURL(s.esURL),
 		elastic.SetSniff(false),
 	)
-	assert.NoError(s.T(), err, "expected no error for ES client")
+	require.NoError(s.T(), err, "expected no error for ES client")
 
 	s.ec = ec
-	_ = writeTestConcepts(s.ec)
+
+	err = createIndex(s.ec, testMappingFile)
+	require.NoError(s.T(), err, "expected no error in creating index")
+
+	writeTestConcepts(s.ec, esGenreType, ftGenreType, 4)
+	require.NoError(s.T(), err, "expected no error in adding genres")
+	err = writeTestConcepts(s.ec, esBrandType, ftBrandType, 4)
+	require.NoError(s.T(), err, "expected no error in adding brands")
+	err = writeTestConcepts(s.ec, esPeopleType, ftPeopleType, 4)
+	require.NoError(s.T(), err, "expected no error in adding people")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TearDownSuite() {
@@ -69,35 +87,48 @@ func getElasticSearchTestURL(t *testing.T) string {
 	return esURL
 }
 
-func writeTestConcepts(ec *elastic.Client) []string {
-	uuids := []string{}
+func createIndex(ec *elastic.Client, mappingFile string) error {
+	mapping, err := ioutil.ReadFile(mappingFile)
+	if err != nil {
+		return err
+	}
+	_, err = ec.CreateIndex(testIndexName).Body(string(mapping)).Do(context.Background())
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
-	for i := 0; i < 2; i++ {
-		u := uuid.NewV4().String()
+func writeTestConcepts(ec *elastic.Client, esConceptType string, ftConceptType string, amount int) error {
+	for i := 0; i < amount; i++ {
+		uuid := uuid.NewV4().String()
 
 		payload := EsConceptModel{
-			Id:         u,
-			ApiUrl:     fmt.Sprintf("%s/%ss/%s", apiBaseUrl, conceptType, u),
-			PrefLabel:  fmt.Sprintf("Test concept %s %s", conceptType, u),
-			Types:      []string{ftGenreType},
-			DirectType: ftGenreType,
+			Id:         uuid,
+			ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseURL, esConceptType, uuid),
+			PrefLabel:  fmt.Sprintf("Test concept %s %s", esConceptType, uuid),
+			Types:      []string{ftConceptType},
+			DirectType: ftConceptType,
 			Aliases:    []string{},
 		}
 
-		ec.Index().
+		_, err := ec.Index().
 			Index(testIndexName).
-			Type(conceptType).
-			Id(u).
+			Type(esConceptType).
+			Id(uuid).
 			BodyJson(payload).
 			Do(context.Background())
-
-		uuids = append(uuids, u)
+		if err != nil {
+			return err
+		}
 	}
 
 	// ensure test data is immediately available from the index
-	ec.Refresh(testIndexName).Do(context.Background())
-
-	return uuids
+	_, err := ec.Refresh(testIndexName).Do(context.Background())
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByType() {
@@ -107,14 +138,14 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByType() {
 	concepts, err := service.FindAllConceptsByType(ftGenreType)
 
 	assert.NoError(s.T(), err, "expected no error for ES read")
-	assert.True(s.T(), len(concepts) > 1, "there should be at least two genres")
+	assert.Len(s.T(), concepts, 4, "there should be four genres")
 
 	var prev string
 	for i := range concepts {
 		if i > 0 {
 			assert.Equal(s.T(), -1, strings.Compare(prev, concepts[i].PrefLabel), "concepts should be ordered")
 		}
-
+		assert.Equal(s.T(), ftGenreType, concepts[i].ConceptType, "Results should be of type FT Genre")
 		prev = concepts[i].PrefLabel
 	}
 }
@@ -124,4 +155,20 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeInvalid() {
 	_, err := service.FindAllConceptsByType("http://www.ft.com/ontology/Foo")
 
 	assert.Equal(s.T(), ErrInvalidConceptType, err, "expected error for ES read")
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypeInvalidTextParameter() {
+	service := NewEsConceptSearchService(s.ec, testIndexName)
+	_, err := service.SuggestConceptByTextAndType("", ftBrandType)
+	assert.EqualError(s.T(), err, ErrEmptyTextParameter.Error(), "error response")
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndType() {
+	service := NewEsConceptSearchService(s.ec, testIndexName)
+	concepts, err := service.SuggestConceptByTextAndType("test", ftBrandType)
+	assert.NoError(s.T(), err, "expected no error for ES read")
+	assert.Len(s.T(), concepts, 4, "there should be four results")
+	for _, c := range concepts {
+		assert.Equal(s.T(), ftBrandType, c.ConceptType, "Results should be of type FT Brand")
+	}
 }

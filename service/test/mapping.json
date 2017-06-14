@@ -1,0 +1,346 @@
+{
+  "mappings" : {
+    "organisations": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "apiUrl": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "directType": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "types": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "prefLabel": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        },
+        "aliases": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    },
+    "people": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "apiUrl": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "directType": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "types": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "prefLabel": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            },
+            "indexCompletion": {
+              "type": "completion"
+            },
+            "completionByContext": {
+              "type": "completion",
+              "contexts": [{
+                "name" : "typeContext",
+                "type" : "category",
+                "path" : "_type"
+              }]
+            }
+          }
+        },
+        "aliases": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    },
+    "locations": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "apiUrl": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "directType": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "types": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "prefLabel": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        },
+        "aliases": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    },
+    "sections": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "apiUrl": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "directType": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "types": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "prefLabel": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        },
+        "aliases": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    },
+    "subjects": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "apiUrl": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "directType": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "types": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "prefLabel": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        },
+        "aliases": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    },
+    "brands": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "apiUrl": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "directType": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "types": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "prefLabel": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            },
+            "indexCompletion": {
+              "type": "completion"
+            },
+            "completionByContext": {
+              "type": "completion",
+              "contexts": [{
+                "name" : "typeContext",
+                "type" : "category",
+                "path" : "_type"
+              }]
+            }
+          }
+        },
+        "aliases": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    },
+    "genres": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "apiUrl": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "directType": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "types": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "prefLabel": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        },
+        "aliases": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    },
+    "topics": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "apiUrl": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "directType": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "types": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "prefLabel": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        },
+        "aliases": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    }
+  }
+}
