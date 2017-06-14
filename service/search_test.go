@@ -152,6 +152,8 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByType() {
 
 func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeInvalid() {
 	service := NewEsConceptSearchService(testIndexName)
+	service.SetElasticClient(s.ec)
+
 	_, err := service.FindAllConceptsByType("http://www.ft.com/ontology/Foo")
 
 	assert.Equal(s.T(), ErrInvalidConceptType, err, "expected error for ES read")
@@ -159,12 +161,16 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeInvalid() {
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypeInvalidTextParameter() {
 	service := NewEsConceptSearchService(testIndexName)
+	service.SetElasticClient(s.ec)
+
 	_, err := service.SuggestConceptByTextAndType("", ftBrandType)
 	assert.EqualError(s.T(), err, ErrEmptyTextParameter.Error(), "error response")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndType() {
 	service := NewEsConceptSearchService(testIndexName)
+	service.SetElasticClient(s.ec)
+
 	concepts, err := service.SuggestConceptByTextAndType("test", ftBrandType)
 	assert.NoError(s.T(), err, "expected no error for ES read")
 	assert.Len(s.T(), concepts, 4, "there should be four results")
