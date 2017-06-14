@@ -158,13 +158,13 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeInvalid() {
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypeInvalidTextParameter() {
-	service := NewEsConceptSearchService(s.ec, testIndexName)
+	service := NewEsConceptSearchService(testIndexName)
 	_, err := service.SuggestConceptByTextAndType("", ftBrandType)
 	assert.EqualError(s.T(), err, ErrEmptyTextParameter.Error(), "error response")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndType() {
-	service := NewEsConceptSearchService(s.ec, testIndexName)
+	service := NewEsConceptSearchService(testIndexName)
 	concepts, err := service.SuggestConceptByTextAndType("test", ftBrandType)
 	assert.NoError(s.T(), err, "expected no error for ES read")
 	assert.Len(s.T(), concepts, 4, "there should be four results")
