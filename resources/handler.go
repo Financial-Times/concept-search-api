@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/Financial-Times/concept-search-api/service"
-	"github.com/olivere/elastic"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 type Handler struct {
