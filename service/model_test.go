@@ -84,6 +84,6 @@ func TestConvertToSimpleConceptWithIdCorrect(t *testing.T) {
 	}
 
 	actual := ConvertToSimpleConcept(esConcept, "genres")
-	assert.Equal(t, id, actual.Id, "http://www.ft.com/thing/id")
+	assert.Equal(t,  "http://www.ft.com/thing/id", actual.Id, "The id did not get converted properly")
 }
 
