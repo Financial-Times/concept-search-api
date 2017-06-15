@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Financial-Times/concept-search-api/service"
-	"github.com/olivere/elastic"
+	elastic "gopkg.in/olivere/elastic.v5"
 )
 
 type Handler struct {

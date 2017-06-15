@@ -11,9 +11,9 @@ import (
 
 	"github.com/Financial-Times/concept-search-api/service"
 	"github.com/gorilla/mux"
-	"github.com/olivere/elastic"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	elastic "gopkg.in/olivere/elastic.v5"
 )
 
 type mockConceptSearchService struct {
