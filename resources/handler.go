@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/Financial-Times/concept-search-api/service"
 	"github.com/olivere/elastic"
@@ -25,9 +26,22 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 
 	q, foundQ, qErr := getSingleValueQueryParameter(req, "q")
 	conceptType, foundConceptType, conceptTypeErr := getSingleValueQueryParameter(req, "type")
+	boostType, foundBoostType, boostTypeErr := getSingleValueQueryParameter(req, "boost")
 
 	if isAutocompleteRequest(req) {
-		if foundQ && foundConceptType {
+		if foundQ && foundConceptType && foundBoostType {
+			ok := checkAndHandleParamErrors(w, qErr, conceptTypeErr, boostTypeErr)
+			if !ok {
+				return
+			}
+
+			if strings.ToLower(boostType) != "authors" {
+				writeHTTPError(w, http.StatusBadRequest, errors.New("invalid boost parameter for concept search"))
+				return
+			}
+
+			concepts, searchErr = h.service.SuggestAuthorsByText(q, conceptType)
+		} else if foundQ && foundConceptType {
 			ok := checkAndHandleParamErrors(w, qErr, conceptTypeErr)
 			if !ok {
 				return

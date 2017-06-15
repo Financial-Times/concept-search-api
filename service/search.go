@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"sync"
 
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v5"
@@ -20,19 +21,24 @@ var (
 type ConceptSearchService interface {
 	FindAllConceptsByType(conceptType string) ([]Concept, error)
 	SuggestConceptByTextAndType(textQuery string, conceptType string) ([]Concept, error)
+	SuggestAuthorsByText(textQuery string, conceptType string) ([]Concept, error)
 }
 
 type esConceptSearchService struct {
-	esClient *elastic.Client
-	index    string
+	esClient   *elastic.Client
+	index      string
+	clientLock *sync.RWMutex
 }
 
-func NewEsConceptSearchService(client *elastic.Client, index string) *esConceptSearchService {
-	return &esConceptSearchService{client, index}
+func NewEsConceptSearchService(index string) *esConceptSearchService {
+	return &esConceptSearchService{
+		index:      index,
+		clientLock: &sync.RWMutex{},
+	}
 }
 
 func (s *esConceptSearchService) checkElasticClient() error {
-	if s.esClient == nil {
+	if s.elasticClient() == nil {
 		return ErrNoElasticClient
 	}
 
@@ -123,9 +129,13 @@ func (s *esConceptSearchService) SuggestConceptByTextAndType(textQuery string, c
 	return concepts, nil
 }
 
-func (s *esConceptSearchService) SuggestAuthorsByText(textQuery string) ([]Concept, error) {
+func (s *esConceptSearchService) SuggestAuthorsByText(textQuery string, conceptType string) ([]Concept, error) {
 	if textQuery == "" {
 		return nil, ErrEmptyTextParameter
+	}
+
+	if esType(conceptType) != "people" {
+		return nil, ErrInvalidConceptType
 	}
 
 	if err := s.checkElasticClient(); err != nil {
@@ -136,11 +146,7 @@ func (s *esConceptSearchService) SuggestAuthorsByText(textQuery string) ([]Conce
 	formattedQuery := fmt.Sprintf(suggestionQuery, textQuery)
 
 	rawQuery := make(map[string]interface{})
-	err := json.Unmarshal([]byte(formattedQuery), &rawQuery)
-	if err != nil {
-		log.Errorf("error: %v", err)
-		return nil, err
-	}
+	json.Unmarshal([]byte(formattedQuery), &rawQuery)
 
 	result, err := s.esClient.Search(s.index).Source(rawQuery).Do(context.Background())
 	if err != nil {
@@ -150,4 +156,16 @@ func (s *esConceptSearchService) SuggestAuthorsByText(textQuery string) ([]Conce
 
 	concepts := suggestResultToConcepts(result)
 	return concepts, nil
+}
+
+func (s *esConceptSearchService) SetElasticClient(client *elastic.Client) {
+	s.clientLock.Lock()
+	defer s.clientLock.Unlock()
+	s.esClient = client
+}
+
+func (s *esConceptSearchService) elasticClient() *elastic.Client {
+	s.clientLock.RLock()
+	defer s.clientLock.RUnlock()
+	return s.esClient
 }

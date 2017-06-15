@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"sync"
 
 	"github.com/Financial-Times/transactionid-utils-go"
 	log "github.com/Sirupsen/logrus"
@@ -13,16 +14,26 @@ import (
 
 type conceptFinder interface {
 	FindConcept(writer http.ResponseWriter, request *http.Request)
+	SetElasticClient(client *elastic.Client)
 }
 
 type esConceptFinder struct {
 	client            esClient
 	indexName         string
 	searchResultLimit int
+	lockClient        *sync.RWMutex
 }
 
-func (service esConceptFinder) FindConcept(writer http.ResponseWriter, request *http.Request) {
-	if service.client == nil {
+func newConceptFinder(index string, resultLimit int) conceptFinder {
+	return &esConceptFinder{
+		indexName:         index,
+		searchResultLimit: resultLimit,
+		lockClient:        &sync.RWMutex{},
+	}
+}
+
+func (service *esConceptFinder) FindConcept(writer http.ResponseWriter, request *http.Request) {
+	if service.esClient() == nil {
 		log.Errorf("Elasticsearch client is not created.")
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
@@ -56,7 +67,7 @@ func (service esConceptFinder) FindConcept(writer http.ResponseWriter, request *
 
 	finalQuery := elastic.NewBoolQuery().Should(multiMatchQuery, termQueryForPreflabelExactMatches, termQueryForAliasesExactMatches)
 
-	searchResult, err := service.client.query(service.indexName, finalQuery, service.searchResultLimit)
+	searchResult, err := service.esClient().query(service.indexName, finalQuery, service.searchResultLimit)
 
 	if err != nil {
 		log.Errorf("There was an error executing the query on ES: %s", err.Error())
@@ -110,4 +121,16 @@ func isScoreIncluded(request *http.Request) bool {
 		return false
 	}
 	return includeScore
+}
+
+func (service *esConceptFinder) SetElasticClient(client *elastic.Client) {
+	service.lockClient.Lock()
+	defer service.lockClient.Unlock()
+	service.client = &esClientWrapper{elasticClient: client}
+}
+
+func (service *esConceptFinder) esClient() esClient {
+	service.lockClient.RLock()
+	defer service.lockClient.RUnlock()
+	return service.client
 }

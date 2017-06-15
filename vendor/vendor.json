@@ -3,10 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "FUhczVSvt/VQAlWfzATo1YLez2E=",
-			"path": "github.com/Financial-Times/go-fthealth/v1a",
-			"revision": "f9074331b3ab48bca0e6d0afc211a673d88ac925",
-			"revisionTime": "2016-06-16T09:04:59Z"
+			"checksumSHA1": "fNgRM8ZlaDzdvSpuhSdGxEOrWi4=",
+			"path": "github.com/Financial-Times/go-fthealth/v1_1",
+			"revision": "e7ccca038327a0091303a52445ec1f0fb66cb97b",
+			"revisionTime": "2017-05-25T09:50:41Z",
+			"version": "0.3.0",
+			"versionExact": "0.3.0"
 		},
 		{
 			"checksumSHA1": "zUpINnstJChGK0LAtkt7jBc3RY0=",
@@ -15,25 +17,25 @@
 			"revisionTime": "2016-08-03T10:40:03Z"
 		},
 		{
-			"checksumSHA1": "lQfsRf7gWYQDNoI3IOZuwNGUwRo=",
+			"checksumSHA1": "fqpohN7Qp2qj7TLMbUxh/cK4oH0=",
 			"path": "github.com/Financial-Times/service-status-go/buildinfo",
 			"revision": "3f5199736a3d7ae52394c63aac36834786825e21",
 			"revisionTime": "2016-03-23T11:15:42Z"
 		},
 		{
-			"checksumSHA1": "7QAsTdXi/6nTkDhqKy54YIc69d4=",
+			"checksumSHA1": "2rGNLXdRC3qr5n5ll7BpYt8HCK8=",
 			"path": "github.com/Financial-Times/service-status-go/gtg",
 			"revision": "3f5199736a3d7ae52394c63aac36834786825e21",
 			"revisionTime": "2016-03-23T11:15:42Z"
 		},
 		{
-			"checksumSHA1": "YxgjuCI4TJyfQujUeQk3V+gypzo=",
+			"checksumSHA1": "973POGyMCoyaKQuIYX2f7EKFwlQ=",
 			"path": "github.com/Financial-Times/service-status-go/httphandlers",
 			"revision": "3f5199736a3d7ae52394c63aac36834786825e21",
 			"revisionTime": "2016-03-23T11:15:42Z"
 		},
 		{
-			"checksumSHA1": "I/p6g4/ZiQhlPLRa9fFjzwuevwc=",
+			"checksumSHA1": "ddLGmQTKn5BeEsKYFOGAH33sEfg=",
 			"path": "github.com/Financial-Times/transactionid-utils-go",
 			"revision": "a2b1163e7c2f6c77add74ca2c7fc7422323a2d78",
 			"revisionTime": "2016-02-12T16:38:35Z"
@@ -52,13 +54,13 @@
 			"revisionTime": "2016-09-25T01:54:16Z"
 		},
 		{
-			"checksumSHA1": "KJqRW8jfPoHquMAd6FI7x92JxFs=",
+			"checksumSHA1": "tUGxc7rfX0cmhOOUDhMuAZ9rWsA=",
 			"path": "github.com/hashicorp/go-version",
 			"revision": "03c5bf6be031b6dd45afec16b1cf94fc8938bc77",
 			"revisionTime": "2017-02-02T08:07:59Z"
 		},
 		{
-			"checksumSHA1": "u6iTu7n+362sfMROLFN7unXGCw4=",
+			"checksumSHA1": "l3yXJ4cwdt3SNkiBktj8C1sBwrY=",
 			"path": "github.com/husobee/vestigo",
 			"revision": "bc768a4cce10c89efc128b1d7b5b1eb66f7f0fab",
 			"revisionTime": "2017-05-25T14:09:23Z"
