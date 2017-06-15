@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 
 	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
 	log "github.com/Sirupsen/logrus"
@@ -16,15 +17,18 @@ const (
 )
 
 type esHealthService struct {
-	client esClient
+	client     esClient
+	clientLock *sync.RWMutex
 }
 
-func (service esHealthService) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
-	return service.client.getClusterHealth()
+func (service *esHealthService) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
+	return service.esClient().getClusterHealth()
 }
 
-func newEsHealthService(client esClient) *esHealthService {
-	return &esHealthService{client: client}
+func newEsHealthService() *esHealthService {
+	return &esHealthService{
+		clientLock: &sync.RWMutex{},
+	}
 }
 
 func (service *esHealthService) clusterIsHealthyCheck() fthealth.Check {
@@ -39,7 +43,7 @@ func (service *esHealthService) clusterIsHealthyCheck() fthealth.Check {
 }
 
 func (service *esHealthService) healthChecker() (string, error) {
-	if service.client != nil {
+	if service.esClient() != nil {
 		output, err := service.getClusterHealth()
 		if err != nil {
 			return "Cluster is not healthy: ", err
@@ -64,7 +68,7 @@ func (service *esHealthService) connectivityHealthyCheck() fthealth.Check {
 }
 
 func (service *esHealthService) connectivityChecker() (string, error) {
-	if service.client == nil {
+	if service.esClient() == nil {
 		return "", errors.New("Could not connect to elasticsearch, please check the application parameters/env variables, and restart the service.")
 	}
 
@@ -87,7 +91,7 @@ func (service *esHealthService) healthDetails(writer http.ResponseWriter, req *h
 
 	writer.Header().Set("Content-Type", "application/json")
 
-	if writer == nil || service.client == nil {
+	if writer == nil || service.esClient() == nil {
 		writer.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
@@ -108,4 +112,16 @@ func (service *esHealthService) healthDetails(writer http.ResponseWriter, req *h
 	if err != nil {
 		log.Errorf(err.Error())
 	}
+}
+
+func (service *esHealthService) SetElasticClient(client *elastic.Client) {
+	service.clientLock.Lock()
+	defer service.clientLock.Unlock()
+	service.client = &esClientWrapper{elasticClient: client}
+}
+
+func (service *esHealthService) esClient() esClient {
+	service.clientLock.RLock()
+	defer service.clientLock.RUnlock()
+	return service.client
 }

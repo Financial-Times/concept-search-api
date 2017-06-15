@@ -2,29 +2,34 @@ package service
 
 import (
 	"net/http"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	awsauth "github.com/smartystreets/go-aws-auth"
 	"gopkg.in/olivere/elastic.v5"
 )
 
-type EsAccessConfig struct {
+type ESService interface {
+	SetElasticClient(*elastic.Client)
+}
+
+type awsESAccessConfig struct {
 	accessKey  string
 	secretKey  string
 	esEndpoint string
 }
 
-func NewAccessConfig(accessKey string, secretKey string, endpoint string) EsAccessConfig {
-	return EsAccessConfig{accessKey: accessKey, secretKey: secretKey, esEndpoint: endpoint}
+func newAWSAccessConfig(accessKey string, secretKey string, endpoint string) awsESAccessConfig {
+	return awsESAccessConfig{accessKey: accessKey, secretKey: secretKey, esEndpoint: endpoint}
 }
 
-type AWSSigningTransport struct {
+type awsSigningTransport struct {
 	HTTPClient  *http.Client
 	Credentials awsauth.Credentials
 }
 
 // RoundTrip implementation
-func (a AWSSigningTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (a awsSigningTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return a.HTTPClient.Do(awsauth.Sign4(cloneRequest(req), a.Credentials))
 }
 
@@ -44,9 +49,8 @@ func cloneRequest(r *http.Request) *http.Request {
 	return r2
 }
 
-func newAmazonClient(config EsAccessConfig) (*elastic.Client, error) {
-
-	signingTransport := AWSSigningTransport{
+func NewAWSClient(config awsESAccessConfig) (*elastic.Client, error) {
+	signingTransport := awsSigningTransport{
 		Credentials: awsauth.Credentials{
 			AccessKeyID:     config.accessKey,
 			SecretAccessKey: config.secretKey,
@@ -64,18 +68,41 @@ func newAmazonClient(config EsAccessConfig) (*elastic.Client, error) {
 	)
 }
 
-func newSimpleClient(config EsAccessConfig) (*elastic.Client, error) {
-	log.Infof("connecting with default transport to %s", config.esEndpoint)
+func NewSimpleClient(endpoint string) (*elastic.Client, error) {
+	log.Infof("connecting with default transport to %s", endpoint)
 	return elastic.NewClient(
-		elastic.SetURL(config.esEndpoint),
+		elastic.SetURL(endpoint),
 		elastic.SetSniff(false),
 	)
 }
 
-func NewElasticClient(region string, config EsAccessConfig) (*elastic.Client, error) {
-	if region == "local" {
-		return newSimpleClient(config)
-	} else {
-		return newAmazonClient(config)
+func SimpleClientSetup(endpoint string, tryEvery time.Duration, services ...ESService) {
+	for {
+		ec, err := NewSimpleClient(endpoint)
+		if err != nil {
+			log.WithError(err).Errorf("could not connect to ElasticSearch cluster, retring in %v...", tryEvery)
+			time.Sleep(tryEvery)
+		} else {
+			for _, s := range services {
+				s.SetElasticClient(ec)
+			}
+			return
+		}
+	}
+}
+
+func AWSClientSetup(accessKey string, secretKey string, endpoint string, tryEvery time.Duration, services ...ESService) {
+	accessConfig := newAWSAccessConfig(accessKey, secretKey, endpoint)
+	for {
+		ec, err := NewAWSClient(accessConfig)
+		if err != nil {
+			log.WithError(err).Errorf("could not connect to AWS ElasticSearch cluster, retring in %v...", tryEvery)
+			time.Sleep(tryEvery)
+		} else {
+			for _, s := range services {
+				s.SetElasticClient(ec)
+			}
+			return
+		}
 	}
 }
