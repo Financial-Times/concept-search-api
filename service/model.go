@@ -34,7 +34,7 @@ var (
 
 func ConvertToSimpleConcept(esConcept EsConceptModel, esType string) Concept {
 	c := Concept{}
-	c.Id = correctDomain(esConcept.Id)
+	c.Id = correctPath(esConcept.Id)
 	c.ApiUrl = esConcept.ApiUrl
 	c.ConceptType = ftType(esType)
 	c.PrefLabel = esConcept.PrefLabel
@@ -46,7 +46,7 @@ func esType(ftType string) string {
 	return esTypeMapping[ftType]
 }
 
-func correctDomain(id string) string {
+func correctPath(id string) string {
 	if (strings.HasPrefix(id, incorrectPath)){
 		return strings.Replace(id, incorrectPath, "http://www.ft.com/thing/", 1)
 	}
