@@ -11,6 +11,7 @@ import (
 
 	"github.com/Financial-Times/concept-search-api/service"
 	"github.com/husobee/vestigo"
+	"github.com/olivere/elastic"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -118,6 +119,34 @@ func TestConceptSearchByTypeServerError(t *testing.T) {
 	actual := w.Result()
 
 	assert.Equal(t, http.StatusInternalServerError, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := make(map[string]string)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
+	if err != nil {
+		t.Errorf("Unmarshalling request response failed. %v", err)
+	}
+
+	assert.Equal(t, expectedError.Error(), respObject["message"], "error message")
+}
+
+func TestConceptSearchByTypeNoElasticInstance(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre", nil)
+
+	expectedError := elastic.ErrNoClient
+	svc := mockConceptSearchService{}
+	svc.On("FindAllConceptsByType", mock.AnythingOfType("string")).Return([]service.Concept{}, expectedError)
+	endpoint := NewHandler(&svc)
+
+	router := vestigo.NewRouter()
+	router.Get("/concepts", endpoint.ConceptSearch)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
+
+	assert.Equal(t, http.StatusServiceUnavailable, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
 	respObject := make(map[string]string)

@@ -67,6 +67,8 @@ func (s *EsConceptSearchServiceTestSuite) SetupSuite() {
 	require.NoError(s.T(), err, "expected no error in adding brands")
 	err = writeTestConcepts(s.ec, esPeopleType, ftPeopleType, 4)
 	require.NoError(s.T(), err, "expected no error in adding people")
+	err = writeTestAuthors(s.ec, 4)
+	require.NoError(s.T(), err, "expected no error in adding people")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TearDownSuite() {
@@ -74,9 +76,9 @@ func (s *EsConceptSearchServiceTestSuite) TearDownSuite() {
 }
 
 func getElasticSearchTestURL(t *testing.T) string {
-	if testing.Short() {
-		t.Skip("ElasticSearch integration for long tests only.")
-	}
+	// if testing.Short() {
+	// t.Skip("ElasticSearch integration for long tests only.")
+	// }
 
 	esURL := os.Getenv("ELASTICSEARCH_TEST_URL")
 	if strings.TrimSpace(esURL) == "" {
@@ -92,6 +94,39 @@ func createIndex(ec *elastic.Client, mappingFile string) error {
 		return err
 	}
 	_, err = ec.CreateIndex(testIndexName).Body(string(mapping)).Do(context.Background())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeTestAuthors(ec *elastic.Client, amount int) error {
+	for i := 0; i < amount; i++ {
+		uuid := uuid.NewV4().String()
+
+		payload := EsConceptModel{
+			Id:         uuid,
+			ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseURL, esPeopleType, uuid),
+			PrefLabel:  fmt.Sprintf("Test concept %s %s", esPeopleType, uuid),
+			Types:      []string{ftPeopleType},
+			DirectType: ftPeopleType,
+			Aliases:    []string{},
+			IsFTAuthor: true,
+		}
+
+		_, err := ec.Index().
+			Index(testIndexName).
+			Type(esPeopleType).
+			Id(uuid).
+			BodyJson(payload).
+			Do(context.Background())
+		if err != nil {
+			return err
+		}
+	}
+
+	// ensure test data is immediately available from the index
+	_, err := ec.Refresh(testIndexName).Do(context.Background())
 	if err != nil {
 		return err
 	}
@@ -167,5 +202,21 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndType() {
 	assert.Len(s.T(), concepts, 4, "there should be four results")
 	for _, c := range concepts {
 		assert.Equal(s.T(), ftBrandType, c.ConceptType, "Results should be of type FT Brand")
+	}
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByText() {
+	service := NewEsConceptSearchService(s.ec, testIndexName)
+	concepts, err := service.SuggestAuthorsByText("test")
+	assert.NoError(s.T(), err, "expected no error for ES read")
+	assert.Len(s.T(), concepts, 8, "there should be eight results")
+
+	for i, concept := range concepts {
+		assert.Equal(s.T(), ftPeopleType, concept.ConceptType)
+		if i > 3 {
+			assert.False(s.T(), concept.IsFTAuthor)
+		} else {
+			assert.True(s.T(), concept.IsFTAuthor)
+		}
 	}
 }

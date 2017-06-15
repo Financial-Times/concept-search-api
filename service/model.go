@@ -7,6 +7,7 @@ type EsConceptModel struct {
 	Types      []string `json:"types"`
 	DirectType string   `json:"directType"`
 	Aliases    []string `json:"aliases,omitempty"`
+	IsFTAuthor bool     `json:"isFTAuthor"`
 }
 
 type Concept struct {
@@ -14,6 +15,7 @@ type Concept struct {
 	ApiUrl      string `json:"apiUrl"`
 	PrefLabel   string `json:"prefLabel"`
 	ConceptType string `json:"type"`
+	IsFTAuthor  bool   `json:"isFTAuthor"`
 }
 
 type Concepts []Concept
@@ -32,6 +34,7 @@ func ConvertToSimpleConcept(esConcept EsConceptModel, esType string) Concept {
 	c.ApiUrl = esConcept.ApiUrl
 	c.ConceptType = ftType(esType)
 	c.PrefLabel = esConcept.PrefLabel
+	c.IsFTAuthor = esConcept.IsFTAuthor
 
 	return c
 }

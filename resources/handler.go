@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Financial-Times/concept-search-api/service"
+	"github.com/olivere/elastic"
 )
 
 type Handler struct {
@@ -52,6 +53,8 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	if searchErr != nil {
 		if searchErr == service.ErrInvalidConceptType || searchErr == service.ErrEmptyTextParameter {
 			writeHTTPError(w, http.StatusBadRequest, searchErr)
+		} else if searchErr == elastic.ErrNoClient {
+			writeHTTPError(w, http.StatusServiceUnavailable, searchErr)
 		} else {
 			writeHTTPError(w, http.StatusInternalServerError, searchErr)
 		}

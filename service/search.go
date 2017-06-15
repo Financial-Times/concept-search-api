@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sort"
 
 	log "github.com/Sirupsen/logrus"
@@ -113,6 +114,35 @@ func (s *esConceptSearchService) SuggestConceptByTextAndType(textQuery string, c
 	typeContext := elastic.NewSuggesterCategoryQuery("typeContext", t)
 	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.completionByContext").ContextQuery(typeContext).Size(50)
 	result, err := s.esClient.Search(s.index).Suggester(completionSuggester).Do(context.Background())
+	if err != nil {
+		log.Errorf("error: %v", err)
+		return nil, err
+	}
+
+	concepts := suggestResultToConcepts(result)
+	return concepts, nil
+}
+
+func (s *esConceptSearchService) SuggestAuthorsByText(textQuery string) ([]Concept, error) {
+	if textQuery == "" {
+		return nil, ErrEmptyTextParameter
+	}
+
+	if err := s.checkElasticClient(); err != nil {
+		return nil, err
+	}
+
+	suggestionQuery := `{"suggest":{"conceptSuggestion":{"text":"%s","completion":{"field":"prefLabel.authorCompletionByContext","size":50,"contexts":{"authorContext":[{"context":"true","boost":2}],"typeContext":[{"context":"people"}]}}}}}`
+	formattedQuery := fmt.Sprintf(suggestionQuery, textQuery)
+
+	rawQuery := make(map[string]interface{})
+	err := json.Unmarshal([]byte(formattedQuery), &rawQuery)
+	if err != nil {
+		log.Errorf("error: %v", err)
+		return nil, err
+	}
+
+	result, err := s.esClient.Search(s.index).Source(rawQuery).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err
