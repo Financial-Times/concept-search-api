@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/satori/go.uuid"
@@ -28,7 +29,7 @@ const (
 )
 
 func TestNoElasticClient(t *testing.T) {
-	service := esConceptSearchService{nil, "test"}
+	service := esConceptSearchService{nil, "test", &sync.RWMutex{}}
 
 	_, err := service.FindAllConceptsByType(ftGenreType)
 	assert.EqualError(t, err, ErrNoElasticClient.Error(), "error response")
@@ -131,7 +132,9 @@ func writeTestConcepts(ec *elastic.Client, esConceptType string, ftConceptType s
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByType() {
-	service := NewEsConceptSearchService(s.ec, testIndexName)
+	service := NewEsConceptSearchService(testIndexName)
+	service.SetElasticClient(s.ec)
+
 	concepts, err := service.FindAllConceptsByType(ftGenreType)
 
 	assert.NoError(s.T(), err, "expected no error for ES read")
@@ -148,20 +151,26 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByType() {
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeInvalid() {
-	service := NewEsConceptSearchService(s.ec, testIndexName)
+	service := NewEsConceptSearchService(testIndexName)
+	service.SetElasticClient(s.ec)
+
 	_, err := service.FindAllConceptsByType("http://www.ft.com/ontology/Foo")
 
 	assert.Equal(s.T(), ErrInvalidConceptType, err, "expected error for ES read")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypeInvalidTextParameter() {
-	service := NewEsConceptSearchService(s.ec, testIndexName)
+	service := NewEsConceptSearchService(testIndexName)
+	service.SetElasticClient(s.ec)
+
 	_, err := service.SuggestConceptByTextAndType("", ftBrandType)
 	assert.EqualError(s.T(), err, ErrEmptyTextParameter.Error(), "error response")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndType() {
-	service := NewEsConceptSearchService(s.ec, testIndexName)
+	service := NewEsConceptSearchService(testIndexName)
+	service.SetElasticClient(s.ec)
+
 	concepts, err := service.SuggestConceptByTextAndType("test", ftBrandType)
 	assert.NoError(s.T(), err, "expected no error for ES read")
 	assert.Len(s.T(), concepts, 4, "there should be four results")
