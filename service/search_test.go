@@ -213,10 +213,10 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByText() {
 
 	for i, concept := range concepts {
 		assert.Equal(s.T(), ftPeopleType, concept.ConceptType)
-		if i > 3 {
-			assert.False(s.T(), concept.IsFTAuthor)
-		} else {
+		if i < 4 {
 			assert.True(s.T(), concept.IsFTAuthor)
+		} else {
+			assert.False(s.T(), concept.IsFTAuthor)
 		}
 	}
 }
