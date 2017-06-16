@@ -153,10 +153,10 @@
 			"revisionTime": "2017-02-23T22:05:28Z"
 		},
 		{
-			"checksumSHA1": "jOAJJMO3K2jcr9e5QDP+ehk/3fE=",
+			"checksumSHA1": "PuaAxqk9sYmIPJDMgrFecNbLdOw=",
 			"path": "gopkg.in/olivere/elastic.v5",
-			"revision": "3f49414dc29d45ba96fde19ba72bc646077dbffd",
-			"revisionTime": "2017-05-15T15:52:10Z",
+			"revision": "d38422dbe9b19c6cf9c6c9c99b2306bee9fbaf89",
+			"revisionTime": "2017-06-16T11:44:02Z",
 			"version": "v5.0.40",
 			"versionExact": "v5.0.40"
 		},

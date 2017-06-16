@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"sort"
 	"sync"
 
@@ -142,13 +141,13 @@ func (s *esConceptSearchService) SuggestAuthorsByText(textQuery string, conceptT
 		return nil, err
 	}
 
-	suggestionQuery := `{"suggest":{"conceptSuggestion":{"text":"%s","completion":{"field":"prefLabel.authorCompletionByContext","size":50,"contexts":{"authorContext":[{"context":"true","boost":2}],"typeContext":[{"context":"people"}]}}}}}`
-	formattedQuery := fmt.Sprintf(suggestionQuery, textQuery)
+	typeContext := elastic.NewSuggesterCategoryQuery("typeContext", "people")
+	authorContext := elastic.NewSuggesterCategoryQuery("authorContext")
+	authorContext.ValueWithBoost("true", 2)
 
-	rawQuery := make(map[string]interface{})
-	json.Unmarshal([]byte(formattedQuery), &rawQuery)
+	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.authorCompletionByContext").ContextQueries(typeContext, authorContext).Size(50)
 
-	result, err := s.esClient.Search(s.index).Source(rawQuery).Do(context.Background())
+	result, err := s.esClient.Search(s.index).Suggester(completionSuggester).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err
