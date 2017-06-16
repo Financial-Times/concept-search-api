@@ -142,8 +142,7 @@ func (s *esConceptSearchService) SuggestAuthorsByText(textQuery string, conceptT
 	}
 
 	typeContext := elastic.NewSuggesterCategoryQuery("typeContext", "people")
-	authorContext := elastic.NewSuggesterCategoryQuery("authorContext")
-	authorContext.ValueWithBoost("true", 2)
+	authorContext := elastic.NewSuggesterCategoryQuery("authorContext").ValueWithBoost("true", 2)
 
 	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.authorCompletionByContext").ContextQueries(typeContext, authorContext).Size(50)
 
