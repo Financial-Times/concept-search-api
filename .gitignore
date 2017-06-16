@@ -2,7 +2,7 @@
 *.exe
 .idea
 vendor/*/
-concept-search-api
+/concept-search-api
 coverage.html
 coverage.json
 /.project
