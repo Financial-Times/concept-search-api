@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/Financial-Times/concept-search-api/service"
+	"github.com/gorilla/mux"
 	"github.com/husobee/vestigo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
