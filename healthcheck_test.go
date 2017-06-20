@@ -22,7 +22,8 @@ func TestHealthDetailsHealthyCluster(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	healthService := newEsHealthService(hcClient{healthy: true, returnsError: false})
+	healthService := newEsHealthService()
+	healthService.client = hcClient{healthy: true, returnsError: false}
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -60,7 +61,8 @@ func TestHealthDetailsReturnsError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	healthService := newEsHealthService(hcClient{returnsError: true})
+	healthService := newEsHealthService()
+	healthService.client = hcClient{returnsError: true}
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -94,7 +96,8 @@ func TestGoodToGoHealthyCluster(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	healthService := newEsHealthService(hcClient{returnsError: true})
+	healthService := newEsHealthService()
+	healthService.client = hcClient{returnsError: true}
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(healthService.goodToGo)
@@ -121,8 +124,8 @@ func TestGoodToGoUnhealthyCluster(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	healthService := newEsHealthService(hcClient{healthy: true, returnsError: false})
-
+	healthService := newEsHealthService()
+	healthService.client = hcClient{healthy: true, returnsError: false}
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(healthService.goodToGo)
@@ -143,8 +146,8 @@ func TestGoodToGoUnhealthyCluster(t *testing.T) {
 }
 
 func TestHealthServiceConnectivityChecker(t *testing.T) {
-	healthService := newEsHealthService(hcClient{healthy: true, returnsError: false})
-
+	healthService := newEsHealthService()
+	healthService.client = hcClient{healthy: true, returnsError: false}
 	message, err := healthService.connectivityChecker()
 
 	assert.Equal(t, "Successfully connected to the cluster", message)
@@ -152,8 +155,8 @@ func TestHealthServiceConnectivityChecker(t *testing.T) {
 }
 
 func TestHealthServiceConnectivityCheckerForFailedConnection(t *testing.T) {
-	healthService := newEsHealthService(hcClient{returnsError: true})
-
+	healthService := newEsHealthService()
+	healthService.client = hcClient{returnsError: true}
 	message, err := healthService.connectivityChecker()
 
 	assert.Equal(t, "Could not connect to elasticsearch", message)
@@ -161,7 +164,7 @@ func TestHealthServiceConnectivityCheckerForFailedConnection(t *testing.T) {
 }
 
 func TestHealthServiceConnectivityCheckerNilClient(t *testing.T) {
-	healthService := newEsHealthService(nil)
+	healthService := newEsHealthService()
 
 	_, err := healthService.connectivityChecker()
 
@@ -170,7 +173,7 @@ func TestHealthServiceConnectivityCheckerNilClient(t *testing.T) {
 }
 
 func TestHealthServiceHealthCheckerNilClient(t *testing.T) {
-	healthService := newEsHealthService(nil)
+	healthService := newEsHealthService()
 
 	_, err := healthService.healthChecker()
 
@@ -179,7 +182,8 @@ func TestHealthServiceHealthCheckerNilClient(t *testing.T) {
 }
 
 func TestHealthServiceHealthCheckerNotHealthyClient(t *testing.T) {
-	healthService := newEsHealthService(hcClient{healthy: false})
+	healthService := newEsHealthService()
+	healthService.client = hcClient{healthy: false}
 
 	message, err := healthService.healthChecker()
 
@@ -194,7 +198,7 @@ func TestHealthDetailsNilClient(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	healthService := newEsHealthService(nil)
+	healthService := newEsHealthService()
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
