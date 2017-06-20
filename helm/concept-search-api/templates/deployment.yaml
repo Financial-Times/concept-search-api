@@ -1,46 +1,59 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: {{ .Values.service.name }} 
+  name: {{ .Values.service.name }}
   labels:
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}" 
-    visualize: "true" 
-    app: {{ .Values.service.name }} 
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    visualize: "true"
+    app: {{ .Values.service.name }}
 spec:
-  replicas: {{ .Values.replicaCount }} 
-  selector: 
+  replicas: {{ .Values.replicaCount }}
+  selector:
     matchLabels:
       app: {{ .Values.service.name }}
   template:
     metadata:
       labels:
         app: {{ .Values.service.name }}
-        visualize: "true" 
+        visualize: "true"
     spec:
-      containers: 
-      - name: {{ .Chart.Name }} 
-        image: "{{ .Values.image.repository }}:{{ required "Please provide a valid docker image version by adding the argument at install '--set image.version=...'" .Values.image.version }}" 
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ required "Please provide a valid docker image version by adding the argument at install '--set image.version=...'" .Values.image.version }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
-        env: 
-        - name: ENV_VAR_1 
-          value: "value for env var 1" 
-        - name: ENV_VAR_WITH_VALUE_IN_CONFIG_MAP 
-          valueFrom: 
-            configMapKeyRef: 
-              name: global-config 
-              key: key.for.configmap.entry 
-        ports: 
-        - containerPort: 8080 
-        livenessProbe: 
-          tcpSocket: 
-            port: 8080 
-          initialDelaySeconds: 10 
-        readinessProbe: 
-          httpGet: 
-            path: "/__gtg" 
-            port: 8080 
-          initialDelaySeconds: 15 
-          periodSeconds: 30 
-        resources: 
+        env:
+        - name: AUTH
+          value: aws
+        - name: ELASTICSEARCH_INDEX
+          value: concepts
+        - name: RESULT_LIMIT
+          value: "50"
+        - name: ELASTICSEARCH_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: aws.elasticsearch.endpoint
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: aws.access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: aws.secret_access_key
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 10
+        readinessProbe:
+          httpGet:
+            path: "/__gtg"
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 30
+        resources:
 {{ toYaml .Values.resources | indent 12 }}
-

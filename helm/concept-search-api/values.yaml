@@ -9,8 +9,6 @@ image:
   repository: coco/concept-search-api
   version: "" # should be set explicitly at installation
   pullPolicy: Always
-#resources:
-#  limits:
-#    memory: 256Mi
-
-
+resources:
+  limits:
+    memory: 256Mi
