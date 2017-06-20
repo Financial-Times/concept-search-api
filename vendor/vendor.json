@@ -10,7 +10,7 @@
 			"version": "0.0.2",
 			"versionExact": "0.0.2"
 		},
-      {
+		{
 			"checksumSHA1": "fNgRM8ZlaDzdvSpuhSdGxEOrWi4=",
 			"path": "github.com/Financial-Times/go-fthealth/v1_1",
 			"revision": "e7ccca038327a0091303a52445ec1f0fb66cb97b",
@@ -175,6 +175,12 @@
 			"revisionTime": "2017-05-15T15:52:10Z",
 			"version": "v5.0.40",
 			"versionExact": "v5.0.40"
+		},
+		{
+			"checksumSHA1": "fALlQNY1fM99NesfLJ50KguWsio=",
+			"path": "gopkg.in/yaml.v2",
+			"revision": "cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b",
+			"revisionTime": "2017-04-07T17:21:22Z"
 		}
 	],
 	"rootPath": "github.com/Financial-Times/concept-search-api"
