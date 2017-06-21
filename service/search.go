@@ -117,7 +117,7 @@ func (s *esConceptSearchService) SuggestConceptByTextAndType(textQuery string, c
 	}
 
 	typeContext := elastic.NewSuggesterCategoryQuery("typeContext", t)
-	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.completionByContext").ContextQuery(typeContext).Size(50)
+	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.completionByContext").ContextQuery(typeContext).Size(10)
 	result, err := s.esClient.Search(s.index).Suggester(completionSuggester).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)

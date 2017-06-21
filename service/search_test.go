@@ -237,7 +237,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByTextNoInputText() 
 	service.SetElasticClient(s.ec)
 
 	concepts, err := service.SuggestAuthorsByText("", ftPeopleType)
-	assert.Error(s.T(), err)
+	assert.EqualError(s.T(), err, ErrEmptyTextParameter.Error())
 	assert.Nil(s.T(), concepts)
 }
 
@@ -245,7 +245,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByTextNoESConnection
 	service := NewEsConceptSearchService(testIndexName)
 
 	concepts, err := service.SuggestAuthorsByText("test", ftPeopleType)
-	assert.Error(s.T(), err)
+	assert.EqualError(s.T(), err, ErrNoElasticClient.Error())
 	assert.Nil(s.T(), concepts)
 }
 
