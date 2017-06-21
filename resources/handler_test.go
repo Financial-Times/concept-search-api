@@ -10,10 +10,11 @@ import (
 	"testing"
 
 	"github.com/Financial-Times/concept-search-api/service"
+	"github.com/gorilla/mux"
 	"github.com/husobee/vestigo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"gopkg.in/olivere/elastic.v5"
+	elastic "gopkg.in/olivere/elastic.v5"
 )
 
 type mockConceptSearchService struct {
@@ -108,6 +109,33 @@ func TestConceptSearchByTypeClientError(t *testing.T) {
 	assert.Equal(t, service.ErrInvalidConceptType.Error(), respObject["message"], "error message")
 }
 
+func TestConceptSearchByTypeNoElasticsearchError(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FFoo", nil)
+
+	svc := mockConceptSearchService{}
+	svc.On("FindAllConceptsByType", mock.AnythingOfType("string")).Return([]service.Concept{}, elastic.ErrNoClient)
+	endpoint := NewHandler(&svc)
+
+	router := mux.NewRouter()
+	router.HandleFunc("/concepts", endpoint.ConceptSearch).Methods("GET")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
+
+	assert.Equal(t, http.StatusServiceUnavailable, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := make(map[string]string)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
+	if err != nil {
+		t.Errorf("Unmarshalling request response failed. %v", err)
+	}
+
+	assert.Equal(t, elastic.ErrNoClient.Error(), respObject["message"], "error message")
+}
+
 func TestConceptSearchByTypeServerError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre", nil)
 
@@ -187,7 +215,7 @@ func TestConceptSeachByTypeNoType(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, "invalid or missing parameters for concept search", respObject["message"], "error message")
+	assert.Equal(t, "invalid or missing parameters for concept search (no type)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
 
@@ -270,7 +298,7 @@ func TestConceptSeachByTypeAndValue(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, "invalid or missing parameters for concept search", respObject["message"], "error message")
+	assert.Equal(t, "invalid or missing parameters for concept search (no mode)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
 
@@ -297,7 +325,7 @@ func TestTypeaheadConceptSearchByText(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, "invalid or missing parameters for autocomplete concept search", respObject["message"], "error message")
+	assert.Equal(t, "invalid or missing parameters for autocomplete concept search (require type and q)", respObject["message"], "error message")
 }
 
 func TestTypeaheadConceptSearchByTextAndType(t *testing.T) {
@@ -437,7 +465,7 @@ func TestTypeaheadInvalidBoost(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, respObject["message"], "invalid boost parameter for concept search")
+	assert.Equal(t, "'somethingThatWeDontSupport' is not a valid value for parameter 'boost'", respObject["message"])
 	svc.AssertExpectations(t)
 }
 
@@ -464,6 +492,6 @@ func TestTypeaheadMultipleBoostValues(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, respObject["message"], "specified multiple boost query parameters in the URL")
+	assert.Equal(t, "specified multiple boost query parameters in the URL", respObject["message"])
 	svc.AssertExpectations(t)
 }
