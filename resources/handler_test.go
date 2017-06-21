@@ -14,7 +14,6 @@ import (
 	"github.com/husobee/vestigo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	elastic "gopkg.in/olivere/elastic.v5"
 )
 
 type mockConceptSearchService struct {
@@ -108,7 +107,7 @@ func TestConceptSearchByTypeNoElasticsearchError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FFoo", nil)
 
 	svc := mockConceptSearchService{}
-	svc.On("FindAllConceptsByType", mock.AnythingOfType("string")).Return([]service.Concept{}, elastic.ErrNoClient)
+	svc.On("FindAllConceptsByType", mock.AnythingOfType("string")).Return([]service.Concept{}, service.ErrNoElasticClient)
 	endpoint := NewHandler(&svc)
 
 	router := mux.NewRouter()
@@ -128,7 +127,7 @@ func TestConceptSearchByTypeNoElasticsearchError(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, elastic.ErrNoClient.Error(), respObject["message"], "error message")
+	assert.Equal(t, service.ErrNoElasticClient.Error(), respObject["message"], "error message")
 }
 
 func TestConceptSearchByTypeServerError(t *testing.T) {
