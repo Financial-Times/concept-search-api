@@ -26,12 +26,16 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	conceptType, foundConceptType, conceptTypeErr := getSingleValueQueryParameter(req, "type")
 
 	if isAutocompleteRequest(req) {
-		if foundQ && foundConceptType {
-			ok := checkAndHandleParamErrors(w, qErr, conceptTypeErr)
-			if !ok {
-				return
+		if foundQ {
+			if foundConceptType {
+				ok := checkAndHandleParamErrors(w, qErr, conceptTypeErr)
+				if !ok {
+					return
+				}
+				concepts, searchErr = h.service.SuggestConceptByTextAndType(q, conceptType)
+			} else {
+				concepts, searchErr = h.service.SuggestConceptByText(q)
 			}
-			concepts, searchErr = h.service.SuggestConceptByTextAndType(q, conceptType)
 		} else {
 			writeHTTPError(w, http.StatusBadRequest, errors.New("invalid or missing parameters for autocomplete concept search"))
 			return

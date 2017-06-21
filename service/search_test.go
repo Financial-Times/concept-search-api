@@ -17,15 +17,21 @@ import (
 )
 
 const (
-	apiBaseURL      = "http://test.api.ft.com"
-	testIndexName   = "test-index"
-	esGenreType     = "genres"
-	esBrandType     = "brands"
-	esPeopleType    = "people"
-	ftGenreType     = "http://www.ft.com/ontology/Genre"
-	ftBrandType     = "http://www.ft.com/ontology/product/Brand"
-	ftPeopleType    = "http://www.ft.com/ontology/person/Person"
-	testMappingFile = "test/mapping.json"
+	apiBaseURL         = "http://test.api.ft.com"
+	testIndexName      = "test-index"
+	esGenreType        = "genres"
+	esBrandType        = "brands"
+	esPeopleType       = "people"
+	esOrganisationType = "organisations"
+	esLocationType     = "locations"
+	esTopicType        = "topics"
+	ftGenreType        = "http://www.ft.com/ontology/Genre"
+	ftBrandType        = "http://www.ft.com/ontology/product/Brand"
+	ftPeopleType       = "http://www.ft.com/ontology/person/Person"
+	ftOrganisationType = "http://www.ft.com/ontology/organisation/Organisation"
+	ftLocationType     = "http://www.ft.com/ontology/Location"
+	ftTopicType        = "http://www.ft.com/ontology/Topic"
+	testMappingFile    = "test/mapping.json"
 )
 
 func TestNoElasticClient(t *testing.T) {
@@ -68,6 +74,12 @@ func (s *EsConceptSearchServiceTestSuite) SetupSuite() {
 	require.NoError(s.T(), err, "expected no error in adding brands")
 	err = writeTestConcepts(s.ec, esPeopleType, ftPeopleType, 4)
 	require.NoError(s.T(), err, "expected no error in adding people")
+	err = writeTestConcepts(s.ec, esOrganisationType, ftOrganisationType, 1)
+	require.NoError(s.T(), err, "expected no error in adding organisations")
+	err = writeTestConcepts(s.ec, esLocationType, ftLocationType, 2)
+	require.NoError(s.T(), err, "expected no error in adding locations")
+	err = writeTestConcepts(s.ec, esTopicType, ftTopicType, 2)
+	require.NoError(s.T(), err, "expected no error in adding topics")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TearDownSuite() {
@@ -177,4 +189,31 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndType() {
 	for _, c := range concepts {
 		assert.Equal(s.T(), ftBrandType, c.ConceptType, "Results should be of type FT Brand")
 	}
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextInvalidTextParameter() {
+	service := NewEsConceptSearchService(testIndexName)
+	service.SetElasticClient(s.ec)
+
+	_, err := service.SuggestConceptByText("")
+	assert.EqualError(s.T(), err, ErrEmptyTextParameter.Error(), "error response")
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByText() {
+	service := NewEsConceptSearchService(testIndexName)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.SuggestConceptByText("test")
+	assert.NoError(s.T(), err, "expected no error for ES read")
+	assert.Len(s.T(), concepts, 9, "there should be nine results")
+	counts := map[string]int{}
+	for _, c := range concepts {
+		i := counts[c.ConceptType]
+		counts[c.ConceptType] = i + 1
+	}
+
+	assert.Equal(s.T(), 4, counts[ftPeopleType], "people")
+	assert.Equal(s.T(), 1, counts[ftOrganisationType], "organisations")
+	assert.Equal(s.T(), 2, counts[ftLocationType], "locations")
+	assert.Equal(s.T(), 2, counts[ftTopicType], "topics")
 }

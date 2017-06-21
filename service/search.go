@@ -20,6 +20,7 @@ var (
 type ConceptSearchService interface {
 	FindAllConceptsByType(conceptType string) ([]Concept, error)
 	SuggestConceptByTextAndType(textQuery string, conceptType string) ([]Concept, error)
+	SuggestConceptByText(textQuery string) ([]Concept, error)
 }
 
 type esConceptSearchService struct {
@@ -117,6 +118,26 @@ func (s *esConceptSearchService) SuggestConceptByTextAndType(textQuery string, c
 
 	typeContext := elastic.NewSuggesterCategoryQuery("typeContext", t)
 	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.completionByContext").ContextQuery(typeContext).Size(50)
+	result, err := s.esClient.Search(s.index).Suggester(completionSuggester).Do(context.Background())
+	if err != nil {
+		log.Errorf("error: %v", err)
+		return nil, err
+	}
+
+	concepts := suggestResultToConcepts(result)
+	return concepts, nil
+}
+
+func (s *esConceptSearchService) SuggestConceptByText(textQuery string) ([]Concept, error) {
+	if textQuery == "" {
+		return nil, ErrEmptyTextParameter
+	}
+
+	if err := s.checkElasticClient(); err != nil {
+		return nil, err
+	}
+
+	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.mentionsCompletion").Size(10)
 	result, err := s.esClient.Search(s.index).Suggester(completionSuggester).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)

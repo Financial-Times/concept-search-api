@@ -20,9 +20,12 @@ type Concepts []Concept
 
 var (
 	esTypeMapping = map[string]string{
-		"http://www.ft.com/ontology/Genre":         "genres",
-		"http://www.ft.com/ontology/product/Brand": "brands",
-		"http://www.ft.com/ontology/person/Person": "people",
+		"http://www.ft.com/ontology/Genre":                     "genres",
+		"http://www.ft.com/ontology/product/Brand":             "brands",
+		"http://www.ft.com/ontology/person/Person":             "people",
+		"http://www.ft.com/ontology/organisation/Organisation": "organisations",
+		"http://www.ft.com/ontology/Location":                  "locations",
+		"http://www.ft.com/ontology/Topic":                     "topics",
 	}
 )
 

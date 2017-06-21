@@ -49,7 +49,7 @@ func cloneRequest(r *http.Request) *http.Request {
 	return r2
 }
 
-func NewAWSClient(config awsESAccessConfig) (*elastic.Client, error) {
+func NewAWSClient(config awsESAccessConfig, traceLogging bool) (*elastic.Client, error) {
 	signingTransport := awsSigningTransport{
 		Credentials: awsauth.Credentials{
 			AccessKeyID:     config.accessKey,
@@ -60,25 +60,34 @@ func NewAWSClient(config awsESAccessConfig) (*elastic.Client, error) {
 	signingClient := &http.Client{Transport: http.RoundTripper(signingTransport)}
 
 	log.Infof("connecting with AWSSigningTransport to %s", config.esEndpoint)
-	return elastic.NewClient(
-		elastic.SetURL(config.esEndpoint),
+	return newClient(config.esEndpoint, traceLogging,
 		elastic.SetScheme("https"),
 		elastic.SetHttpClient(signingClient),
-		elastic.SetSniff(false), //needs to be disabled due to EAS behavior. Healthcheck still operates as normal.
 	)
 }
 
-func NewSimpleClient(endpoint string) (*elastic.Client, error) {
+func NewSimpleClient(endpoint string, traceLogging bool) (*elastic.Client, error) {
 	log.Infof("connecting with default transport to %s", endpoint)
-	return elastic.NewClient(
-		elastic.SetURL(endpoint),
-		elastic.SetSniff(false),
-	)
+	return newClient(endpoint, traceLogging)
 }
 
-func SimpleClientSetup(endpoint string, tryEvery time.Duration, services ...ESService) {
+func newClient(endpoint string, traceLogging bool, options ...elastic.ClientOptionFunc) (*elastic.Client, error) {
+	optionFuncs := []elastic.ClientOptionFunc{
+		elastic.SetURL(endpoint),
+		elastic.SetSniff(false), //needs to be disabled due to EAS behavior. Healthcheck still operates as normal.
+	}
+	optionFuncs = append(optionFuncs, options...)
+
+	if traceLogging {
+		optionFuncs = append(optionFuncs, elastic.SetTraceLog(log.New()))
+	}
+
+	return elastic.NewClient(optionFuncs...)
+}
+
+func SimpleClientSetup(endpoint string, traceLogging bool, tryEvery time.Duration, services ...ESService) {
 	for {
-		ec, err := NewSimpleClient(endpoint)
+		ec, err := NewSimpleClient(endpoint, traceLogging)
 		if err != nil {
 			log.WithError(err).Errorf("could not connect to ElasticSearch cluster, retring in %v...", tryEvery)
 			time.Sleep(tryEvery)
@@ -91,10 +100,10 @@ func SimpleClientSetup(endpoint string, tryEvery time.Duration, services ...ESSe
 	}
 }
 
-func AWSClientSetup(accessKey string, secretKey string, endpoint string, tryEvery time.Duration, services ...ESService) {
+func AWSClientSetup(accessKey string, secretKey string, endpoint string, traceLogging bool, tryEvery time.Duration, services ...ESService) {
 	accessConfig := newAWSAccessConfig(accessKey, secretKey, endpoint)
 	for {
-		ec, err := NewAWSClient(accessConfig)
+		ec, err := NewAWSClient(accessConfig, traceLogging)
 		if err != nil {
 			log.WithError(err).Errorf("could not connect to AWS ElasticSearch cluster, retring in %v...", tryEvery)
 			time.Sleep(tryEvery)
