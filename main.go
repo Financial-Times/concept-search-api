@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	api "github.com/Financial-Times/api-endpoint"
 	"github.com/Financial-Times/concept-search-api/resources"
 	"github.com/Financial-Times/concept-search-api/service"
 	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
@@ -52,6 +53,12 @@ func main() {
 		Desc:   "Elasticsearch index",
 		EnvVar: "ELASTICSEARCH_INDEX",
 	})
+	apiYml := app.String(cli.StringOpt{
+		Name:   "api-yml",
+		Value:  "./api.yml",
+		Desc:   "Location of the API Swagger YML file.",
+		EnvVar: "API_YML",
+	})
 	searchResultLimit := app.Int(cli.IntOpt{
 		Name:   "search-result-limit",
 		Value:  50,
@@ -81,7 +88,7 @@ func main() {
 		}
 
 		handler := resources.NewHandler(search)
-		routeRequest(port, conceptFinder, handler, healthcheck)
+		routeRequest(port, apiYml, conceptFinder, handler, healthcheck)
 	}
 
 	log.SetLevel(log.InfoLevel)
@@ -101,10 +108,19 @@ func logStartupConfig(port, esEndpoint, esAuth, esIndex *string, searchResultLim
 	log.Infof("search-result-limit: %v", *searchResultLimit)
 }
 
-func routeRequest(port *string, conceptFinder conceptFinder, handler *resources.Handler, healthService *esHealthService) {
+func routeRequest(port *string, apiYml *string, conceptFinder conceptFinder, handler *resources.Handler, healthService *esHealthService) {
 	servicesRouter := vestigo.NewRouter()
 	servicesRouter.Post("/concept/search", conceptFinder.FindConcept)
 	servicesRouter.Get("/concepts", handler.ConceptSearch, &resources.AcceptInterceptor{})
+
+	if apiYml != nil {
+		apiEndpoint, err := api.NewAPIEndpointForFile(*apiYml)
+		if err != nil {
+			log.WithError(err).WithField("file", apiYml).Warn("Failed to serve the API Endpoint for this service. Please validate the Swagger YML and the file location.")
+		} else {
+			servicesRouter.Get(api.DefaultPath, apiEndpoint.ServeHTTP)
+		}
+	}
 
 	var monitoringRouter http.Handler = servicesRouter
 	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
@@ -121,6 +137,7 @@ func routeRequest(port *string, conceptFinder conceptFinder, handler *resources.
 	}
 	http.HandleFunc("/__health", fthealth.Handler(healthCheck))
 	http.HandleFunc("/__health-details", healthService.healthDetails)
+
 	http.HandleFunc(status.GTGPath, healthService.goodToGo)
 	http.HandleFunc(status.BuildInfoPath, status.BuildInfoHandler)
 

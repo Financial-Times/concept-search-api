@@ -3,6 +3,14 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "1Oc3/DfHZZ2pX+OA0cR6lCfxGSY=",
+			"path": "github.com/Financial-Times/api-endpoint",
+			"revision": "d9f326a291cc08362746471b16b3533472b1d4da",
+			"revisionTime": "2017-06-12T09:59:45Z",
+			"version": "0.0.2",
+			"versionExact": "0.0.2"
+		},
+		{
 			"checksumSHA1": "fNgRM8ZlaDzdvSpuhSdGxEOrWi4=",
 			"path": "github.com/Financial-Times/go-fthealth/v1_1",
 			"revision": "e7ccca038327a0091303a52445ec1f0fb66cb97b",
@@ -52,6 +60,20 @@
 			"path": "github.com/davecgh/go-spew/spew",
 			"revision": "cbd71e7dd4212e1fd8a2401873da279ebab0dca8",
 			"revisionTime": "2016-09-25T01:54:16Z"
+		},
+		{
+			"checksumSHA1": "g/V4qrXjUGG9B+e3hB+4NAYJ5Gs=",
+			"path": "github.com/gorilla/context",
+			"revision": "08b5f424b9271eedf6f9f0ce86cb9396ed337a42",
+			"revisionTime": "2016-08-17T18:46:32Z"
+		},
+		{
+			"checksumSHA1": "Ow/mLkfVIZgMOXE6aPSdPiDLJ6c=",
+			"path": "github.com/gorilla/mux",
+			"revision": "bcd8bc72b08df0f70df986b97f95590779502d31",
+			"revisionTime": "2017-05-21T04:50:13Z",
+			"version": "v1.4.0",
+			"versionExact": "v1.4.0"
 		},
 		{
 			"checksumSHA1": "tUGxc7rfX0cmhOOUDhMuAZ9rWsA=",
@@ -167,6 +189,12 @@
 			"revisionTime": "2017-05-15T15:52:10Z",
 			"version": "v5.0.38",
 			"versionExact": "v5.0.38"
+		},
+		{
+			"checksumSHA1": "fALlQNY1fM99NesfLJ50KguWsio=",
+			"path": "gopkg.in/yaml.v2",
+			"revision": "cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b",
+			"revisionTime": "2017-04-07T17:21:22Z"
 		}
 	],
 	"rootPath": "github.com/Financial-Times/concept-search-api"
