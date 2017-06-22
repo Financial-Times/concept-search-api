@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"sort"
+	"sync"
 
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v5"
@@ -26,14 +27,15 @@ type esConceptSearchService struct {
 	index                  string
 	maxSearchResults       int
 	maxAutoCompleteResults int
+	clientLock             *sync.RWMutex
 }
 
-func NewEsConceptSearchService(client *elastic.Client, index string, maxSearchResults int, maxAutoCompleteResults int) *esConceptSearchService {
-	return &esConceptSearchService{client, index, maxSearchResults, maxAutoCompleteResults}
+func NewEsConceptSearchService(index string, maxSearchResults int, maxAutoCompleteResults int) *esConceptSearchService {
+	return &esConceptSearchService{nil, index, maxSearchResults, maxAutoCompleteResults, &sync.RWMutex{}}
 }
 
 func (s *esConceptSearchService) checkElasticClient() error {
-	if s.esClient == nil {
+	if s.elasticClient() == nil {
 		return ErrNoElasticClient
 	}
 
@@ -122,4 +124,16 @@ func (s *esConceptSearchService) SuggestConceptByTextAndType(textQuery string, c
 
 	concepts := suggestResultToConcepts(result)
 	return concepts, nil
+}
+
+func (s *esConceptSearchService) SetElasticClient(client *elastic.Client) {
+	s.clientLock.Lock()
+	defer s.clientLock.Unlock()
+	s.esClient = client
+}
+
+func (s *esConceptSearchService) elasticClient() *elastic.Client {
+	s.clientLock.RLock()
+	defer s.clientLock.RUnlock()
+	return s.esClient
 }

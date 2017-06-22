@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"log"
@@ -102,11 +103,13 @@ func TestConceptFinder(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		conceptFinder := esConceptFinder{
-			client:            testCase.client,
+		conceptFinder := &esConceptFinder{
 			indexName:         "concept",
 			searchResultLimit: 50,
+			lockClient:        &sync.RWMutex{},
 		}
+		conceptFinder.client = testCase.client
+
 		req, _ := http.NewRequest("POST", testCase.requestURL, strings.NewReader(testCase.requestBody))
 		w := httptest.NewRecorder()
 

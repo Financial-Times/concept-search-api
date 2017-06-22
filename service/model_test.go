@@ -48,7 +48,7 @@ func TestFtType(t *testing.T) {
 }
 
 func TestConvertToSimpleConcept(t *testing.T) {
-	id := "id"
+	id := "http://www.ft.com/thing/id"
 	apiUrl := "http://www.example.com/1"
 	label := "Test Concept"
 
@@ -63,8 +63,27 @@ func TestConvertToSimpleConcept(t *testing.T) {
 
 	actual := ConvertToSimpleConcept(esConcept, "genres")
 
-	assert.Equal(t, id, actual.Id, "id")
+	assert.Equal(t, id, actual.Id, "http://www.ft.com/thing/id")
 	assert.Equal(t, apiUrl, actual.ApiUrl, "apiUrl")
 	assert.Equal(t, "http://www.ft.com/ontology/Genre", actual.ConceptType, "type")
 	assert.Equal(t, label, actual.PrefLabel, "prefLabel")
 }
+
+func TestConvertToSimpleConceptWithIdCorrect(t *testing.T) {
+	id := "http://api.ft.com/things/id"
+	apiUrl := "http://www.example.com/1"
+	label := "Another Test Concept"
+
+	esConcept := EsConceptModel{
+		Id:         id,
+		ApiUrl:     apiUrl,
+		PrefLabel:  label,
+		Types:      []string{"any"},
+		DirectType: "any",
+		Aliases:    []string{},
+	}
+
+	actual := ConvertToSimpleConcept(esConcept, "genres")
+	assert.Equal(t,  "http://www.ft.com/thing/id", actual.Id, "The id did not get converted properly")
+}
+

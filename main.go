@@ -3,10 +3,12 @@ package main
 import (
 	"net/http"
 	"os"
+	"time"
 
+	api "github.com/Financial-Times/api-endpoint"
 	"github.com/Financial-Times/concept-search-api/resources"
 	"github.com/Financial-Times/concept-search-api/service"
-	"github.com/Financial-Times/go-fthealth/v1a"
+	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
 	"github.com/Financial-Times/http-handlers-go/httphandlers"
 	status "github.com/Financial-Times/service-status-go/httphandlers"
 	log "github.com/Sirupsen/logrus"
@@ -39,17 +41,23 @@ func main() {
 		Desc:   "AES endpoint",
 		EnvVar: "ELASTICSEARCH_ENDPOINT",
 	})
-	esRegion := app.String(cli.StringOpt{
-		Name:   "elasticsearch-region",
-		Value:  "local",
-		Desc:   "AES region",
-		EnvVar: "ELASTICSEARCH_REGION",
+	esAuth := app.String(cli.StringOpt{
+		Name:   "auth",
+		Value:  "none",
+		Desc:   "Authentication method for ES cluster (aws or none)",
+		EnvVar: "AUTH",
 	})
 	esIndex := app.String(cli.StringOpt{
 		Name:   "elasticsearch-index",
 		Value:  "concepts",
 		Desc:   "Elasticsearch index",
 		EnvVar: "ELASTICSEARCH_INDEX",
+	})
+	apiYml := app.String(cli.StringOpt{
+		Name:   "api-yml",
+		Value:  "./api.yml",
+		Desc:   "Location of the API Swagger YML file.",
+		EnvVar: "API_YML",
 	})
 	searchResultLimit := app.Int(cli.IntOpt{
 		Name:   "search-result-limit",
@@ -64,26 +72,23 @@ func main() {
 		EnvVar: "AUTOCOMPLETE_LIMIT",
 	})
 
-	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)
-
 	log.SetLevel(log.InfoLevel)
 
 	app.Action = func() {
-		logStartupConfig(port, esEndpoint, esRegion, esIndex, searchResultLimit)
-		esClient, err := service.NewElasticClient(*esRegion, accessConfig)
-		if err != nil {
-			log.Fatalf("Creating elasticsearch client failed with error=[%v]", err)
-		}
-		client := &esClientWrapper{elasticClient: esClient}
-		conceptFinder := esConceptFinder{
-			client:            client,
-			indexName:         *esIndex,
-			searchResultLimit: *searchResultLimit,
-		}
-		search := service.NewEsConceptSearchService(esClient, *esIndex, *searchResultLimit, *autoCompleteResultLimit)
-		handler := resources.NewHandler(search)
+		logStartupConfig(port, esEndpoint, esAuth, esIndex, searchResultLimit)
 
-		routeRequest(port, conceptFinder, handler, newEsHealthService(client))
+		search := service.NewEsConceptSearchService(*esIndex, *searchResultLimit, *autoCompleteResultLimit)
+		conceptFinder := newConceptFinder(*esIndex, *searchResultLimit)
+		healthcheck := newEsHealthService()
+
+		if *esAuth == "aws" {
+			go service.AWSClientSetup(*accessKey, *secretKey, *esEndpoint, time.Minute, search, conceptFinder, healthcheck)
+		} else {
+			go service.SimpleClientSetup(*esEndpoint, time.Minute, search, conceptFinder, healthcheck)
+		}
+
+		handler := resources.NewHandler(search)
+		routeRequest(port, apiYml, conceptFinder, handler, healthcheck)
 	}
 
 	log.SetLevel(log.InfoLevel)
@@ -94,26 +99,45 @@ func main() {
 	}
 }
 
-func logStartupConfig(port, esEndpoint, esRegion, esIndex *string, searchResultLimit *int) {
+func logStartupConfig(port, esEndpoint, esAuth, esIndex *string, searchResultLimit *int) {
 	log.Info("Concept Search API uses the following configurations:")
 	log.Infof("port: %v", *port)
 	log.Infof("elasticsearch-endpoint: %v", *esEndpoint)
-	log.Infof("elasticsearch-region: %v", *esRegion)
+	log.Infof("elasticsearch-auth: %v", *esAuth)
 	log.Infof("elasticsearch-index: %v", *esIndex)
 	log.Infof("search-result-limit: %v", *searchResultLimit)
 }
 
-func routeRequest(port *string, conceptFinder conceptFinder, handler *resources.Handler, healthService *esHealthService) {
+func routeRequest(port *string, apiYml *string, conceptFinder conceptFinder, handler *resources.Handler, healthService *esHealthService) {
 	servicesRouter := vestigo.NewRouter()
 	servicesRouter.Post("/concept/search", conceptFinder.FindConcept)
 	servicesRouter.Get("/concepts", handler.ConceptSearch, &resources.AcceptInterceptor{})
+
+	if apiYml != nil {
+		apiEndpoint, err := api.NewAPIEndpointForFile(*apiYml)
+		if err != nil {
+			log.WithError(err).WithField("file", apiYml).Warn("Failed to serve the API Endpoint for this service. Please validate the Swagger YML and the file location.")
+		} else {
+			servicesRouter.Get(api.DefaultPath, apiEndpoint.ServeHTTP)
+		}
+	}
 
 	var monitoringRouter http.Handler = servicesRouter
 	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
 	monitoringRouter = httphandlers.HTTPMetricsHandler(metrics.DefaultRegistry, monitoringRouter)
 
-	http.HandleFunc("/__health", v1a.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", healthService.connectivityHealthyCheck(), healthService.clusterIsHealthyCheck()))
+	healthCheck := fthealth.HealthCheck{
+		SystemCode:  "up-csa",
+		Name:        "Amazon Elasticsearch Service Healthcheck",
+		Description: "Checks for AES",
+		Checks: []fthealth.Check{
+			healthService.connectivityHealthyCheck(),
+			healthService.clusterIsHealthyCheck(),
+		},
+	}
+	http.HandleFunc("/__health", fthealth.Handler(healthCheck))
 	http.HandleFunc("/__health-details", healthService.healthDetails)
+
 	http.HandleFunc(status.GTGPath, healthService.goodToGo)
 	http.HandleFunc(status.BuildInfoPath, status.BuildInfoHandler)
 

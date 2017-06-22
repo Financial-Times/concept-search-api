@@ -1,5 +1,9 @@
 package service
 
+import (
+	"strings"
+)
+
 type EsConceptModel struct {
 	Id         string   `json:"id"`
 	ApiUrl     string   `json:"apiUrl"`
@@ -22,12 +26,15 @@ var (
 	esTypeMapping = map[string]string{
 		"http://www.ft.com/ontology/Genre":         "genres",
 		"http://www.ft.com/ontology/product/Brand": "brands",
+		"http://www.ft.com/ontology/person/Person": "people",
 	}
+
+	incorrectPath = "http://api.ft.com/things/"
 )
 
 func ConvertToSimpleConcept(esConcept EsConceptModel, esType string) Concept {
 	c := Concept{}
-	c.Id = esConcept.Id
+	c.Id = correctPath(esConcept.Id)
 	c.ApiUrl = esConcept.ApiUrl
 	c.ConceptType = ftType(esType)
 	c.PrefLabel = esConcept.PrefLabel
@@ -37,6 +44,13 @@ func ConvertToSimpleConcept(esConcept EsConceptModel, esType string) Concept {
 
 func esType(ftType string) string {
 	return esTypeMapping[ftType]
+}
+
+func correctPath(id string) string {
+	if (strings.HasPrefix(id, incorrectPath)){
+		return strings.Replace(id, incorrectPath, "http://www.ft.com/thing/", 1)
+	}
+	return id
 }
 
 func ftType(esType string) string {
