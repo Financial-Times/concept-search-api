@@ -65,13 +65,25 @@ func main() {
 		Desc:   "The maximum number of search results returned",
 		EnvVar: "RESULT_LIMIT",
 	})
+	autoCompleteResultLimit := app.Int(cli.IntOpt{
+		Name:   "autocomplete-result-limit",
+		Value:  10,
+		Desc:   "The maximum number of autocomplete results returned",
+		EnvVar: "AUTOCOMPLETE_LIMIT",
+	})
+	authorsBoost := app.Int(cli.IntOpt{
+		Name:   "authors-boost",
+		Value:  10,
+		Desc:   "The boost to apply to authors during a /concepts?boost=author typeahead search.",
+		EnvVar: "AUTHORS_BOOST",
+	})
 
 	log.SetLevel(log.InfoLevel)
 
 	app.Action = func() {
 		logStartupConfig(port, esEndpoint, esAuth, esIndex, searchResultLimit)
 
-		search := service.NewEsConceptSearchService(*esIndex)
+		search := service.NewEsConceptSearchService(*esIndex, *searchResultLimit, *autoCompleteResultLimit, *authorsBoost)
 		conceptFinder := newConceptFinder(*esIndex, *searchResultLimit)
 		healthcheck := newEsHealthService()
 

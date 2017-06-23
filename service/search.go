@@ -24,16 +24,16 @@ type ConceptSearchService interface {
 }
 
 type esConceptSearchService struct {
-	esClient   *elastic.Client
-	index      string
-	clientLock *sync.RWMutex
+	esClient               *elastic.Client
+	index                  string
+	maxSearchResults       int
+	maxAutoCompleteResults int
+	authorsBoost           int
+	clientLock             *sync.RWMutex
 }
 
-func NewEsConceptSearchService(index string) *esConceptSearchService {
-	return &esConceptSearchService{
-		index:      index,
-		clientLock: &sync.RWMutex{},
-	}
+func NewEsConceptSearchService(index string, maxSearchResults int, maxAutoCompleteResults int, authorsBoost int) *esConceptSearchService {
+	return &esConceptSearchService{nil, index, maxSearchResults, maxAutoCompleteResults, authorsBoost, &sync.RWMutex{}}
 }
 
 func (s *esConceptSearchService) checkElasticClient() error {
@@ -54,7 +54,7 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string) ([]Co
 		return nil, err
 	}
 
-	result, err := s.esClient.Search(s.index).Type(t).Size(50).Do(context.Background())
+	result, err := s.esClient.Search(s.index).Type(t).Size(s.maxSearchResults).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err
@@ -117,7 +117,7 @@ func (s *esConceptSearchService) SuggestConceptByTextAndType(textQuery string, c
 	}
 
 	typeContext := elastic.NewSuggesterCategoryQuery("typeContext", t)
-	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.completionByContext").ContextQuery(typeContext).Size(10)
+	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.completionByContext").ContextQuery(typeContext).Size(s.maxAutoCompleteResults)
 	result, err := s.esClient.Search(s.index).Suggester(completionSuggester).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
@@ -142,9 +142,9 @@ func (s *esConceptSearchService) SuggestAuthorsByText(textQuery string, conceptT
 	}
 
 	typeContext := elastic.NewSuggesterCategoryQuery("typeContext", "people")
-	authorContext := elastic.NewSuggesterCategoryQuery("authorContext").ValueWithBoost("true", 2)
+	authorContext := elastic.NewSuggesterCategoryQuery("authorContext").ValueWithBoost("true", s.authorsBoost)
 
-	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.authorCompletionByContext").ContextQueries(typeContext, authorContext).Size(50)
+	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.authorCompletionByContext").ContextQueries(typeContext, authorContext).Size(s.maxAutoCompleteResults)
 
 	result, err := s.esClient.Search(s.index).Suggester(completionSuggester).Do(context.Background())
 	if err != nil {

@@ -29,7 +29,7 @@ const (
 )
 
 func TestNoElasticClient(t *testing.T) {
-	service := esConceptSearchService{nil, "test", &sync.RWMutex{}}
+	service := esConceptSearchService{nil, "test", 50, 10, 2, &sync.RWMutex{}}
 
 	_, err := service.FindAllConceptsByType(ftGenreType)
 	assert.EqualError(t, err, ErrNoElasticClient.Error(), "error response")
@@ -77,9 +77,9 @@ func (s *EsConceptSearchServiceTestSuite) TearDownSuite() {
 }
 
 func getElasticSearchTestURL(t *testing.T) string {
-	if testing.Short() {
-		t.Skip("ElasticSearch integration for long tests only.")
-	}
+	// if testing.Short() {
+	// t.Skip("ElasticSearch integration for long tests only.")
+	// }
 
 	esURL := os.Getenv("ELASTICSEARCH_TEST_URL")
 	if strings.TrimSpace(esURL) == "" {
@@ -167,7 +167,7 @@ func writeTestConcepts(ec *elastic.Client, esConceptType string, ftConceptType s
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByType() {
-	service := NewEsConceptSearchService(testIndexName)
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	concepts, err := service.FindAllConceptsByType(ftGenreType)
@@ -185,8 +185,26 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByType() {
 	}
 }
 
+func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeResultSize() {
+	service := NewEsConceptSearchService(testIndexName, 3, 10, 2)
+	service.SetElasticClient(s.ec)
+	concepts, err := service.FindAllConceptsByType(ftGenreType)
+
+	assert.NoError(s.T(), err, "expected no error for ES read")
+	assert.Len(s.T(), concepts, 3, "there should be three genres")
+
+	var prev string
+	for i := range concepts {
+		if i > 0 {
+			assert.Equal(s.T(), -1, strings.Compare(prev, concepts[i].PrefLabel), "concepts should be ordered")
+		}
+		assert.Equal(s.T(), ftGenreType, concepts[i].ConceptType, "Results should be of type FT Genre")
+		prev = concepts[i].PrefLabel
+	}
+}
+
 func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeInvalid() {
-	service := NewEsConceptSearchService(testIndexName)
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	_, err := service.FindAllConceptsByType("http://www.ft.com/ontology/Foo")
@@ -195,7 +213,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeInvalid() {
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypeInvalidTextParameter() {
-	service := NewEsConceptSearchService(testIndexName)
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	_, err := service.SuggestConceptByTextAndType("", ftBrandType)
@@ -203,7 +221,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypeInvalid
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndType() {
-	service := NewEsConceptSearchService(testIndexName)
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	concepts, err := service.SuggestConceptByTextAndType("test", ftBrandType)
@@ -215,7 +233,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndType() {
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByText() {
-	service := NewEsConceptSearchService(testIndexName)
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	concepts, err := service.SuggestAuthorsByText("test", ftPeopleType)
@@ -232,8 +250,17 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByText() {
 	}
 }
 
+func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsRestrictedSize() {
+	service := NewEsConceptSearchService(testIndexName, 10, 1, 2)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.SuggestAuthorsByText("test", ftPeopleType)
+	assert.NoError(s.T(), err, "expected no error for ES read")
+	assert.Len(s.T(), concepts, 1, "there should be one results")
+}
+
 func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByTextNoInputText() {
-	service := NewEsConceptSearchService(testIndexName)
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	concepts, err := service.SuggestAuthorsByText("", ftPeopleType)
@@ -242,7 +269,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByTextNoInputText() 
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByTextNoESConnection() {
-	service := NewEsConceptSearchService(testIndexName)
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 
 	concepts, err := service.SuggestAuthorsByText("test", ftPeopleType)
 	assert.EqualError(s.T(), err, ErrNoElasticClient.Error())
@@ -250,9 +277,20 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByTextNoESConnection
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByTextInvalidConceptType() {
-	service := NewEsConceptSearchService(testIndexName)
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 
 	concepts, err := service.SuggestAuthorsByText("test", ftGenreType)
 	assert.EqualError(s.T(), err, ErrInvalidConceptType.Error())
 	assert.Nil(s.T(), concepts)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestAutocompletionResultSize() {
+	service := NewEsConceptSearchService(testIndexName, 10, 3, 2)
+	service.SetElasticClient(s.ec)
+	concepts, err := service.SuggestConceptByTextAndType("test", ftBrandType)
+	assert.NoError(s.T(), err, "expected no error for ES read")
+	assert.Len(s.T(), concepts, 3, "there should be three results")
+	for _, c := range concepts {
+		assert.Equal(s.T(), ftBrandType, c.ConceptType, "Results should be of type FT Brand")
+	}
 }
