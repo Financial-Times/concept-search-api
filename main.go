@@ -65,6 +65,12 @@ func main() {
 		Desc:   "The maximum number of search results returned",
 		EnvVar: "RESULT_LIMIT",
 	})
+	autoCompleteResultLimit := app.Int(cli.IntOpt{
+		Name:   "autocomplete-result-limit",
+		Value:  10,
+		Desc:   "The maximum number of autocomplete results returned",
+		EnvVar: "AUTOCOMPLETE_LIMIT",
+	})
 	esTraceLogging := app.Bool(cli.BoolOpt{
 		Name:   "elasticsearch-trace",
 		Value:  false,
@@ -77,7 +83,7 @@ func main() {
 	app.Action = func() {
 		logStartupConfig(port, esEndpoint, esAuth, esIndex, searchResultLimit)
 
-		search := service.NewEsConceptSearchService(*esIndex)
+		search := service.NewEsConceptSearchService(*esIndex, *searchResultLimit, *autoCompleteResultLimit)
 		conceptFinder := newConceptFinder(*esIndex, *searchResultLimit)
 		healthcheck := newEsHealthService()
 
