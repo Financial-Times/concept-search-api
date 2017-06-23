@@ -59,7 +59,7 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	if searchErr != nil {
 		if searchErr == service.ErrInvalidConceptType || searchErr == service.ErrEmptyTextParameter {
 			writeHTTPError(w, http.StatusBadRequest, searchErr)
-		} else if searchErr == elastic.ErrNoClient {
+		} else if searchErr == service.ErrNoElasticClient || searchErr == elastic.ErrNoClient {
 			writeHTTPError(w, http.StatusServiceUnavailable, searchErr)
 		} else {
 			writeHTTPError(w, http.StatusInternalServerError, searchErr)
