@@ -77,9 +77,9 @@ func (s *EsConceptSearchServiceTestSuite) TearDownSuite() {
 }
 
 func getElasticSearchTestURL(t *testing.T) string {
-	// if testing.Short() {
-	// t.Skip("ElasticSearch integration for long tests only.")
-	// }
+	if testing.Short() {
+		t.Skip("ElasticSearch integration for long tests only.")
+	}
 
 	esURL := os.Getenv("ELASTICSEARCH_TEST_URL")
 	if strings.TrimSpace(esURL) == "" {
