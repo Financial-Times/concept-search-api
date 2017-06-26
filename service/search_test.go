@@ -69,7 +69,7 @@ func (s *EsConceptSearchServiceTestSuite) SetupSuite() {
 	err = writeTestConcepts(s.ec, esPeopleType, ftPeopleType, 4)
 	require.NoError(s.T(), err, "expected no error in adding people")
 	err = writeTestAuthors(s.ec, 4)
-	require.NoError(s.T(), err, "expected no error in adding people")
+	require.NoError(s.T(), err, "expected no error in adding authors")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TearDownSuite() {
@@ -105,6 +105,7 @@ func writeTestAuthors(ec *elastic.Client, amount int) error {
 	for i := 0; i < amount; i++ {
 		uuid := uuid.NewV4().String()
 
+		ftAuthor := true
 		payload := EsConceptModel{
 			Id:         uuid,
 			ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseURL, esPeopleType, uuid),
@@ -112,7 +113,7 @@ func writeTestAuthors(ec *elastic.Client, amount int) error {
 			Types:      []string{ftPeopleType},
 			DirectType: ftPeopleType,
 			Aliases:    []string{},
-			IsFTAuthor: true,
+			IsFTAuthor: &ftAuthor,
 		}
 
 		_, err := ec.Index().
@@ -243,9 +244,10 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByText() {
 	for i, concept := range concepts {
 		assert.Equal(s.T(), ftPeopleType, concept.ConceptType)
 		if i < 4 {
-			assert.True(s.T(), concept.IsFTAuthor)
+			require.NotNil(s.T(), concept.IsFTAuthor)
+			assert.True(s.T(), *concept.IsFTAuthor)
 		} else {
-			assert.False(s.T(), concept.IsFTAuthor)
+			assert.Nil(s.T(), concept.IsFTAuthor)
 		}
 	}
 }

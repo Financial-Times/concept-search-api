@@ -11,7 +11,7 @@ type EsConceptModel struct {
 	Types      []string `json:"types"`
 	DirectType string   `json:"directType"`
 	Aliases    []string `json:"aliases,omitempty"`
-	IsFTAuthor bool     `json:"isFTAuthor"`
+	IsFTAuthor *bool    `json:"isFTAuthor,omitempty"`
 }
 
 type Concept struct {
@@ -19,7 +19,7 @@ type Concept struct {
 	ApiUrl      string `json:"apiUrl"`
 	PrefLabel   string `json:"prefLabel"`
 	ConceptType string `json:"type"`
-	IsFTAuthor  bool   `json:"isFTAuthor"`
+	IsFTAuthor  *bool  `json:"isFTAuthor,omitempty"`
 }
 
 type Concepts []Concept
@@ -50,7 +50,7 @@ func esType(ftType string) string {
 }
 
 func correctPath(id string) string {
-	if (strings.HasPrefix(id, incorrectPath)){
+	if strings.HasPrefix(id, incorrectPath) {
 		return strings.Replace(id, incorrectPath, "http://www.ft.com/thing/", 1)
 	}
 	return id
