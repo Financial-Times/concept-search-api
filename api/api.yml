@@ -28,7 +28,7 @@ paths:
       parameters:
         - name: type
           in: query
-          description: The type of Concept to search for as a URI.
+          description: The type of Concept to search for as a URI. When used in isolation, the results will be the first 50 concepts of that type - this should only really be used with small collections such as Genres. When used in combination with other modes such as `mode=autocomplete`, this will restrict queries to search for concepts by the given type.
           type: string
           enum:
             - http://www.ft.com/ontology/Genre
@@ -37,20 +37,20 @@ paths:
           required: true
         - name: q
           in: query
-          description: The query text to use to find concepts.
+          description: The query text to use to find concepts. Must be set if the `mode=autocomplete`.
           type: string
           required: false
           x-example: analysis
         - name: mode
           in: query
-          description: The mode for the search request. Currently only supports a value of autocomplete, which will provide fast typeahead search functionality.
+          description: The mode for the search request. Currently only supports a value of autocomplete, which will provide fast typeahead search functionality. If set to autocomplete, then a value for `q` is required.
           type: string
           enum:
             - autocomplete
           required: false
         - name: boost
           in: query
-          description: The boost to apply to the request. Currently only supports boosting by FT Author, which requires a query type of http://www.ft.com/ontology/person/Person.
+          description: The boost to apply to the request. Currently only supports boosting by FT Author, which requires a query `type=http://www.ft.com/ontology/person/Person`, `mode=autocomplete` and a value for `q`.
           type: string
           enum:
             - author
