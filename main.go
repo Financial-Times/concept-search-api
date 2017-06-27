@@ -71,6 +71,12 @@ func main() {
 		Desc:   "The maximum number of autocomplete results returned",
 		EnvVar: "AUTOCOMPLETE_LIMIT",
 	})
+	esTraceLogging := app.Bool(cli.BoolOpt{
+		Name:   "elasticsearch-trace",
+		Value:  false,
+		Desc:   "Whether to log ElasticSearch HTTP requests and responses",
+		EnvVar: "ELASTICSEARCH_TRACE",
+	})
 
 	log.SetLevel(log.InfoLevel)
 
@@ -82,9 +88,9 @@ func main() {
 		healthcheck := newEsHealthService()
 
 		if *esAuth == "aws" {
-			go service.AWSClientSetup(*accessKey, *secretKey, *esEndpoint, time.Minute, search, conceptFinder, healthcheck)
+			go service.AWSClientSetup(*accessKey, *secretKey, *esEndpoint, *esTraceLogging, time.Minute, search, conceptFinder, healthcheck)
 		} else {
-			go service.SimpleClientSetup(*esEndpoint, time.Minute, search, conceptFinder, healthcheck)
+			go service.SimpleClientSetup(*esEndpoint, *esTraceLogging, time.Minute, search, conceptFinder, healthcheck)
 		}
 
 		handler := resources.NewHandler(search)

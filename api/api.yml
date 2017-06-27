@@ -30,7 +30,7 @@ paths:
                in: query
                description: The type of Concept to search for as a URI.
                type: string
-               required: true
+               required: false
                x-example: http://www.ft.com/ontology/Genre
             -  name: q
                in: query

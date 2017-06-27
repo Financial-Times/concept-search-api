@@ -25,7 +25,7 @@ func TestHappyAWSClientSetup(t *testing.T) {
 	esInternalServices := newESServiceMock(3)
 	es := newHappyAWSESMock(t)
 	defer es.Close()
-	go AWSClientSetup("a-key", "a-secret", es.URL, time.Second, esInternalServices[0], esInternalServices[1], esInternalServices[2])
+	go AWSClientSetup("a-key", "a-secret", es.URL, false, time.Second, esInternalServices[0], esInternalServices[1], esInternalServices[2])
 	time.Sleep(100 * time.Millisecond)
 	for _, s := range esInternalServices {
 		s.AssertExpectations(t)
@@ -39,7 +39,7 @@ func TestUnhappyAWSClientSetup(t *testing.T) {
 	esInternalServices := newESServiceMock(3)
 	es := newUnhappyAWSESMockForNAttempts(t, 10)
 	defer es.Close()
-	go AWSClientSetup("a-key", "a-secret", es.URL, time.Second, esInternalServices[0], esInternalServices[1], esInternalServices[2])
+	go AWSClientSetup("a-key", "a-secret", es.URL, true, time.Second, esInternalServices[0], esInternalServices[1], esInternalServices[2])
 	for i := 0; i < 12; i++ { // NB elastic.Client retries by default 5 times every second by itself.
 		for _, s := range esInternalServices {
 			s.AssertNotCalled(t, "SetElasticClient", mock.AnythingOfType("*elastic.Client"))
@@ -56,7 +56,7 @@ func TestHappySimpleClientSetup(t *testing.T) {
 	esInternalServices := newESServiceMock(3)
 	es := newHappySimpleESMock(t)
 	defer es.Close()
-	go SimpleClientSetup(es.URL, time.Second, esInternalServices[0], esInternalServices[1], esInternalServices[2])
+	go SimpleClientSetup(es.URL, true, time.Second, esInternalServices[0], esInternalServices[1], esInternalServices[2])
 	time.Sleep(100 * time.Millisecond)
 	for _, s := range esInternalServices {
 		s.AssertExpectations(t)
@@ -70,7 +70,7 @@ func TestUnhappySimpleClientSetup(t *testing.T) {
 	esInternalServices := newESServiceMock(3)
 	es := newUnhappySimpleESMockForNAttempts(t, 10)
 	defer es.Close()
-	go SimpleClientSetup(es.URL, time.Second, esInternalServices[0], esInternalServices[1], esInternalServices[2])
+	go SimpleClientSetup(es.URL, false, time.Second, esInternalServices[0], esInternalServices[1], esInternalServices[2])
 	for i := 0; i < 12; i++ { // NB elastic.Client retries by default 5 times every second by itself.
 		for _, s := range esInternalServices {
 			s.AssertNotCalled(t, "SetElasticClient", mock.AnythingOfType("*elastic.Client"))

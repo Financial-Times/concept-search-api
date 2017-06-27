@@ -34,8 +34,12 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if isAutocomplete {
-		if foundQ && foundConceptType {
-			concepts, searchErr = h.service.SuggestConceptByTextAndType(q, conceptType)
+		if foundQ {
+			if foundConceptType {
+				concepts, searchErr = h.service.SuggestConceptByTextAndType(q, conceptType)
+			} else {
+				concepts, searchErr = h.service.SuggestConceptByText(q)
+			}
 		} else {
 			validationErr = errors.New("invalid or missing parameters for autocomplete concept search (require type and q)")
 		}
