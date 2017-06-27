@@ -32,6 +32,7 @@ Other parameters:
 - index-name (defaults to concept)
 - elasticsearch-index (defaults to concept)
 - search-result-limit (defaults to 50)
+- elasticsearch-trace (defaults to false)
 
 ## Available DATA endpoints:
 

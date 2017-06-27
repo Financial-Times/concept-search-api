@@ -36,6 +36,11 @@ func (s *mockConceptSearchService) SuggestAuthorsByText(textQuery string, concep
 	return args.Get(0).([]service.Concept), args.Error(1)
 }
 
+func (s *mockConceptSearchService) SuggestConceptByText(textQuery string) ([]service.Concept, error) {
+	args := s.Called(textQuery)
+	return args.Get(0).([]service.Concept), args.Error(1)
+}
+
 func dummyConcepts() []service.Concept {
 	return []service.Concept{
 		service.Concept{
@@ -304,7 +309,9 @@ func TestConceptSeachByTypeAndValue(t *testing.T) {
 func TestTypeaheadConceptSearchByText(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?q=lucy&mode=autocomplete", nil)
 
+	concepts := dummyConcepts()
 	svc := mockConceptSearchService{}
+	svc.On("SuggestConceptByText", "lucy").Return(concepts, nil)
 	endpoint := NewHandler(&svc)
 
 	router := vestigo.NewRouter()
@@ -314,17 +321,18 @@ func TestTypeaheadConceptSearchByText(t *testing.T) {
 	router.ServeHTTP(w, req)
 	actual := w.Result()
 
-	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, http.StatusOK, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := make(map[string]string)
+	respObject := make(map[string][]service.Concept)
 	actualBody, _ := ioutil.ReadAll(actual.Body)
 	err := json.Unmarshal(actualBody, &respObject)
 	if err != nil {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, "invalid or missing parameters for autocomplete concept search (require type and q)", respObject["message"], "error message")
+	assert.Len(t, respObject["concepts"], 2, "concepts")
+	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
 }
 
 func TestTypeaheadConceptSearchByTextAndType(t *testing.T) {
