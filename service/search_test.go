@@ -105,7 +105,7 @@ func writeTestAuthors(ec *elastic.Client, amount int) error {
 	for i := 0; i < amount; i++ {
 		uuid := uuid.NewV4().String()
 
-		ftAuthor := true
+		ftAuthor := "true"
 		payload := EsConceptModel{
 			Id:         uuid,
 			ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseURL, esPeopleType, uuid),

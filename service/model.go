@@ -1,7 +1,10 @@
 package service
 
 import (
+	"strconv"
 	"strings"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type EsConceptModel struct {
@@ -11,7 +14,7 @@ type EsConceptModel struct {
 	Types      []string `json:"types"`
 	DirectType string   `json:"directType"`
 	Aliases    []string `json:"aliases,omitempty"`
-	IsFTAuthor *bool    `json:"isFTAuthor,omitempty"`
+	IsFTAuthor *string  `json:"isFTAuthor,omitempty"`
 }
 
 type Concept struct {
@@ -40,7 +43,14 @@ func ConvertToSimpleConcept(esConcept EsConceptModel, esType string) Concept {
 	c.ApiUrl = esConcept.ApiUrl
 	c.ConceptType = ftType(esType)
 	c.PrefLabel = esConcept.PrefLabel
-	c.IsFTAuthor = esConcept.IsFTAuthor
+	if esConcept.IsFTAuthor != nil {
+		ftAuthor, err := strconv.ParseBool(*esConcept.IsFTAuthor)
+		if err != nil {
+			log.WithField("id", esConcept.Id).WithField("isFtAuthor", esConcept.IsFTAuthor).Warn("Failed to parse boolean field isFtAuthor - is there a data issue")
+		} else {
+			c.IsFTAuthor = &ftAuthor
+		}
+	}
 
 	return c
 }
