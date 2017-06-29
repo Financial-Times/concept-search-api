@@ -34,7 +34,7 @@ paths:
             - http://www.ft.com/ontology/Genre
             - http://www.ft.com/ontology/product/Brand
             - http://www.ft.com/ontology/person/Person
-          required: true
+          required: false
         - name: q
           in: query
           description: The query text to use to find concepts. Must be set if the `mode=autocomplete`.

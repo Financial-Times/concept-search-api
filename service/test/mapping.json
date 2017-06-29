@@ -25,6 +25,9 @@
             "raw": {
               "type": "string",
               "index": "not_analyzed"
+            },
+            "mentionsCompletion": {
+              "type": "completion"
             }
           }
         },
@@ -66,7 +69,7 @@
               "type": "string",
               "index": "not_analyzed"
             },
-            "indexCompletion": {
+            "mentionsCompletion": {
               "type": "completion"
             },
             "completionByContext": {
@@ -140,6 +143,9 @@
             "raw": {
               "type": "string",
               "index": "not_analyzed"
+            },
+            "mentionsCompletion": {
+              "type": "completion"
             }
           }
         },
@@ -261,9 +267,6 @@
               "type": "string",
               "index": "not_analyzed"
             },
-            "indexCompletion": {
-              "type": "completion"
-            },
             "completionByContext": {
               "type": "completion",
               "contexts": [{
@@ -351,6 +354,9 @@
             "raw": {
               "type": "string",
               "index": "not_analyzed"
+            },
+            "mentionsCompletion": {
+              "type": "completion"
             }
           }
         },
