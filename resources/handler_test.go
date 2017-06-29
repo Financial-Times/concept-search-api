@@ -191,7 +191,7 @@ func TestConceptSearchByTypeServerError(t *testing.T) {
 	assert.Equal(t, expectedError.Error(), respObject["message"], "error message")
 }
 
-func TestConceptSeachByTypeNoType(t *testing.T) {
+func TestConceptSeachNoParams(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts", nil)
 
 	svc := mockConceptSearchService{}
@@ -214,7 +214,7 @@ func TestConceptSeachByTypeNoType(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, "invalid or missing parameters for concept search (no type)", respObject["message"], "error message")
+	assert.Equal(t, "invalid or missing parameters for concept search (no mode, type, or q)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
 
@@ -297,7 +297,7 @@ func TestConceptSeachByTypeAndValue(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, "invalid or missing parameters for concept search (no mode)", respObject["message"], "error message")
+	assert.Equal(t, "invalid or missing parameters for concept search (q but no mode)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
 
@@ -410,5 +410,32 @@ func TestTypeaheadConceptSearchByMultipleTextAndType(t *testing.T) {
 	}
 
 	assert.Equal(t, "specified multiple q query parameters in the URL", respObject["message"], "error message")
+	svc.AssertExpectations(t)
+}
+
+func TestTypeaheadConceptSearchNoText(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?mode=autocomplete", nil)
+
+	svc := mockConceptSearchService{}
+	endpoint := NewHandler(&svc)
+
+	router := vestigo.NewRouter()
+	router.Get("/concepts", endpoint.ConceptSearch)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
+
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := make(map[string]string)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
+	if err != nil {
+		t.Errorf("Unmarshalling request response failed. %v", err)
+	}
+
+	assert.Equal(t, "invalid or missing parameters for autocomplete concept search (require q)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
