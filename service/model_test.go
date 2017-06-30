@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConceptsSortInterface(t *testing.T) {
@@ -84,6 +85,46 @@ func TestConvertToSimpleConceptWithIdCorrect(t *testing.T) {
 	}
 
 	actual := ConvertToSimpleConcept(esConcept, "genres")
-	assert.Equal(t,  "http://www.ft.com/thing/id", actual.Id, "The id did not get converted properly")
+	assert.Equal(t, "http://www.ft.com/thing/id", actual.Id, "The id did not get converted properly")
 }
 
+func TestConvertToSimpleConceptWithFTAuthor(t *testing.T) {
+	id := "http://api.ft.com/things/id"
+	apiUrl := "http://www.example.com/1"
+	label := "Another Test Concept"
+	isFtAuthor := "true"
+
+	esConcept := EsConceptModel{
+		Id:         id,
+		ApiUrl:     apiUrl,
+		PrefLabel:  label,
+		Types:      []string{"any"},
+		DirectType: "any",
+		Aliases:    []string{},
+		IsFTAuthor: &isFtAuthor,
+	}
+
+	actual := ConvertToSimpleConcept(esConcept, "genres")
+	require.NotNil(t, actual.IsFTAuthor)
+	assert.True(t, *actual.IsFTAuthor)
+}
+
+func TestConvertToSimpleConceptWithNonBoolFTAuthor(t *testing.T) {
+	id := "http://api.ft.com/things/id"
+	apiUrl := "http://www.example.com/1"
+	label := "Another Test Concept"
+	isFtAuthor := "ahhh i'm not a bool!"
+
+	esConcept := EsConceptModel{
+		Id:         id,
+		ApiUrl:     apiUrl,
+		PrefLabel:  label,
+		Types:      []string{"any"},
+		DirectType: "any",
+		Aliases:    []string{},
+		IsFTAuthor: &isFtAuthor,
+	}
+
+	actual := ConvertToSimpleConcept(esConcept, "genres")
+	assert.Nil(t, actual.IsFTAuthor)
+}
