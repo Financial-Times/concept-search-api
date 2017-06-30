@@ -53,7 +53,7 @@ paths:
           description: The boost to apply to the request. Currently only supports boosting by FT Author, which requires a query `type=http://www.ft.com/ontology/person/Person`, `mode=autocomplete` and a value for `q`.
           type: string
           enum:
-            - author
+            - authors
           required: false
       responses:
         200:
