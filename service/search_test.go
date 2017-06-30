@@ -35,7 +35,7 @@ const (
 )
 
 func TestNoElasticClient(t *testing.T) {
-	service := esConceptSearchService{nil, "test", 50, 10, map[string]struct{}{}, &sync.RWMutex{}}
+	service := esConceptSearchService{nil, "test", 50, 10, map[string]struct{}{}, nil, &sync.RWMutex{}}
 
 	_, err := service.FindAllConceptsByType(ftGenreType)
 	assert.EqualError(t, err, ErrNoElasticClient.Error(), "error response")

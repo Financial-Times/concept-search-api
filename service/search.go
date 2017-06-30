@@ -6,6 +6,7 @@ import (
 	"errors"
 	"sort"
 	"sync"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v5"
@@ -30,11 +31,16 @@ type esConceptSearchService struct {
 	maxSearchResults       int
 	maxAutoCompleteResults int
 	autoCompleteByType     map[string]struct{}
+	mappingRefreshTicker   *time.Ticker
 	clientLock             *sync.RWMutex
 }
 
 func NewEsConceptSearchService(index string, maxSearchResults int, maxAutoCompleteResults int) *esConceptSearchService {
-	return &esConceptSearchService{nil, index, maxSearchResults, maxAutoCompleteResults, make(map[string]struct{}), &sync.RWMutex{}}
+	return &esConceptSearchService{index: index,
+		maxSearchResults:       maxSearchResults,
+		maxAutoCompleteResults: maxAutoCompleteResults,
+		autoCompleteByType:     make(map[string]struct{}),
+		clientLock:             &sync.RWMutex{}}
 }
 
 func (s *esConceptSearchService) checkElasticClient() error {
@@ -157,7 +163,17 @@ func (s *esConceptSearchService) SetElasticClient(client *elastic.Client) {
 	defer s.clientLock.Unlock()
 	s.esClient = client
 
+	if s.mappingRefreshTicker != nil {
+		s.mappingRefreshTicker.Stop()
+	}
+
 	s.initMappings(client)
+	s.mappingRefreshTicker = time.NewTicker(5 * time.Minute)
+	go func() {
+		for range s.mappingRefreshTicker.C {
+			s.initMappings(client)
+		}
+	}()
 }
 
 func (s *esConceptSearchService) elasticClient() *elastic.Client {
