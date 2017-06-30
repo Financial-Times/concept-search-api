@@ -35,7 +35,7 @@ const (
 )
 
 func TestNoElasticClient(t *testing.T) {
-	service := esConceptSearchService{nil, "test", 50, 10, &sync.RWMutex{}}
+	service := esConceptSearchService{nil, "test", 50, 10, map[string]struct{}{}, &sync.RWMutex{}}
 
 	_, err := service.FindAllConceptsByType(ftGenreType)
 	assert.EqualError(t, err, ErrNoElasticClient.Error(), "error response")
@@ -207,6 +207,14 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndType() {
 	for _, c := range concepts {
 		assert.Equal(s.T(), ftBrandType, c.ConceptType, "Results should be of type FT Brand")
 	}
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypeInvalidAutocompleteType() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10)
+	service.SetElasticClient(s.ec)
+
+	_, err := service.SuggestConceptByTextAndType("test", ftOrganisationType)
+	assert.EqualError(s.T(), err, ErrInvalidConceptTypeForAutocompleteByType.Error(), "error response")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestAutocompletionResultSize() {

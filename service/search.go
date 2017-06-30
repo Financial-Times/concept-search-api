@@ -12,9 +12,10 @@ import (
 )
 
 var (
-	ErrNoElasticClient    = errors.New("no ElasticSearch client available")
-	ErrInvalidConceptType = errors.New("invalid concept type")
-	ErrEmptyTextParameter = errors.New("empty text parameter")
+	ErrNoElasticClient                         = errors.New("no ElasticSearch client available")
+	ErrInvalidConceptType                      = errors.New("invalid concept type")
+	ErrInvalidConceptTypeForAutocompleteByType = errors.New("invalid concept type for this search")
+	ErrEmptyTextParameter                      = errors.New("empty text parameter")
 )
 
 type ConceptSearchService interface {
@@ -28,11 +29,12 @@ type esConceptSearchService struct {
 	index                  string
 	maxSearchResults       int
 	maxAutoCompleteResults int
+	autoCompleteByType     map[string]struct{}
 	clientLock             *sync.RWMutex
 }
 
 func NewEsConceptSearchService(index string, maxSearchResults int, maxAutoCompleteResults int) *esConceptSearchService {
-	return &esConceptSearchService{nil, index, maxSearchResults, maxAutoCompleteResults, &sync.RWMutex{}}
+	return &esConceptSearchService{nil, index, maxSearchResults, maxAutoCompleteResults, make(map[string]struct{}), &sync.RWMutex{}}
 }
 
 func (s *esConceptSearchService) checkElasticClient() error {
@@ -106,13 +108,16 @@ func (s *esConceptSearchService) SuggestConceptByTextAndType(textQuery string, c
 		return nil, ErrEmptyTextParameter
 	}
 
+	if err := s.checkElasticClient(); err != nil {
+		return nil, err
+	}
+
 	t := esType(conceptType)
 	if t == "" {
 		return nil, ErrInvalidConceptType
 	}
-
-	if err := s.checkElasticClient(); err != nil {
-		return nil, err
+	if _, found := s.autoCompleteByType[t]; !found {
+		return nil, ErrInvalidConceptTypeForAutocompleteByType
 	}
 
 	typeContext := elastic.NewSuggesterCategoryQuery("typeContext", t)
@@ -151,10 +156,40 @@ func (s *esConceptSearchService) SetElasticClient(client *elastic.Client) {
 	s.clientLock.Lock()
 	defer s.clientLock.Unlock()
 	s.esClient = client
+
+	s.initMappings(client)
 }
 
 func (s *esConceptSearchService) elasticClient() *elastic.Client {
 	s.clientLock.RLock()
 	defer s.clientLock.RUnlock()
 	return s.esClient
+}
+
+func (s *esConceptSearchService) initMappings(client *elastic.Client) {
+	s.autoCompleteByType = make(map[string]struct{})
+
+	mapping := elastic.NewIndicesGetFieldMappingService(client)
+	m, err := mapping.Index(s.index).Field("prefLabel").Do(context.Background())
+
+	if err != nil {
+		log.Errorf("unable to read ES mappings: %v", err)
+		return
+	}
+
+	if len(m) != 1 {
+		log.Errorf("mappings for index are unexpected size: %v", len(m))
+		return
+	}
+
+	for _, v := range m {
+		for conceptType, fields := range v.(map[string]interface{})["mappings"].(map[string]interface{}) {
+			prefLabelFields := fields.(map[string]interface{})["prefLabel"].(map[string]interface{})["mapping"].(map[string]interface{})["prefLabel"].(map[string]interface{})["fields"].(map[string]interface{})
+			if _, hasContextCompletion := prefLabelFields["completionByContext"]; hasContextCompletion {
+				s.autoCompleteByType[conceptType] = struct{}{}
+			}
+		}
+	}
+
+	log.Infof("autocomplete by type: %v", s.autoCompleteByType)
 }

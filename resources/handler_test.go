@@ -412,3 +412,30 @@ func TestTypeaheadConceptSearchByMultipleTextAndType(t *testing.T) {
 	assert.Equal(t, "specified multiple q query parameters in the URL", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
+
+func TestTypeaheadConceptSearchByTextAndTypeInvalidAutocompleteType(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Forganisation%2FOrganisation&q=google&mode=autocomplete", nil)
+
+	svc := mockConceptSearchService{}
+	svc.On("SuggestConceptByTextAndType", mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return([]service.Concept{}, service.ErrInvalidConceptTypeForAutocompleteByType)
+	endpoint := NewHandler(&svc)
+
+	router := vestigo.NewRouter()
+	router.Get("/concepts", endpoint.ConceptSearch)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
+
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := make(map[string]string)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
+	if err != nil {
+		t.Errorf("Unmarshalling request response failed. %v", err)
+	}
+
+	assert.Equal(t, service.ErrInvalidConceptTypeForAutocompleteByType.Error(), respObject["message"], "error message")
+}
