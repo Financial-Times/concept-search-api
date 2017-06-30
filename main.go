@@ -71,6 +71,12 @@ func main() {
 		Desc:   "The maximum number of autocomplete results returned",
 		EnvVar: "AUTOCOMPLETE_LIMIT",
 	})
+	authorsBoost := app.Int(cli.IntOpt{
+		Name:   "authors-boost",
+		Value:  10,
+		Desc:   "The boost to apply to authors during a /concepts?boost=author typeahead search.",
+		EnvVar: "AUTHORS_BOOST",
+	})
 	esTraceLogging := app.Bool(cli.BoolOpt{
 		Name:   "elasticsearch-trace",
 		Value:  false,
@@ -83,7 +89,7 @@ func main() {
 	app.Action = func() {
 		logStartupConfig(port, esEndpoint, esAuth, esIndex, searchResultLimit)
 
-		search := service.NewEsConceptSearchService(*esIndex, *searchResultLimit, *autoCompleteResultLimit)
+		search := service.NewEsConceptSearchService(*esIndex, *searchResultLimit, *autoCompleteResultLimit, *authorsBoost)
 		conceptFinder := newConceptFinder(*esIndex, *searchResultLimit)
 		healthcheck := newEsHealthService()
 

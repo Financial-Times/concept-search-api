@@ -26,8 +26,9 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	_, isAutocomplete, modeErr := getSingleValueQueryParameter(req, "mode", "autocomplete")
 	q, foundQ, qErr := getSingleValueQueryParameter(req, "q")
 	conceptType, foundConceptType, conceptTypeErr := getSingleValueQueryParameter(req, "type")
+	_, foundBoostType, boostTypeErr := getSingleValueQueryParameter(req, "boost", "authors") // we currently only accept authors, so ignoring the actual boost value
 
-	err := firstError(modeErr, qErr, conceptTypeErr)
+	err := firstError(modeErr, qErr, conceptTypeErr, boostTypeErr)
 	if err != nil {
 		writeHTTPError(w, http.StatusBadRequest, err)
 		return
@@ -36,7 +37,11 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	if isAutocomplete {
 		if foundQ {
 			if foundConceptType {
-				concepts, searchErr = h.service.SuggestConceptByTextAndType(q, conceptType)
+				if foundBoostType {
+					concepts, searchErr = h.service.SuggestAuthorsByText(q, conceptType)
+				} else {
+					concepts, searchErr = h.service.SuggestConceptByTextAndType(q, conceptType)
+				}
 			} else {
 				concepts, searchErr = h.service.SuggestConceptByText(q)
 			}

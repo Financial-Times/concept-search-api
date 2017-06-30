@@ -1,7 +1,10 @@
 package service
 
 import (
+	"strconv"
 	"strings"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type EsConceptModel struct {
@@ -11,6 +14,7 @@ type EsConceptModel struct {
 	Types      []string `json:"types"`
 	DirectType string   `json:"directType"`
 	Aliases    []string `json:"aliases,omitempty"`
+	IsFTAuthor *string  `json:"isFTAuthor,omitempty"`
 }
 
 type Concept struct {
@@ -18,6 +22,7 @@ type Concept struct {
 	ApiUrl      string `json:"apiUrl"`
 	PrefLabel   string `json:"prefLabel"`
 	ConceptType string `json:"type"`
+	IsFTAuthor  *bool  `json:"isFTAuthor,omitempty"`
 }
 
 type Concepts []Concept
@@ -41,6 +46,14 @@ func ConvertToSimpleConcept(esConcept EsConceptModel, esType string) Concept {
 	c.ApiUrl = esConcept.ApiUrl
 	c.ConceptType = ftType(esType)
 	c.PrefLabel = esConcept.PrefLabel
+	if esConcept.IsFTAuthor != nil {
+		ftAuthor, err := strconv.ParseBool(*esConcept.IsFTAuthor)
+		if err != nil {
+			log.WithField("id", esConcept.Id).WithField("isFtAuthor", esConcept.IsFTAuthor).Warn("Failed to parse boolean field isFtAuthor - is there a data issue")
+		} else {
+			c.IsFTAuthor = &ftAuthor
+		}
+	}
 
 	return c
 }
@@ -50,7 +63,7 @@ func esType(ftType string) string {
 }
 
 func correctPath(id string) string {
-	if (strings.HasPrefix(id, incorrectPath)){
+	if strings.HasPrefix(id, incorrectPath) {
 		return strings.Replace(id, incorrectPath, "http://www.ft.com/thing/", 1)
 	}
 	return id
