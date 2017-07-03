@@ -1,212 +1,221 @@
 swagger: "2.0"
 
 info:
-   title: Concept Search API
-   description: A microservice that provides endpoints to query for UPP V2 Concepts
-   version: 0.0.1
-   license:
-      name: MIT
-   contact:
-      name: Universal Publishing
-      email: universal.publishing@ft.com
+  title: Concept Search API
+  description: A microservice that provides endpoints to query for UPP V2 Concepts
+  version: 0.0.1
+  license:
+    name: MIT
+  contact:
+    name: Universal Publishing
+    email: universal.publishing@ft.com
 
 host: api.ft.com
 
 schemes:
-   - http
-   - https
+  - http
+  - https
 
 basePath: /
 
 paths:
-   /concepts:
-      get:
-         summary: Concept Query
-         description: Get all Concepts by type or search for concepts using a query.
-         tags:
-            - Public API
-         parameters:
-            -  name: type
-               in: query
-               description: The type of Concept to search for as a URI.
-               type: string
-               required: false
-               x-example: http://www.ft.com/ontology/Genre
-            -  name: q
-               in: query
-               description: The query text to use to find concepts.
-               type: string
-               required: false
-               x-example: analysis
-            -  name: mode
-               in: query
-               description: The mode for the search request. Currently only supports a value of autocomplete, which will provide fast typeahead search functionality.
-               type: string
-               enum:
-                  - autocomplete
-               required: false
-         responses:
-            200:
-               description: Returns concepts based on the provided query parameters.
-               examples:
-                  application/json:
-                     concepts:
-                        -  id: http://www.ft.com/thing/61d707b5-6fab-3541-b017-49b72de80772
-                           apiUrl: http://api.ft.com/things/61d707b5-6fab-3541-b017-49b72de80772
-                           prefLabel: Analysis
-                           type: http://www.ft.com/ontology/Genre
-            500:
-               description: Failed to search for concepts, usually caused by issues with ES.
-            400:
-               description: Incorrect request parameters or invalid concept type.
-   /concept/search:
-      post:
-         summary: Concept Search by Terms
-         description: Search for Concepts using ES query terms.
-         tags:
-            - Public API
-         consumes:
-            - application/json
-         parameters:
-            -  name: include_score
-               in: query
-               required: false
-               type: boolean
-               description: Include the ES scores for each item in the response.
-            -  name: body
-               in: body
-               required: true
-               description: The concept search term to query for.
-               schema:
+  /concepts:
+    get:
+      summary: Concept Query
+      description: Get all Concepts by type or search for concepts using a query.
+      tags:
+        - Public API
+      parameters:
+        - name: type
+          in: query
+          description: The type of Concept to search for as a URI. When used in isolation, the results will be the first 50 concepts of that type - this should only really be used with small collections such as Genres. When used in combination with other modes such as `mode=autocomplete`, this will restrict queries to search for concepts by the given type.
+          type: string
+          enum:
+            - http://www.ft.com/ontology/Genre
+            - http://www.ft.com/ontology/product/Brand
+            - http://www.ft.com/ontology/person/Person
+          required: false
+        - name: q
+          in: query
+          description: The query text to use to find concepts. Must be set if the `mode=autocomplete`.
+          type: string
+          required: false
+          x-example: analysis
+        - name: mode
+          in: query
+          description: The mode for the search request. Currently only supports a value of autocomplete, which will provide fast typeahead search functionality. If set to autocomplete, then a value for `q` is required.
+          type: string
+          enum:
+            - autocomplete
+          required: false
+        - name: boost
+          in: query
+          description: The boost to apply to the request. Currently only supports boosting by FT Author, which requires a query `type=http://www.ft.com/ontology/person/Person`, `mode=autocomplete` and a value for `q`.
+          type: string
+          enum:
+            - authors
+          required: false
+      responses:
+        200:
+          description: Returns concepts based on the provided query parameters.
+          examples:
+            application/json:
+              concepts:
+                - id: http://www.ft.com/thing/61d707b5-6fab-3541-b017-49b72de80772
+                  apiUrl: http://api.ft.com/things/61d707b5-6fab-3541-b017-49b72de80772
+                  prefLabel: Analysis
+                  type: http://www.ft.com/ontology/Genre
+        500:
+          description: Failed to search for concepts, usually caused by issues with ES.
+        400:
+          description: Incorrect request parameters or invalid concept type.
+  /concept/search:
+    post:
+      summary: Concept Search by Terms
+      description: Search for Concepts using ES query terms.
+      tags:
+        - Public API
+      consumes:
+        - application/json
+      parameters:
+        - name: include_score
+          in: query
+          required: false
+          type: boolean
+          description: Include the ES scores for each item in the response.
+        - name: body
+          in: body
+          required: true
+          description: The concept search term to query for.
+          schema:
+            type: object
+            properties:
+              term:
+                type: string
+                required:
+                  - term
+            example:
+              term: Analysis
+      responses:
+        200:
+          description: Returns concepts based on the provided query parameters.
+          schema:
+            type: object
+            properties:
+              results:
+                type: array
+                items:
                   type: object
                   properties:
-                     term:
-                        type: string
-                  required:
-                     - term
-                  example:
-                     term: Analysis
-         responses:
-            200:
-               description: Returns concepts based on the provided query parameters.
-               schema:
-                  type: object
-                  properties:
-                     results:
-                        type: array
-                        items:
-                           type: object
-                           properties:
-                              id:
-                                 type: string
-                              apiUrl:
-                                 type: string
-                              prefLabel:
-                                 type: string
-                              types:
-                                 type:
-                                    - array
-                                    - "null"
-                                 items:
-                                    type: string
-                              directType:
-                                 type: string
-                  required:
-                     - results
-                  example:
-                     results:
-                        -  id: http://api.ft.com/things/61d707b5-6fab-3541-b017-49b72de80772
-                           apiUrl: http://api.ft.com/things/61d707b5-6fab-3541-b017-49b72de80772
-                           prefLabel: Analysis
-            500:
-               description: Failed to search for concepts, usually caused by issues with ES.
-            400:
-               description: Incorrect request body.
-            404:
-               description: Incorrect request parameters or invalid concept type.
-   /__health:
-      get:
-         summary: Healthchecks
-         description: Runs application healthchecks and returns FT Healthcheck style json.
-         produces:
-            - application/json
-         tags:
-            - Health
-         responses:
-            200:
-               description: Should always return 200 along with the output of the healthchecks - regardless of whether the healthchecks failed or not. Please inspect the overall ok property to see whether or not the application is healthy.
-               examples:
-                  application/json:
-                     checks:
-                        -  businessImpact: "No Business Impact."
-                           checkOutput: "OK"
-                           lastUpdated: "2017-01-16T10:26:47.222805121Z"
-                           name: "ExampleHealthcheck"
-                           ok: true
-                           panicGuide: "https://dewey.ft.com/some-app.html"
-                           severity: 1
-                           technicalSummary: "Some engaging technical summary"
-                     description: A concise description.
-                     name: app-name
-                     ok: true
-                     schemaVersion: 1
-   /__health-details:
-      get:
-         summary: Healthcheck Details
-         description: Returns healthcheck data for the external ES cluster.
-         produces:
-            - application/json
-         tags:
-            - Health
-         responses:
-            200:
-               description: Returns ES style status information.
-               examples:
-                  application/json:
-                     cluster_name: a-cluster-name
-                     status: green
-                     timed_out: false
-                     number_of_nodes: 6
-                     number_of_data_nodes: 3
-                     active_primary_shards: 16
-                     active_shards: 32
-                     relocating_shards: 0
-                     initializing_shards: 0
-                     unassigned_shards: 0
-                     delayed_unassigned_shards: 0
-                     number_of_pending_tasks: 0
-                     number_of_in_flight_fetch: 0
-                     task_max_waiting_in_queue_millis: 0
-                     active_shards_percent_as_number: 100
-                     validation_failures: null
-                     indices: null
-
-   /__build-info:
-      get:
-         summary: Build Information
-         description: Returns application build info, such as the git repository and revision, the golang version it was built with, and the app release version.
-         produces:
-            - application/json; charset=UTF-8
-         tags:
-            - Info
-         responses:
-            200:
-               description: Outputs build information as described in the summary.
-               examples:
-                  application/json; charset=UTF-8:
-                     version: "0.0.1"
-                     repository: "https://github.com/Financial-Times/concept-search-api.git"
-                     revision: "7cdbdb18b4a518eef3ebb1b545fc124612f9d7cd"
-                     builder: "go version go1.6.3 linux/amd64"
-                     dateTime: "20161123122615"
-   /__gtg:
-      get:
-         summary: Good To Go
-         description: Lightly healthchecks the application, and returns a 200 if it's Good-To-Go.
-         tags:
-            - Health
-         responses:
-            200:
-               description: The application is healthy enough to perform all its functions correctly - i.e. good to go.
-            503:
-               description: One or more of the applications healthchecks have failed, so please do not use the app. See the /__health endpoint for more detailed information.
+                    id:
+                      type: string
+                    apiUrl:
+                      type: string
+                    prefLabel:
+                      type: string
+                    types:
+                      type:
+                        - array
+                        - "null"
+                    items:
+                      type: string
+                    directType:
+                      type: string
+                required:
+                  - results
+                example:
+                  results:
+                    - id: http://api.ft.com/things/61d707b5-6fab-3541-b017-49b72de80772
+                      apiUrl: http://api.ft.com/things/61d707b5-6fab-3541-b017-49b72de80772
+                      prefLabel: Analysis
+        500:
+          description: Failed to search for concepts, usually caused by issues with ES.
+        400:
+          description: Incorrect request body.
+        404:
+          description: Incorrect request parameters or invalid concept type.
+  /__health:
+    get:
+      summary: Healthchecks
+      description: Runs application healthchecks and returns FT Healthcheck style json.
+      produces:
+        - application/json
+      tags:
+        - Health
+      responses:
+        200:
+          description: Should always return 200 along with the output of the healthchecks - regardless of whether the healthchecks failed or not. Please inspect the overall ok property to see whether or not the application is healthy.
+          examples:
+            application/json:
+              checks:
+                - businessImpact: "No Business Impact."
+                  checkOutput: "OK"
+                  lastUpdated: "2017-01-16T10:26:47.222805121Z"
+                  name: "ExampleHealthcheck"
+                  ok: true
+                  panicGuide: "https://dewey.ft.com/some-app.html"
+                  severity: 1
+                  technicalSummary: "Some engaging technical summary"
+              description: A concise description.
+              name: app-name
+              ok: true
+              schemaVersion: 1
+  /__health-details:
+    get:
+      summary: Healthcheck Details
+      description: Returns healthcheck data for the external ES cluster.
+      produces:
+        - application/json
+      tags:
+        - Health
+      responses:
+        200:
+          description: Returns ES style status information.
+          examples:
+            application/json:
+              cluster_name: a-cluster-name
+              status: green
+              timed_out: false
+              number_of_nodes: 6
+              number_of_data_nodes: 3
+              active_primary_shards: 16
+              active_shards: 32
+              relocating_shards: 0
+              initializing_shards: 0
+              unassigned_shards: 0
+              delayed_unassigned_shards: 0
+              number_of_pending_tasks: 0
+              number_of_in_flight_fetch: 0
+              task_max_waiting_in_queue_millis: 0
+              active_shards_percent_as_number: 100
+              validation_failures: null
+              indices: null
+  /__build-info:
+    get:
+      summary: Build Information
+      description: Returns application build info, such as the git repository and revision, the golang version it was built with, and the app release version.
+      produces:
+        - application/json; charset=UTF-8
+      tags:
+        - Info
+      responses:
+        200:
+          description: Outputs build information as described in the summary.
+          examples:
+            application/json; charset=UTF-8:
+              version: "0.0.1"
+              repository: "https://github.com/Financial-Times/concept-search-api.git"
+              revision: "7cdbdb18b4a518eef3ebb1b545fc124612f9d7cd"
+              builder: "go version go1.6.3 linux/amd64"
+              dateTime: "20161123122615"
+  /__gtg:
+    get:
+      summary: Good To Go
+      description: Lightly healthchecks the application, and returns a 200 if it's Good-To-Go.
+      tags:
+        - Health
+      responses:
+        200:
+          description: The application is healthy enough to perform all its functions correctly - i.e. good to go.
+        503:
+          description: One or more of the applications healthchecks have failed, so please do not use the app. See the /__health endpoint for more detailed information.
