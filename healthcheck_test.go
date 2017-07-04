@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -23,7 +24,7 @@ func TestHealthDetailsHealthyCluster(t *testing.T) {
 	}
 
 	healthService := newEsHealthService()
-	healthService.client = hcClient{healthy: true, returnsError: false}
+	healthService.client = hcClient{healthy: true}
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -62,7 +63,7 @@ func TestHealthDetailsReturnsError(t *testing.T) {
 		t.Fatal(err)
 	}
 	healthService := newEsHealthService()
-	healthService.client = hcClient{returnsError: true}
+	healthService.client = hcClient{returnError: errors.New("test error")}
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -88,16 +89,12 @@ func TestHealthDetailsReturnsError(t *testing.T) {
 	}
 }
 
-func TestGoodToGoHealthyCluster(t *testing.T) {
-
+func TestGoodToGoUnhealthyCluster(t *testing.T) {
 	//create a request to pass to our handler
-	req, err := http.NewRequest("GET", "/__gtg", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	req := httptest.NewRequest("GET", "/__gtg", nil)
 
 	healthService := newEsHealthService()
-	healthService.client = hcClient{returnsError: true}
+	healthService.client = hcClient{returnError: errors.New("test error")}
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(healthService.goodToGo)
@@ -105,27 +102,20 @@ func TestGoodToGoHealthyCluster(t *testing.T) {
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
 	handler.ServeHTTP(rr, req)
+	actual := rr.Result()
 
 	// Series of verifications:
-	if status := rr.Code; status != http.StatusServiceUnavailable {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusServiceUnavailable)
-	}
-
-	if rr.Body.Bytes() != nil {
-		t.Error("Response body should be empty")
-	}
+	assert.Equal(t, http.StatusServiceUnavailable, actual.StatusCode, "status code")
+	assert.Equal(t, "no-cache", actual.Header.Get("Cache-Control"), "cache-control header")
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	assert.Len(t, actualBody, 0, "Response body should be empty")
 }
 
-func TestGoodToGoUnhealthyCluster(t *testing.T) {
-
+func TestGoodToGoHealthyCluster(t *testing.T) {
 	//create a request to pass to our handler
-	req, err := http.NewRequest("GET", "/__gtg", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	req := httptest.NewRequest("GET", "/__gtg", nil)
 	healthService := newEsHealthService()
-	healthService.client = hcClient{healthy: true, returnsError: false}
+	healthService.client = hcClient{healthy: true}
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(healthService.goodToGo)
@@ -133,22 +123,23 @@ func TestGoodToGoUnhealthyCluster(t *testing.T) {
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
 	handler.ServeHTTP(rr, req)
+	actual := rr.Result()
 
 	// Series of verifications:
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-
-	if rr.Body.Bytes() != nil {
-		t.Error("Response body should be empty")
-	}
+	assert.Equal(t, http.StatusOK, actual.StatusCode, "status code")
+	assert.Equal(t, "no-cache", actual.Header.Get("Cache-Control"), "cache-control header")
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	assert.Len(t, actualBody, 0, "Response body should be empty")
 }
 
 func TestHealthServiceConnectivityChecker(t *testing.T) {
 	healthService := newEsHealthService()
-	healthService.client = hcClient{healthy: true, returnsError: false}
-	message, err := healthService.connectivityChecker()
+	healthService.client = hcClient{healthy: true}
+	hc := healthService.connectivityHealthyCheck()
+
+	assert.Equal(t, "elasticsearch-connectivity", hc.ID, "healthcheck id")
+
+	message, err := hc.Checker()
 
 	assert.Equal(t, "Successfully connected to the cluster", message)
 	assert.Equal(t, nil, err)
@@ -156,7 +147,7 @@ func TestHealthServiceConnectivityChecker(t *testing.T) {
 
 func TestHealthServiceConnectivityCheckerForFailedConnection(t *testing.T) {
 	healthService := newEsHealthService()
-	healthService.client = hcClient{returnsError: true}
+	healthService.client = hcClient{returnError: errors.New("test error")}
 	message, err := healthService.connectivityChecker()
 
 	assert.Equal(t, "Could not connect to elasticsearch", message)
@@ -224,9 +215,49 @@ func TestHealthDetailsNilClient(t *testing.T) {
 	}
 }
 
+func TestClusterIsHealthyChecker(t *testing.T) {
+	healthService := newEsHealthService()
+	healthService.client = hcClient{healthy: true}
+	hc := healthService.clusterIsHealthyCheck()
+
+	assert.Equal(t, "elasticsearch-cluster-health", hc.ID, "healthcheck id")
+
+	message, err := hc.Checker()
+
+	assert.Equal(t, "Cluster is healthy", message)
+	assert.NoError(t, err)
+}
+
+func TestClusterIsHealthyCheckerError(t *testing.T) {
+	healthService := newEsHealthService()
+	expectedError := errors.New("test error")
+	healthService.client = hcClient{healthy: false, returnError: expectedError}
+	hc := healthService.clusterIsHealthyCheck()
+
+	assert.Equal(t, "elasticsearch-cluster-health", hc.ID, "healthcheck id")
+
+	message, err := hc.Checker()
+
+	assert.Equal(t, "Cluster is not healthy: ", message)
+	assert.Error(t, expectedError, err)
+}
+
+func TestClusterIsHealthyCheckerNotHealthy(t *testing.T) {
+	healthService := newEsHealthService()
+	healthService.client = hcClient{healthy: false}
+	hc := healthService.clusterIsHealthyCheck()
+
+	assert.Equal(t, "elasticsearch-cluster-health", hc.ID, "healthcheck id")
+
+	message, err := hc.Checker()
+
+	assert.Equal(t, "Cluster is red", message)
+	assert.EqualError(t, err, "Cluster is red")
+}
+
 type hcClient struct {
-	healthy      bool
-	returnsError bool
+	healthy     bool
+	returnError error
 }
 
 func (c hcClient) query(indexName string, query elastic.Query, resultLimit int) (*elastic.SearchResult, error) {
@@ -234,8 +265,8 @@ func (c hcClient) query(indexName string, query elastic.Query, resultLimit int) 
 }
 
 func (c hcClient) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
-	if c.returnsError {
-		return nil, errors.New("error")
+	if c.returnError != nil {
+		return nil, c.returnError
 	}
 	if c.healthy {
 		return &elastic.ClusterHealthResponse{Status: "green"}, nil
