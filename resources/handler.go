@@ -25,39 +25,37 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 
 	_, isAutocomplete, modeErr := getSingleValueQueryParameter(req, "mode", "autocomplete")
 	q, foundQ, qErr := getSingleValueQueryParameter(req, "q")
-	conceptType, foundConceptType, conceptTypeErr := getSingleValueQueryParameter(req, "type")
-	_, foundBoostType, boostTypeErr := getSingleValueQueryParameter(req, "boost", "authors") // we currently only accept authors, so ignoring the actual boost value
+	conceptTypes, foundConceptTypes := getMultipleValueQueryParameter(req, "type")
+	boostType, foundBoostType, boostTypeErr := getSingleValueQueryParameter(req, "boost") // we currently only accept authors, so ignoring the actual boost value
 
-	err := firstError(modeErr, qErr, conceptTypeErr, boostTypeErr)
+	err := firstError(modeErr, qErr, boostTypeErr)
 	if err != nil {
 		writeHTTPError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	if isAutocomplete {
-		if foundQ {
-			if foundConceptType {
+	if foundConceptTypes {
+		if isAutocomplete {
+			if foundQ {
 				if foundBoostType {
-					concepts, searchErr = h.service.SuggestAuthorsByText(q, conceptType)
+					concepts, searchErr = h.service.SuggestConceptByTextAndTypesWithBoost(q, conceptTypes, boostType)
 				} else {
-					concepts, searchErr = h.service.SuggestConceptByTextAndType(q, conceptType)
+					concepts, searchErr = h.service.SuggestConceptByTextAndTypes(q, conceptTypes)
 				}
 			} else {
-				concepts, searchErr = h.service.SuggestConceptByText(q)
+				validationErr = errors.New("invalid or missing parameters for autocomplete concept search (require q)")
 			}
 		} else {
-			validationErr = errors.New("invalid or missing parameters for autocomplete concept search (require type and q)")
-		}
-	} else {
-		if foundConceptType {
-			if !foundQ {
-				concepts, searchErr = h.service.FindAllConceptsByType(conceptType)
+			if !foundQ && len(conceptTypes) == 1 {
+				concepts, searchErr = h.service.FindAllConceptsByType(conceptTypes[0])
+			} else if len(conceptTypes) > 1 {
+				validationErr = errors.New("only a single type is supported by this kind of request")
 			} else {
 				validationErr = errors.New("invalid or missing parameters for concept search (no mode)")
 			}
-		} else {
-			validationErr = errors.New("invalid or missing parameters for concept search (no type)")
 		}
+	} else {
+		validationErr = errors.New("invalid or missing parameters for concept search (no type)")
 	}
 
 	if validationErr != nil {
@@ -66,12 +64,15 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if searchErr != nil {
-		if searchErr == service.ErrInvalidConceptType || searchErr == service.ErrEmptyTextParameter {
+		switch searchErr.(type) {
+		case service.InputError:
 			writeHTTPError(w, http.StatusBadRequest, searchErr)
-		} else if searchErr == service.ErrNoElasticClient || searchErr == elastic.ErrNoClient {
-			writeHTTPError(w, http.StatusServiceUnavailable, searchErr)
-		} else {
-			writeHTTPError(w, http.StatusInternalServerError, searchErr)
+		default:
+			if searchErr == service.ErrNoElasticClient || searchErr == elastic.ErrNoClient {
+				writeHTTPError(w, http.StatusServiceUnavailable, searchErr)
+			} else {
+				writeHTTPError(w, http.StatusInternalServerError, searchErr)
+			}
 		}
 		return
 	}
@@ -82,8 +83,7 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 }
 
 func getSingleValueQueryParameter(req *http.Request, param string, allowed ...string) (string, bool, error) {
-	query := req.URL.Query()
-	values, found := query[param]
+	values, found := getMultipleValueQueryParameter(req, param)
 	if len(values) > 1 {
 		return "", found, fmt.Errorf("specified multiple %v query parameters in the URL", param)
 	}
@@ -103,6 +103,12 @@ func getSingleValueQueryParameter(req *http.Request, param string, allowed ...st
 	}
 
 	return v, found, nil
+}
+
+func getMultipleValueQueryParameter(req *http.Request, param string) ([]string, bool) {
+	query := req.URL.Query()
+	values, found := query[param]
+	return values, found
 }
 
 func firstError(errors ...error) error {
