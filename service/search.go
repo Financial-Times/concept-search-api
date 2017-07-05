@@ -32,7 +32,9 @@ type esConceptSearchService struct {
 	maxSearchResults       int
 	maxAutoCompleteResults int
 	autoCompleteByType     map[string]struct{}
+	autoCompleteTypesLock  *sync.RWMutex
 	mappingRefreshTicker   *time.Ticker
+	mappingRefreshInterval time.Duration
 	authorsBoost           int
 	clientLock             *sync.RWMutex
 }
@@ -42,6 +44,8 @@ func NewEsConceptSearchService(index string, maxSearchResults int, maxAutoComple
 		maxSearchResults:       maxSearchResults,
 		maxAutoCompleteResults: maxAutoCompleteResults,
 		autoCompleteByType:     make(map[string]struct{}),
+		autoCompleteTypesLock:  &sync.RWMutex{},
+		mappingRefreshInterval: 5 * time.Minute,
 		authorsBoost:           authorsBoost,
 		clientLock:             &sync.RWMutex{}}
 }
@@ -125,7 +129,7 @@ func (s *esConceptSearchService) SuggestConceptByTextAndType(textQuery string, c
 	if t == "" {
 		return nil, ErrInvalidConceptType
 	}
-	if _, found := s.autoCompleteByType[t]; !found {
+	if !s.isAutoCompleteType(t) {
 		return nil, ErrInvalidConceptTypeForAutocompleteByType
 	}
 
@@ -139,6 +143,14 @@ func (s *esConceptSearchService) SuggestConceptByTextAndType(textQuery string, c
 
 	concepts := suggestResultToConcepts(result)
 	return concepts, nil
+}
+
+func (s *esConceptSearchService) isAutoCompleteType(t string) bool {
+	s.autoCompleteTypesLock.RLock()
+	defer s.autoCompleteTypesLock.RUnlock()
+
+	_, found := s.autoCompleteByType[t]
+	return found
 }
 
 func (s *esConceptSearchService) SuggestAuthorsByText(textQuery string, conceptType string) ([]Concept, error) {
@@ -199,7 +211,7 @@ func (s *esConceptSearchService) SetElasticClient(client *elastic.Client) {
 	}
 
 	s.initMappings(client)
-	s.mappingRefreshTicker = time.NewTicker(5 * time.Minute)
+	s.mappingRefreshTicker = time.NewTicker(s.mappingRefreshInterval)
 	go func() {
 		for range s.mappingRefreshTicker.C {
 			s.initMappings(client)
@@ -214,6 +226,9 @@ func (s *esConceptSearchService) elasticClient() *elastic.Client {
 }
 
 func (s *esConceptSearchService) initMappings(client *elastic.Client) {
+	s.autoCompleteTypesLock.Lock()
+	defer s.autoCompleteTypesLock.Unlock()
+
 	s.autoCompleteByType = make(map[string]struct{})
 
 	mapping := elastic.NewIndicesGetFieldMappingService(client)
