@@ -222,7 +222,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeInvalid() {
 
 	_, err := service.FindAllConceptsByType("http://www.ft.com/ontology/Foo")
 
-	assert.EqualError(s.T(), err, "", "expected error for ES read")
+	assert.EqualError(s.T(), err, "invalid concept type [http://www.ft.com/ontology/Foo]", "expected error")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypeInvalidTextParameter() {
@@ -294,7 +294,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesWithBo
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 
 	concepts, err := service.SuggestConceptByTextAndTypesWithBoost("test", []string{ftGenreType}, "authors")
-	assert.EqualError(s.T(), err, "")
+	assert.EqualError(s.T(), err, "invalid concept type [http://www.ft.com/ontology/Genre]")
 	assert.Nil(s.T(), concepts)
 }
 

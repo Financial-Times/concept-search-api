@@ -61,7 +61,7 @@ func dummyConcepts() []service.Concept {
 	}
 }
 
-func TestConceptSearchByType(t *testing.T) {
+func TestAllConceptsByType(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre", nil)
 
 	concepts := dummyConcepts()
@@ -90,7 +90,7 @@ func TestConceptSearchByType(t *testing.T) {
 	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
 }
 
-func TestConceptSearchByTypeInputError(t *testing.T) {
+func TestAllConceptsByTypeInputError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FFoo", nil)
 
 	svc := mockConceptSearchService{}
@@ -117,7 +117,7 @@ func TestConceptSearchByTypeInputError(t *testing.T) {
 	assert.Equal(t, expectedInputErr.Error(), respObject["message"], "error message")
 }
 
-func TestConceptSearchByTypeNoElasticsearchError(t *testing.T) {
+func TestAllConceptByTypeNoElasticsearchError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FFoo", nil)
 
 	svc := mockConceptSearchService{}
@@ -144,7 +144,7 @@ func TestConceptSearchByTypeNoElasticsearchError(t *testing.T) {
 	assert.Equal(t, elastic.ErrNoClient.Error(), respObject["message"], "error message")
 }
 
-func TestConceptSearchByTypeNoElasticsearchClientError(t *testing.T) {
+func TestAllConceptByTypeNoElasticsearchClientError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FFoo", nil)
 
 	svc := mockConceptSearchService{}
@@ -171,7 +171,7 @@ func TestConceptSearchByTypeNoElasticsearchClientError(t *testing.T) {
 	assert.Equal(t, service.ErrNoElasticClient.Error(), respObject["message"], "error message")
 }
 
-func TestConceptSearchByTypeServerError(t *testing.T) {
+func TestAllConceptByTypeServerError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre", nil)
 
 	expectedError := errors.New("Test error")
@@ -226,7 +226,7 @@ func TestConceptSeachByTypeNoType(t *testing.T) {
 	svc.AssertExpectations(t)
 }
 
-func TestConceptSeachByTypeMultipleTypes(t *testing.T) {
+func TestAllConceptsByTypeMultipleTypes(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre", nil)
 
 	svc := mockConceptSearchService{}
@@ -307,7 +307,61 @@ func TestTypeaheadConceptSearchErrorMissingType(t *testing.T) {
 	svc.AssertExpectations(t)
 }
 
-func TestTypeaheadConceptSearchByTextAndType(t *testing.T) {
+func TestTypeaheadConceptSearchErrorMissingQ(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&mode=autocomplete", nil)
+
+	svc := mockConceptSearchService{}
+	endpoint := NewHandler(&svc)
+
+	router := vestigo.NewRouter()
+	router.Get("/concepts", endpoint.ConceptSearch)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
+
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := make(map[string]string)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
+	if err != nil {
+		t.Errorf("Unmarshalling request response failed. %v", err)
+	}
+
+	assert.Equal(t, "invalid or missing parameters for autocomplete concept search (require q)", respObject["message"], "error message")
+	svc.AssertExpectations(t)
+}
+
+func TestTypeaheadConceptSearchErrorInvalidMode(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?q=lucy&type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&mode=pippo", nil)
+
+	svc := mockConceptSearchService{}
+	endpoint := NewHandler(&svc)
+
+	router := vestigo.NewRouter()
+	router.Get("/concepts", endpoint.ConceptSearch)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
+
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := make(map[string]string)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
+	if err != nil {
+		t.Errorf("Unmarshalling request response failed. %v", err)
+	}
+
+	assert.Equal(t, "'pippo' is not a valid value for parameter 'mode'", respObject["message"], "error message")
+	svc.AssertExpectations(t)
+}
+
+func TestTypeaheadConceptSearchByTextAndSingleType(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&q=lucy&mode=autocomplete", nil)
 
 	concepts := dummyConcepts()
@@ -336,7 +390,68 @@ func TestTypeaheadConceptSearchByTextAndType(t *testing.T) {
 	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
 }
 
-func TestTypeaheadConceptSearchByTextAndMultipleTypesError(t *testing.T) {
+func TestTypeaheadConceptSearchByTextAndMutlipleTypes(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=lucy&mode=autocomplete", nil)
+
+	concepts := dummyConcepts()
+	expectedTypes := []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/Genre"}
+
+	svc := mockConceptSearchService{}
+	svc.On("SuggestConceptByTextAndTypes", "lucy", expectedTypes).Return(concepts, nil)
+	endpoint := NewHandler(&svc)
+
+	router := vestigo.NewRouter()
+	router.Get("/concepts", endpoint.ConceptSearch)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
+
+	assert.Equal(t, http.StatusOK, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := make(map[string][]service.Concept)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
+	if err != nil {
+		t.Errorf("Unmarshalling request response failed. %v", err)
+	}
+
+	assert.Len(t, respObject["concepts"], 2, "concepts")
+	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
+}
+
+func TestTypeaheadConceptSearchByTextAndMultipleTypesServerError(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=lucy&mode=autocomplete", nil)
+
+	svc := mockConceptSearchService{}
+	expectedErr := errors.New("test error")
+	expectedTypes := []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/Genre"}
+	svc.On("SuggestConceptByTextAndTypes", "lucy", expectedTypes).Return([]service.Concept{}, expectedErr)
+	endpoint := NewHandler(&svc)
+
+	router := vestigo.NewRouter()
+	router.Get("/concepts", endpoint.ConceptSearch)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
+
+	assert.Equal(t, http.StatusInternalServerError, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := make(map[string]string)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
+	if err != nil {
+		t.Errorf("Unmarshalling request response failed. %v", err)
+	}
+
+	assert.Equal(t, "test error", respObject["message"], "error message")
+	svc.AssertExpectations(t)
+}
+
+func TestTypeaheadConceptSearchByTextAndMultipleTypesInputError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=lucy&mode=autocomplete", nil)
 
 	svc := mockConceptSearchService{}
@@ -362,33 +477,6 @@ func TestTypeaheadConceptSearchByTextAndMultipleTypesError(t *testing.T) {
 	}
 
 	assert.Equal(t, "computer says no", respObject["message"], "error message")
-	svc.AssertExpectations(t)
-}
-
-func TestTypeaheadConceptSearchByMultipleTextAndType(t *testing.T) {
-	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&q=pippo&q=lucy&mode=autocomplete", nil)
-
-	svc := mockConceptSearchService{}
-	endpoint := NewHandler(&svc)
-
-	router := vestigo.NewRouter()
-	router.Get("/concepts", endpoint.ConceptSearch)
-
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-	actual := w.Result()
-
-	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
-	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
-
-	respObject := make(map[string]string)
-	actualBody, _ := ioutil.ReadAll(actual.Body)
-	err := json.Unmarshal(actualBody, &respObject)
-	if err != nil {
-		t.Errorf("Unmarshalling request response failed. %v", err)
-	}
-
-	assert.Equal(t, "specified multiple q query parameters in the URL", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
 
@@ -420,6 +508,35 @@ func TestTypeaheadConceptSearchForAuthors(t *testing.T) {
 
 	assert.Len(t, respObject["concepts"], 2, "concepts")
 	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
+	svc.AssertExpectations(t)
+}
+
+func TestTypeaheadConceptSearchForAuthorsServerError(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&q=pippo&mode=autocomplete&boost=authors", nil)
+
+	svc := mockConceptSearchService{}
+	endpoint := NewHandler(&svc)
+
+	router := vestigo.NewRouter()
+	router.Get("/concepts", endpoint.ConceptSearch)
+	expectedErr := errors.New("test error")
+	svc.On("SuggestConceptByTextAndTypesWithBoost", "pippo", []string{"http://www.ft.com/product/Brand"}, "authors").Return([]service.Concept{}, expectedErr)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
+
+	assert.Equal(t, http.StatusInternalServerError, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := make(map[string]string)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
+	if err != nil {
+		t.Errorf("Unmarshalling request response failed. %v", err)
+	}
+
+	assert.Equal(t, expectedErr.Error(), respObject["message"])
 	svc.AssertExpectations(t)
 }
 
