@@ -51,8 +51,8 @@ type esConceptSearchService struct {
 	index                  string
 	maxSearchResults       int
 	maxAutoCompleteResults int
-	autoCompleteByType     map[string]struct{}
-	autoCompleteTypesLock  *sync.RWMutex
+	autoCompleteTypes      *typeSet
+	mentionTypes           *typeSet
 	mappingRefreshTicker   *time.Ticker
 	mappingRefreshInterval time.Duration
 	authorsBoost           int
@@ -60,14 +60,16 @@ type esConceptSearchService struct {
 }
 
 func NewEsConceptSearchService(index string, maxSearchResults int, maxAutoCompleteResults int, authorsBoost int) ConceptSearchService {
-	return &esConceptSearchService{index: index,
+	return &esConceptSearchService{
+		index:                  index,
 		maxSearchResults:       maxSearchResults,
 		maxAutoCompleteResults: maxAutoCompleteResults,
-		autoCompleteByType:     make(map[string]struct{}),
-		autoCompleteTypesLock:  &sync.RWMutex{},
+		autoCompleteTypes:      newTypeSet(),
+		mentionTypes:           newTypeSet(),
 		mappingRefreshInterval: 5 * time.Minute,
 		authorsBoost:           authorsBoost,
-		clientLock:             &sync.RWMutex{}}
+		clientLock:             &sync.RWMutex{},
+	}
 }
 
 func (s *esConceptSearchService) checkElasticClient() error {
@@ -176,11 +178,7 @@ func (s *esConceptSearchService) suggestConceptByTextAndType(textQuery string, c
 }
 
 func (s *esConceptSearchService) isAutoCompleteType(t string) bool {
-	s.autoCompleteTypesLock.RLock()
-	defer s.autoCompleteTypesLock.RUnlock()
-
-	_, found := s.autoCompleteByType[t]
-	return found
+	return s.autoCompleteTypes.contains(t)
 }
 
 func (s *esConceptSearchService) suggestConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]Concept, error) {
@@ -200,8 +198,7 @@ func (s *esConceptSearchService) suggestConceptByTextAndTypes(textQuery string, 
 }
 
 func (s *esConceptSearchService) validateTypesForMentionsCompletion(conceptTypes []string) error {
-	//TODO proper scan in ES of supported types
-	if len(conceptTypes) != 4 {
+	if len(conceptTypes) != s.mentionTypes.len() {
 		return errNotSupportedCombinationOfConceptTypes
 	}
 	for _, conceptType := range conceptTypes {
@@ -209,7 +206,7 @@ func (s *esConceptSearchService) validateTypesForMentionsCompletion(conceptTypes
 		if t == "" {
 			return NewInputErrorf(errInvalidConceptTypeFormat, conceptType)
 		}
-		if t != "people" && t != "organisations" && t != "locations" && t != "topics" {
+		if !s.mentionTypes.contains(t) {
 			return errNotSupportedCombinationOfConceptTypes
 		}
 	}
@@ -277,11 +274,6 @@ func (s *esConceptSearchService) elasticClient() *elastic.Client {
 }
 
 func (s *esConceptSearchService) initMappings(client *elastic.Client) {
-	s.autoCompleteTypesLock.Lock()
-	defer s.autoCompleteTypesLock.Unlock()
-
-	s.autoCompleteByType = make(map[string]struct{})
-
 	mapping := elastic.NewIndicesGetFieldMappingService(client)
 	m, err := mapping.Index(s.index).Field("prefLabel").Do(context.Background())
 
@@ -295,14 +287,53 @@ func (s *esConceptSearchService) initMappings(client *elastic.Client) {
 		return
 	}
 
+	autoCompleteTypes := []string{}
+	mentionTypes := []string{}
 	for _, v := range m {
 		for conceptType, fields := range v.(map[string]interface{})["mappings"].(map[string]interface{}) {
 			prefLabelFields := fields.(map[string]interface{})["prefLabel"].(map[string]interface{})["mapping"].(map[string]interface{})["prefLabel"].(map[string]interface{})["fields"].(map[string]interface{})
 			if _, hasContextCompletion := prefLabelFields["completionByContext"]; hasContextCompletion {
-				s.autoCompleteByType[conceptType] = struct{}{}
+				autoCompleteTypes = append(autoCompleteTypes, conceptType)
+			}
+			if _, hasMentionCompletion := prefLabelFields["mentionsCompletion"]; hasMentionCompletion {
+				mentionTypes = append(mentionTypes, conceptType)
 			}
 		}
 	}
 
-	log.Infof("autocomplete by type: %v", s.autoCompleteByType)
+	log.Infof("autocomplete by type: %v", autoCompleteTypes)
+	s.autoCompleteTypes.updateTypes(autoCompleteTypes)
+	log.Infof("mention types: %v", mentionTypes)
+	s.mentionTypes.updateTypes(mentionTypes)
+}
+
+type typeSet struct {
+	sync.RWMutex
+	types map[string]struct{}
+}
+
+func newTypeSet() *typeSet {
+	return &typeSet{types: make(map[string]struct{})}
+}
+
+func (s *typeSet) updateTypes(types []string) {
+	s.Lock()
+	defer s.Unlock()
+	s.types = make(map[string]struct{})
+	for _, t := range types {
+		s.types[t] = struct{}{}
+	}
+}
+
+func (s *typeSet) contains(t string) bool {
+	s.RLock()
+	defer s.RUnlock()
+	_, found := s.types[t]
+	return found
+}
+
+func (s *typeSet) len() int {
+	s.RLock()
+	defer s.RUnlock()
+	return len(s.types)
 }
