@@ -556,7 +556,7 @@ func TestTypeaheadConceptSearchBoostButNoType(t *testing.T) {
 }
 
 func TestTypeaheadConceptSearchBoostButNoMode(t *testing.T) {
-	req := httptest.NewRequest("GET", "/concepts?type=genres&boost=authors", nil)
+	req := httptest.NewRequest("GET", "/concepts?type=http://www.ft.com/ontology/Genre&boost=authors", nil)
 	svc := mockConceptSearchService{}
 	endpoint := NewHandler(&svc)
 
