@@ -20,8 +20,8 @@ func NewInputError(msg string) InputError {
 	return InputError{msg}
 }
 
-func NewInputErrorf(format string, args ...string) InputError {
-	return InputError{fmt.Sprintf(format, args)}
+func NewInputErrorf(format string, args ...interface{}) InputError {
+	return InputError{fmt.Sprintf(format, args...)}
 }
 
 func (e InputError) Error() string {

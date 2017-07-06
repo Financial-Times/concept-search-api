@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/satori/go.uuid"
@@ -35,7 +34,7 @@ const (
 )
 
 func TestNoElasticClient(t *testing.T) {
-	service := esConceptSearchService{nil, "test", 50, 10, 2, &sync.RWMutex{}}
+	service := NewEsConceptSearchService("test", 50, 10, 2)
 
 	_, err := service.FindAllConceptsByType(ftGenreType)
 	assert.EqualError(t, err, ErrNoElasticClient.Error(), "error response")
@@ -222,10 +221,10 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeInvalid() {
 
 	_, err := service.FindAllConceptsByType("http://www.ft.com/ontology/Foo")
 
-	assert.EqualError(s.T(), err, "invalid concept type [http://www.ft.com/ontology/Foo]", "expected error")
+	assert.EqualError(s.T(), err, fmt.Sprintf(errInvalidConceptTypeFormat, "http://www.ft.com/ontology/Foo"), "expected error")
 }
 
-func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypeInvalidTextParameter() {
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesInvalidTextParameter() {
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
@@ -243,6 +242,46 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndType() {
 	for _, c := range concepts {
 		assert.Equal(s.T(), ftBrandType, c.ConceptType, "Results should be of type FT Brand")
 	}
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesMissingTypes() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	_, err := service.SuggestConceptByTextAndTypes("test", []string{})
+	assert.EqualError(s.T(), err, errNoConceptTypeParameter.Error(), "expected no concept type parameter error")
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypeInvalidType() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	_, err := service.SuggestConceptByTextAndTypes("test", []string{"pippo"})
+	assert.EqualError(s.T(), err, fmt.Sprintf(errInvalidConceptTypeFormat, "pippo"), "expected invalid type error")
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesNotEnoghtValidTypes() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	_, err := service.SuggestConceptByTextAndTypes("test", []string{ftOrganisationType, ftLocationType, ftPeopleType})
+	assert.EqualError(s.T(), err, errNotSupportedCombinationOfConceptTypes.Error(), "expected error not supported combination of concept types")
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesNotValidTypeInCombination() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	_, err := service.SuggestConceptByTextAndTypes("test", []string{ftOrganisationType, ftLocationType, ftPeopleType, ftBrandType})
+	assert.EqualError(s.T(), err, errNotSupportedCombinationOfConceptTypes.Error(), "expected error not supported combination of concept types")
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesNotExistingTypeInCombination() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	_, err := service.SuggestConceptByTextAndTypes("test", []string{ftOrganisationType, ftLocationType, ftPeopleType, "pippo"})
+	assert.EqualError(s.T(), err, fmt.Sprintf(errInvalidConceptTypeFormat, "pippo"), "expected error invalid concept type")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesWithBoost() {
@@ -282,6 +321,33 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesWithBo
 	assert.Nil(s.T(), concepts)
 }
 
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesWithBoostNoTypes() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.SuggestConceptByTextAndTypesWithBoost("test", []string{}, "authors")
+	assert.EqualError(s.T(), err, errNoConceptTypeParameter.Error())
+	assert.Nil(s.T(), concepts)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesWithBoostMultipleTypes() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.SuggestConceptByTextAndTypesWithBoost("test", []string{ftPeopleType, ftLocationType}, "authors")
+	assert.EqualError(s.T(), err, errNotSupportedCombinationOfConceptTypes.Error())
+	assert.Nil(s.T(), concepts)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesWithInvalidBoost() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.SuggestConceptByTextAndTypesWithBoost("test", []string{ftPeopleType}, "pluto")
+	assert.EqualError(s.T(), err, errInvalidBoostTypeParameter.Error())
+	assert.Nil(s.T(), concepts)
+}
+
 func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesWithBoostNoESConnection() {
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 
@@ -294,7 +360,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesWithBo
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 
 	concepts, err := service.SuggestConceptByTextAndTypesWithBoost("test", []string{ftGenreType}, "authors")
-	assert.EqualError(s.T(), err, "invalid concept type [http://www.ft.com/ontology/Genre]")
+	assert.EqualError(s.T(), err, fmt.Sprintf(errInvalidConceptTypeFormat, ftGenreType))
 	assert.Nil(s.T(), concepts)
 }
 
