@@ -46,17 +46,17 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 				concepts, searchErr = h.service.SuggestConceptByText(q)
 			}
 		} else {
-			validationErr = errors.New("invalid or missing parameters for autocomplete concept search (require type and q)")
+			validationErr = errors.New("invalid or missing parameters for autocomplete concept search (require q)")
 		}
 	} else {
 		if foundConceptType {
 			if !foundQ {
 				concepts, searchErr = h.service.FindAllConceptsByType(conceptType)
 			} else {
-				validationErr = errors.New("invalid or missing parameters for concept search (no mode)")
+				validationErr = errors.New("invalid or missing parameters for concept search (q but no mode)")
 			}
 		} else {
-			validationErr = errors.New("invalid or missing parameters for concept search (no type)")
+			validationErr = errors.New("invalid or missing parameters for concept search (no mode, type, or q)")
 		}
 	}
 
