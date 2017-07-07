@@ -401,20 +401,34 @@ func (s *EsConceptSearchServiceTestSuite) TestAutocompletionResultSize() {
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndMultipleType() {
 	service := NewEsConceptSearchService(testIndexName, 20, 20, 2)
+	service.(*esConceptSearchService).mappingRefreshInterval = time.Second
 	service.SetElasticClient(s.ec)
 
-	types := []string{ftLocationType, ftOrganisationType, ftPeopleType, ftTopicType}
-	concepts, err := service.SuggestConceptByTextAndTypes("test", types)
-	assert.NoError(s.T(), err, "expected no error for ES read")
-	assert.Len(s.T(), concepts, 13, "there should be thirteen results")
-	counts := map[string]int{}
-	for _, c := range concepts {
-		i := counts[c.ConceptType]
-		counts[c.ConceptType] = i + 1
+	// for short test, run once and don't sleep
+	// otherwise, repeat 5 times with random sleep between 500 and 1500 ms each time
+	// to prove the read and write (refresh) goroutines interact safely with each other
+	iterations := 5
+	if testing.Short() {
+		iterations = 1
 	}
+	for i := 0; i < iterations; i++ {
+		types := []string{ftLocationType, ftOrganisationType, ftPeopleType, ftTopicType}
+		concepts, err := service.SuggestConceptByTextAndTypes("test", types)
+		assert.NoError(s.T(), err, "expected no error for ES read")
+		assert.Len(s.T(), concepts, 13, "there should be thirteen results")
+		counts := map[string]int{}
+		for _, c := range concepts {
+			i := counts[c.ConceptType]
+			counts[c.ConceptType] = i + 1
+		}
 
-	assert.Equal(s.T(), 8, counts[ftPeopleType], "people")
-	assert.Equal(s.T(), 1, counts[ftOrganisationType], "organisations")
-	assert.Equal(s.T(), 2, counts[ftLocationType], "locations")
-	assert.Equal(s.T(), 2, counts[ftTopicType], "topics")
+		assert.Equal(s.T(), 8, counts[ftPeopleType], "people")
+		assert.Equal(s.T(), 1, counts[ftOrganisationType], "organisations")
+		assert.Equal(s.T(), 2, counts[ftLocationType], "locations")
+		assert.Equal(s.T(), 2, counts[ftTopicType], "topics")
+
+		if iterations > 1 {
+			time.Sleep(time.Duration(500+rand.Int31n(1000)) * time.Millisecond)
+		}
+	}
 }
