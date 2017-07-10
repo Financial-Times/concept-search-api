@@ -196,7 +196,7 @@ func TestConceptSearchByTypeServerError(t *testing.T) {
 	assert.Equal(t, expectedError.Error(), respObject["message"], "error message")
 }
 
-func TestConceptSeachByTypeNoType(t *testing.T) {
+func TestConceptSearchNoParams(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts", nil)
 
 	svc := mockConceptSearchService{}
@@ -219,11 +219,11 @@ func TestConceptSeachByTypeNoType(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, "invalid or missing parameters for concept search (no type)", respObject["message"], "error message")
+	assert.Equal(t, "invalid or missing parameters for concept search (no mode, type, or q)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
 
-func TestConceptSeachByTypeBlankType(t *testing.T) {
+func TestConceptSearchByTypeBlankType(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=", nil)
 
 	svc := mockConceptSearchService{}
@@ -252,7 +252,7 @@ func TestConceptSeachByTypeBlankType(t *testing.T) {
 	svc.AssertExpectations(t)
 }
 
-func TestConceptSeachByTypeMultipleTypes(t *testing.T) {
+func TestConceptSearchByTypeMultipleTypes(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre", nil)
 
 	svc := mockConceptSearchService{}
@@ -279,7 +279,7 @@ func TestConceptSeachByTypeMultipleTypes(t *testing.T) {
 	svc.AssertExpectations(t)
 }
 
-func TestConceptSeachByTypeAndValue(t *testing.T) {
+func TestConceptSearchByTypeAndValue(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=fast", nil)
 
 	svc := mockConceptSearchService{}
@@ -302,7 +302,7 @@ func TestConceptSeachByTypeAndValue(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, "invalid or missing parameters for concept search (no mode)", respObject["message"], "error message")
+	assert.Equal(t, "invalid or missing parameters for concept search (q but no mode)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
 
@@ -527,5 +527,31 @@ func TestTypeaheadMultipleBoostValues(t *testing.T) {
 	}
 
 	assert.Equal(t, "specified multiple boost query parameters in the URL", respObject["message"])
+	svc.AssertExpectations(t)
+}
+
+func TestTypeaheadConceptSearchNoText(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?mode=autocomplete", nil)
+	svc := mockConceptSearchService{}
+	endpoint := NewHandler(&svc)
+
+	router := vestigo.NewRouter()
+	router.Get("/concepts", endpoint.ConceptSearch)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
+
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := make(map[string]string)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
+	if err != nil {
+		t.Errorf("Unmarshalling request response failed. %v", err)
+	}
+
+	assert.Equal(t, "invalid or missing parameters for autocomplete concept search (require q)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }

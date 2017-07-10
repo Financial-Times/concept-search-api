@@ -33,6 +33,7 @@ func newEsHealthService() *esHealthService {
 
 func (service *esHealthService) clusterIsHealthyCheck() fthealth.Check {
 	return fthealth.Check{
+		ID:               "elasticsearch-cluster-health",
 		BusinessImpact:   "Full or partial degradation in serving requests from Elasticsearch",
 		Name:             "Check Elasticsearch cluster health",
 		PanicGuide:       deweyUrl,
@@ -58,6 +59,7 @@ func (service *esHealthService) healthChecker() (string, error) {
 
 func (service *esHealthService) connectivityHealthyCheck() fthealth.Check {
 	return fthealth.Check{
+		ID:               "elasticsearch-connectivity",
 		BusinessImpact:   "Could not connect to Elasticsearch",
 		Name:             "Check connectivity to the Elasticsearch cluster",
 		PanicGuide:       deweyUrl,
@@ -81,6 +83,7 @@ func (service *esHealthService) connectivityChecker() (string, error) {
 
 //GoodToGo returns a 503 if the healthcheck fails - suitable for use from varnish to check availability of a node
 func (service *esHealthService) goodToGo(writer http.ResponseWriter, req *http.Request) {
+	writer.Header().Add("Cache-Control", "no-cache")
 	if _, err := service.healthChecker(); err != nil {
 		writer.WriteHeader(http.StatusServiceUnavailable)
 	}
