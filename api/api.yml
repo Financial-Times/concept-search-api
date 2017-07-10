@@ -28,7 +28,16 @@ paths:
       parameters:
         - name: type
           in: query
-          description: The type of Concept to search for as a URI. When used in isolation, the results will be the first 50 concepts of that type - this should only really be used with small collections such as Genres. When used in combination with other modes such as `mode=autocomplete`, this will restrict queries to search for concepts by the given type.
+          description: >
+            The type of Concept to search for as a URI.
+            When used in isolation, the results will be the first 50 concepts of
+            that type - this should only really be used with small collections
+            such as Genres.
+            When used in combination with other modes such as `mode=autocomplete`,
+            this will restrict queries to search for concepts by the given type.
+            Multiple types can be specified in the request.
+            However, the only current supported combination is Person + Organisation
+            + Location + Topic with `mode=autocomplete`.
           type: string
           enum:
             - http://www.ft.com/ontology/Genre
@@ -37,7 +46,8 @@ paths:
             - http://www.ft.com/ontology/organisation/Organisation
             - http://www.ft.com/ontology/Location
             - http://www.ft.com/ontology/Topic
-          required: true
+          required:
+          allowMultiple: true
         - name: q
           in: query
           description: The query text to use to find concepts. Must be set if the `mode=autocomplete`.
@@ -46,14 +56,20 @@ paths:
           x-example: analysis
         - name: mode
           in: query
-          description: The mode for the search request. Currently only supports a value of autocomplete, which will provide fast typeahead search functionality. If set to autocomplete, then a value for `q` is required.
+          description: >
+            The mode for the search request. Currently only supports a value of
+            autocomplete, which will provide fast typeahead search functionality.
+            If set to autocomplete, then a value for `q` is required.
           type: string
           enum:
             - autocomplete
           required: false
         - name: boost
           in: query
-          description: The boost to apply to the request. Currently only supports boosting by FT Author, which requires a query `type=http://www.ft.com/ontology/person/Person`, `mode=autocomplete` and a value for `q`.
+          description: >
+            The boost to apply to the request. Currently only supports boosting
+            by FT Author, which requires a query `type=http://www.ft.com/ontology/person/Person`,
+            `mode=autocomplete` and a value for `q`.
           type: string
           enum:
             - authors
@@ -147,7 +163,10 @@ paths:
         - Health
       responses:
         200:
-          description: Should always return 200 along with the output of the healthchecks - regardless of whether the healthchecks failed or not. Please inspect the overall ok property to see whether or not the application is healthy.
+          description: >
+            Should always return 200 along with the output of the healthchecks - regardless
+            of whether the healthchecks failed or not.
+            Please inspect the overall ok property to see whether or not the application is healthy.
           examples:
             application/json:
               checks:
@@ -196,7 +215,9 @@ paths:
   /__build-info:
     get:
       summary: Build Information
-      description: Returns application build info, such as the git repository and revision, the golang version it was built with, and the app release version.
+      description: >
+        Returns application build info, such as the git repository and revision,
+        the golang version it was built with, and the app release version.
       produces:
         - application/json; charset=UTF-8
       tags:
@@ -221,4 +242,6 @@ paths:
         200:
           description: The application is healthy enough to perform all its functions correctly - i.e. good to go.
         503:
-          description: One or more of the applications healthchecks have failed, so please do not use the app. See the /__health endpoint for more detailed information.
+          description: >
+            One or more of the applications healthchecks have failed,
+            so please do not use the app. See the /__health endpoint for more detailed information.
