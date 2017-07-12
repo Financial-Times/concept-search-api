@@ -284,7 +284,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypeInvalid
 	assert.EqualError(s.T(), err, fmt.Sprintf(errInvalidConceptTypeFormat, "pippo"), "expected invalid type error")
 }
 
-func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesNotEnoghtValidTypes() {
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesNotEnoughValidTypes() {
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
 

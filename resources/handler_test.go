@@ -390,7 +390,7 @@ func TestTypeaheadConceptSearchByTextAndSingleType(t *testing.T) {
 	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
 }
 
-func TestTypeaheadConceptSearchByTextAndMutlipleTypes(t *testing.T) {
+func TestTypeaheadConceptSearchByTextAndMultipleTypes(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=lucy&mode=autocomplete", nil)
 
 	concepts := dummyConcepts()
