@@ -152,7 +152,7 @@ func (s *esConceptSearchService) SuggestConceptByTextAndTypes(textQuery string, 
 	if len(conceptTypes) == 1 {
 		return s.suggestConceptByTextAndType(textQuery, conceptTypes[0])
 	}
-	return s.suggestConceptByTextAndTypes(textQuery, conceptTypes)
+	return s.suggestConceptForMentions(textQuery, conceptTypes)
 }
 
 func (s *esConceptSearchService) suggestConceptByTextAndType(textQuery string, conceptType string) ([]Concept, error) {
@@ -181,7 +181,7 @@ func (s *esConceptSearchService) isAutoCompleteType(t string) bool {
 	return s.autoCompleteTypes.contains(t)
 }
 
-func (s *esConceptSearchService) suggestConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]Concept, error) {
+func (s *esConceptSearchService) suggestConceptForMentions(textQuery string, conceptTypes []string) ([]Concept, error) {
 	if err := s.validateTypesForMentionsCompletion(conceptTypes); err != nil {
 		return nil, err
 	}
@@ -214,22 +214,32 @@ func (s *esConceptSearchService) validateTypesForMentionsCompletion(conceptTypes
 }
 
 func (s *esConceptSearchService) SuggestConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string) ([]Concept, error) {
+	if err := validateForAuthorsSearch(conceptTypes, boostType); err != nil {
+		return nil, err
+	}
+	return s.suggestAuthors(textQuery)
+}
+
+func validateForAuthorsSearch(conceptTypes []string, boostType string) error {
+	if len(conceptTypes) == 0 {
+		return errNoConceptTypeParameter
+	}
+	if len(conceptTypes) > 1 {
+		return errNotSupportedCombinationOfConceptTypes
+	}
+	if esType(conceptTypes[0]) != "people" {
+		return NewInputErrorf(errInvalidConceptTypeFormat, conceptTypes[0])
+	}
+	if boostType != "authors" {
+		return errInvalidBoostTypeParameter
+	}
+	return nil
+}
+
+func (s *esConceptSearchService) suggestAuthors(textQuery string) ([]Concept, error) {
 	if textQuery == "" {
 		return nil, errEmptyTextParameter
 	}
-	if len(conceptTypes) == 0 {
-		return nil, errNoConceptTypeParameter
-	}
-	if len(conceptTypes) > 1 {
-		return nil, errNotSupportedCombinationOfConceptTypes
-	}
-	if esType(conceptTypes[0]) != "people" {
-		return nil, NewInputErrorf(errInvalidConceptTypeFormat, conceptTypes[0])
-	}
-	if boostType != "authors" {
-		return nil, errInvalidBoostTypeParameter
-	}
-
 	if err := s.checkElasticClient(); err != nil {
 		return nil, err
 	}
