@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
@@ -35,7 +37,7 @@ const (
 )
 
 func TestNoElasticClient(t *testing.T) {
-	service := esConceptSearchService{nil, "test", 50, 10, 2, &sync.RWMutex{}}
+	service := esConceptSearchService{nil, "test", 50, 10, map[string]struct{}{}, &sync.RWMutex{}, nil, 5 * time.Minute, 2, &sync.RWMutex{}}
 
 	_, err := service.FindAllConceptsByType(ftGenreType)
 	assert.EqualError(t, err, ErrNoElasticClient.Error(), "error response")
@@ -235,14 +237,36 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypeInvalid
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndType() {
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.mappingRefreshInterval = time.Second
 	service.SetElasticClient(s.ec)
 
-	concepts, err := service.SuggestConceptByTextAndType("test", ftBrandType)
-	assert.NoError(s.T(), err, "expected no error for ES read")
-	assert.Len(s.T(), concepts, 4, "there should be four results")
-	for _, c := range concepts {
-		assert.Equal(s.T(), ftBrandType, c.ConceptType, "Results should be of type FT Brand")
+	// for short test, run once and don't sleep
+	// otherwise, repeat 5 times with random sleep between 500 and 1500 ms each time
+	// to prove the read and write (refresh) goroutines interact safely with each other
+	iterations := 5
+	if testing.Short() {
+		iterations = 1
 	}
+	for i := 0; i < iterations; i++ {
+		concepts, err := service.SuggestConceptByTextAndType("test", ftBrandType)
+		assert.NoError(s.T(), err, "expected no error for ES read")
+		assert.Len(s.T(), concepts, 4, "there should be four results")
+		for _, c := range concepts {
+			assert.Equal(s.T(), ftBrandType, c.ConceptType, "Results should be of type FT Brand")
+		}
+
+		if iterations > 1 {
+			time.Sleep(time.Duration(500+rand.Int31n(1000)) * time.Millisecond)
+		}
+	}
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypeInvalidAutocompleteType() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	_, err := service.SuggestConceptByTextAndType("test", ftOrganisationType)
+	assert.EqualError(s.T(), err, ErrInvalidConceptTypeForAutocompleteByType.Error(), "error response")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByText() {

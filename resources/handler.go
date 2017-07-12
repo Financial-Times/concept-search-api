@@ -66,7 +66,7 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if searchErr != nil {
-		if searchErr == service.ErrInvalidConceptType || searchErr == service.ErrEmptyTextParameter {
+		if isClientError(searchErr) {
 			writeHTTPError(w, http.StatusBadRequest, searchErr)
 		} else if searchErr == service.ErrNoElasticClient || searchErr == elastic.ErrNoClient {
 			writeHTTPError(w, http.StatusServiceUnavailable, searchErr)
@@ -115,6 +115,19 @@ func firstError(errors ...error) error {
 	return nil
 }
 
+func isClientError(err error) bool {
+	switch err {
+	case service.ErrInvalidConceptType:
+		fallthrough
+	case service.ErrInvalidConceptTypeForAutocompleteByType:
+		fallthrough
+	case service.ErrEmptyTextParameter:
+		return true
+
+	default:
+		return false
+	}
+}
 func writeHTTPError(w http.ResponseWriter, status int, err error) {
 	response := make(map[string]interface{})
 	response["message"] = err.Error()
