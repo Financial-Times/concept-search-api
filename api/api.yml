@@ -30,9 +30,9 @@ paths:
           in: query
           description: >
             The type of Concept to search for as a URI.
-            When used in isolation, the results will be the first 50 concepts of
-            that type - this should only really be used with small collections
-            such as Genres.
+            When used without a mode, only a single value for type can be used.
+            The results will be the first 50 concepts of
+            that type - this is only useful for small collections such as Genres.
             When used in combination with other modes such as `mode=autocomplete`,
             this will restrict queries to search for concepts by the given type.
             Multiple types can be specified in the request.
@@ -46,7 +46,7 @@ paths:
             - http://www.ft.com/ontology/organisation/Organisation
             - http://www.ft.com/ontology/Location
             - http://www.ft.com/ontology/Topic
-          required:
+          required: true
           allowMultiple: true
         - name: q
           in: query
