@@ -46,10 +46,12 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 				validationErr = errors.New("invalid or missing parameters for autocomplete concept search (require q)")
 			}
 		} else {
-			if !foundQ && len(conceptTypes) == 1 {
+			if !foundQ && len(conceptTypes) == 1 && !foundBoostType {
 				concepts, searchErr = h.service.FindAllConceptsByType(conceptTypes[0])
 			} else if len(conceptTypes) > 1 {
 				validationErr = errors.New("only a single type is supported by this kind of request")
+			} else if foundBoostType {
+				validationErr = errors.New("invalid or missing parameters for concept search (boost but no mode)")
 			} else {
 				validationErr = errors.New("invalid or missing parameters for concept search (q but no mode)")
 			}

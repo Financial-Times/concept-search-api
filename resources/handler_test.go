@@ -643,13 +643,14 @@ func TestTypeaheadConceptSearchBoostButNoType(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.Equal(t, "invalid or missing parameters for autocomplete concept search (q and boost, but no type)", respObject["message"], "error message")
+	assert.Equal(t, "invalid or missing parameters for concept search (no type)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
 
 func TestTypeaheadConceptSearchBoostButNoMode(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http://www.ft.com/ontology/Genre&boost=authors", nil)
 	svc := mockConceptSearchService{}
+
 	endpoint := NewHandler(&svc)
 
 	router := vestigo.NewRouter()
