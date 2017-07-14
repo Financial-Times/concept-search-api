@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -37,12 +36,12 @@ const (
 )
 
 func TestNoElasticClient(t *testing.T) {
-	service := esConceptSearchService{nil, "test", 50, 10, map[string]struct{}{}, &sync.RWMutex{}, nil, 5 * time.Minute, 2, &sync.RWMutex{}}
+	service := NewEsConceptSearchService("test", 50, 10, 2)
 
 	_, err := service.FindAllConceptsByType(ftGenreType)
 	assert.EqualError(t, err, ErrNoElasticClient.Error(), "error response")
 
-	_, err = service.SuggestConceptByTextAndType("lucy", ftBrandType)
+	_, err = service.SuggestConceptByTextAndTypes("lucy", []string{ftBrandType})
 	assert.EqualError(t, err, ErrNoElasticClient.Error(), "error response")
 }
 
@@ -224,20 +223,20 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeInvalid() {
 
 	_, err := service.FindAllConceptsByType("http://www.ft.com/ontology/Foo")
 
-	assert.Equal(s.T(), ErrInvalidConceptType, err, "expected error for ES read")
+	assert.EqualError(s.T(), err, fmt.Sprintf(errInvalidConceptTypeFormat, "http://www.ft.com/ontology/Foo"), "expected error")
 }
 
-func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypeInvalidTextParameter() {
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesInvalidTextParameter() {
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
-	_, err := service.SuggestConceptByTextAndType("", ftBrandType)
-	assert.EqualError(s.T(), err, ErrEmptyTextParameter.Error(), "error response")
+	_, err := service.SuggestConceptByTextAndTypes("", []string{ftBrandType})
+	assert.EqualError(s.T(), err, errEmptyTextParameter.Error(), "error response")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndType() {
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
-	service.mappingRefreshInterval = time.Second
+	service.(*esConceptSearchService).mappingRefreshInterval = time.Second
 	service.SetElasticClient(s.ec)
 
 	// for short test, run once and don't sleep
@@ -248,7 +247,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndType() {
 		iterations = 1
 	}
 	for i := 0; i < iterations; i++ {
-		concepts, err := service.SuggestConceptByTextAndType("test", ftBrandType)
+		concepts, err := service.SuggestConceptByTextAndTypes("test", []string{ftBrandType})
 		assert.NoError(s.T(), err, "expected no error for ES read")
 		assert.Len(s.T(), concepts, 4, "there should be four results")
 		for _, c := range concepts {
@@ -265,15 +264,55 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypeInvalid
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
-	_, err := service.SuggestConceptByTextAndType("test", ftOrganisationType)
-	assert.EqualError(s.T(), err, ErrInvalidConceptTypeForAutocompleteByType.Error(), "error response")
+	_, err := service.SuggestConceptByTextAndTypes("test", []string{ftOrganisationType})
+	assert.EqualError(s.T(), err, errInvalidConceptTypeForAutocompleteByType.Error(), "error response")
 }
 
-func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByText() {
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesMissingTypes() {
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
-	concepts, err := service.SuggestAuthorsByText("test", ftPeopleType)
+	_, err := service.SuggestConceptByTextAndTypes("test", []string{})
+	assert.EqualError(s.T(), err, errNoConceptTypeParameter.Error(), "expected no concept type parameter error")
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypeInvalidType() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	_, err := service.SuggestConceptByTextAndTypes("test", []string{"pippo"})
+	assert.EqualError(s.T(), err, fmt.Sprintf(errInvalidConceptTypeFormat, "pippo"), "expected invalid type error")
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesNotEnoughValidTypes() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	_, err := service.SuggestConceptByTextAndTypes("test", []string{ftOrganisationType, ftLocationType, ftPeopleType})
+	assert.EqualError(s.T(), err, errNotSupportedCombinationOfConceptTypes.Error(), "expected error not supported combination of concept types")
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesNotValidTypeInCombination() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	_, err := service.SuggestConceptByTextAndTypes("test", []string{ftOrganisationType, ftLocationType, ftPeopleType, ftBrandType})
+	assert.EqualError(s.T(), err, errNotSupportedCombinationOfConceptTypes.Error(), "expected error not supported combination of concept types")
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesNotExistingTypeInCombination() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	_, err := service.SuggestConceptByTextAndTypes("test", []string{ftOrganisationType, ftLocationType, ftPeopleType, "pippo"})
+	assert.EqualError(s.T(), err, fmt.Sprintf(errInvalidConceptTypeFormat, "pippo"), "expected error invalid concept type")
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesWithBoost() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.SuggestConceptByTextAndTypesWithBoost("test", []string{ftPeopleType}, "authors")
 	assert.NoError(s.T(), err, "expected no error for ES read")
 	assert.Len(s.T(), concepts, 8, "there should be eight results")
 
@@ -288,44 +327,71 @@ func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByText() {
 	}
 }
 
-func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsRestrictedSize() {
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesWithBoostRestrictedSize() {
 	service := NewEsConceptSearchService(testIndexName, 10, 1, 2)
 	service.SetElasticClient(s.ec)
 
-	concepts, err := service.SuggestAuthorsByText("test", ftPeopleType)
+	concepts, err := service.SuggestConceptByTextAndTypesWithBoost("test", []string{ftPeopleType}, "authors")
 	assert.NoError(s.T(), err, "expected no error for ES read")
 	assert.Len(s.T(), concepts, 1, "there should be one results")
 }
 
-func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByTextNoInputText() {
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesWithBoostNoInputText() {
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
-	concepts, err := service.SuggestAuthorsByText("", ftPeopleType)
-	assert.EqualError(s.T(), err, ErrEmptyTextParameter.Error())
+	concepts, err := service.SuggestConceptByTextAndTypesWithBoost("", []string{ftPeopleType}, "authors")
+	assert.EqualError(s.T(), err, errEmptyTextParameter.Error())
 	assert.Nil(s.T(), concepts)
 }
 
-func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByTextNoESConnection() {
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesWithBoostNoTypes() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.SuggestConceptByTextAndTypesWithBoost("test", []string{}, "authors")
+	assert.EqualError(s.T(), err, errNoConceptTypeParameter.Error())
+	assert.Nil(s.T(), concepts)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesWithBoostMultipleTypes() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.SuggestConceptByTextAndTypesWithBoost("test", []string{ftPeopleType, ftLocationType}, "authors")
+	assert.EqualError(s.T(), err, errNotSupportedCombinationOfConceptTypes.Error())
+	assert.Nil(s.T(), concepts)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesWithInvalidBoost() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.SuggestConceptByTextAndTypesWithBoost("test", []string{ftPeopleType}, "pluto")
+	assert.EqualError(s.T(), err, errInvalidBoostTypeParameter.Error())
+	assert.Nil(s.T(), concepts)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesWithBoostNoESConnection() {
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 
-	concepts, err := service.SuggestAuthorsByText("test", ftPeopleType)
+	concepts, err := service.SuggestConceptByTextAndTypesWithBoost("test", []string{ftPeopleType}, "authors")
 	assert.EqualError(s.T(), err, ErrNoElasticClient.Error())
 	assert.Nil(s.T(), concepts)
 }
 
-func (s *EsConceptSearchServiceTestSuite) TestSuggestAuthorsByTextInvalidConceptType() {
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndTypesWithBoostInvalidConceptType() {
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 
-	concepts, err := service.SuggestAuthorsByText("test", ftGenreType)
-	assert.EqualError(s.T(), err, ErrInvalidConceptType.Error())
+	concepts, err := service.SuggestConceptByTextAndTypesWithBoost("test", []string{ftGenreType}, "authors")
+	assert.EqualError(s.T(), err, fmt.Sprintf(errInvalidConceptTypeFormat, ftGenreType))
 	assert.Nil(s.T(), concepts)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestAutocompletionResultSize() {
 	service := NewEsConceptSearchService(testIndexName, 10, 3, 2)
 	service.SetElasticClient(s.ec)
-	concepts, err := service.SuggestConceptByTextAndType("test", ftBrandType)
+	concepts, err := service.SuggestConceptByTextAndTypes("test", []string{ftBrandType})
 	assert.NoError(s.T(), err, "expected no error for ES read")
 	assert.Len(s.T(), concepts, 3, "there should be three results")
 	for _, c := range concepts {
@@ -333,29 +399,36 @@ func (s *EsConceptSearchServiceTestSuite) TestAutocompletionResultSize() {
 	}
 }
 
-func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextInvalidTextParameter() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
-	service.SetElasticClient(s.ec)
-
-	_, err := service.SuggestConceptByText("")
-	assert.EqualError(s.T(), err, ErrEmptyTextParameter.Error(), "error response")
-}
-
-func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByText() {
+func (s *EsConceptSearchServiceTestSuite) TestSuggestConceptByTextAndMultipleType() {
 	service := NewEsConceptSearchService(testIndexName, 20, 20, 2)
+	service.(*esConceptSearchService).mappingRefreshInterval = time.Second
 	service.SetElasticClient(s.ec)
 
-	concepts, err := service.SuggestConceptByText("test")
-	assert.NoError(s.T(), err, "expected no error for ES read")
-	assert.Len(s.T(), concepts, 13, "there should be thirteen results")
-	counts := map[string]int{}
-	for _, c := range concepts {
-		i := counts[c.ConceptType]
-		counts[c.ConceptType] = i + 1
+	// for short test, run once and don't sleep
+	// otherwise, repeat 5 times with random sleep between 500 and 1500 ms each time
+	// to prove the read and write (refresh) goroutines interact safely with each other
+	iterations := 5
+	if testing.Short() {
+		iterations = 1
 	}
+	for i := 0; i < iterations; i++ {
+		types := []string{ftLocationType, ftOrganisationType, ftPeopleType, ftTopicType}
+		concepts, err := service.SuggestConceptByTextAndTypes("test", types)
+		assert.NoError(s.T(), err, "expected no error for ES read")
+		assert.Len(s.T(), concepts, 13, "there should be thirteen results")
+		counts := map[string]int{}
+		for _, c := range concepts {
+			i := counts[c.ConceptType]
+			counts[c.ConceptType] = i + 1
+		}
 
-	assert.Equal(s.T(), 8, counts[ftPeopleType], "people")
-	assert.Equal(s.T(), 1, counts[ftOrganisationType], "organisations")
-	assert.Equal(s.T(), 2, counts[ftLocationType], "locations")
-	assert.Equal(s.T(), 2, counts[ftTopicType], "topics")
+		assert.Equal(s.T(), 8, counts[ftPeopleType], "people")
+		assert.Equal(s.T(), 1, counts[ftOrganisationType], "organisations")
+		assert.Equal(s.T(), 2, counts[ftLocationType], "locations")
+		assert.Equal(s.T(), 2, counts[ftTopicType], "topics")
+
+		if iterations > 1 {
+			time.Sleep(time.Duration(500+rand.Int31n(1000)) * time.Millisecond)
+		}
+	}
 }
