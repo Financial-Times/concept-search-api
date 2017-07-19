@@ -37,6 +37,7 @@ var (
 	errEmptyTextParameter                      = NewInputError("empty text parameter")
 	errNotSupportedCombinationOfConceptTypes   = NewInputError("the combination of concept types is not supported")
 	errInvalidBoostTypeParameter               = NewInputError("invalid boost type")
+	mentionTypes                               = []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/organisation/Organisation", "http://www.ft.com/ontology/Location", "http://www.ft.com/ontology/Topic"}
 )
 
 type ConceptSearchService interface {
@@ -152,7 +153,7 @@ func (s *esConceptSearchService) SuggestConceptByTextAndTypes(textQuery string, 
 	if len(conceptTypes) == 1 {
 		return s.suggestConceptByTextAndType(textQuery, conceptTypes[0])
 	}
-	return s.suggestConceptForMentions(textQuery, conceptTypes)
+	return s.searchConceptsForMultipleTypes(textQuery, conceptTypes)
 }
 
 func (s *esConceptSearchService) suggestConceptByTextAndType(textQuery string, conceptType string) ([]Concept, error) {
@@ -181,24 +182,44 @@ func (s *esConceptSearchService) isAutoCompleteType(t string) bool {
 	return s.autoCompleteTypes.contains(t)
 }
 
-func (s *esConceptSearchService) suggestConceptForMentions(textQuery string, conceptTypes []string) ([]Concept, error) {
-	if err := s.validateTypesForMentionsCompletion(conceptTypes); err != nil {
+func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string, conceptTypes []string) ([]Concept, error) {
+	if err := validateTypesForMentionsCompletion(conceptTypes); err != nil {
 		return nil, err
 	}
 
-	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.mentionsCompletion").Size(s.maxAutoCompleteResults)
-	result, err := s.esClient.Search(s.index).Suggester(completionSuggester).Do(context.Background())
+	textMatch := elastic.NewMatchQuery("prefLabel.autocomplete", textQuery)
+	mentionsFilter := elastic.NewTermsQuery("directType", toTerms(conceptTypes)...)
+	mentionsQuery := elastic.NewBoolQuery().Must(textMatch).Filter(mentionsFilter).Boost(1)
+
+	result, err := s.esClient.Search(s.index).Size(s.maxAutoCompleteResults).Query(mentionsQuery).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err
 	}
 
-	concepts := suggestResultToConcepts(result)
+	concepts := searchResultToConcepts(result)
 	return concepts, nil
 }
 
-func (s *esConceptSearchService) validateTypesForMentionsCompletion(conceptTypes []string) error {
-	if len(conceptTypes) != s.mentionTypes.len() {
+func validateTypes(conceptTypes []string) error {
+	for _, t := range conceptTypes {
+		if esType(t) == "" {
+			return NewInputErrorf(errInvalidConceptTypeFormat, t)
+		}
+	}
+	return nil
+}
+
+func toTerms(types []string) []interface{} {
+	i := make([]interface{}, 0)
+	for _, v := range types {
+		i = append(i, v)
+	}
+	return i
+}
+
+func validateTypesForMentionsCompletion(conceptTypes []string) error {
+	if len(conceptTypes) != len(mentionTypes) {
 		return errNotSupportedCombinationOfConceptTypes
 	}
 	for _, conceptType := range conceptTypes {
@@ -206,7 +227,7 @@ func (s *esConceptSearchService) validateTypesForMentionsCompletion(conceptTypes
 		if t == "" {
 			return NewInputErrorf(errInvalidConceptTypeFormat, conceptType)
 		}
-		if !s.mentionTypes.contains(t) {
+		if !arrayContains(conceptType, mentionTypes) {
 			return errNotSupportedCombinationOfConceptTypes
 		}
 	}
@@ -315,6 +336,15 @@ func (s *esConceptSearchService) initMappings(client *elastic.Client) {
 	s.autoCompleteTypes.updateTypes(autoCompleteTypes)
 	log.Infof("mention types: %v", mentionTypes)
 	s.mentionTypes.updateTypes(mentionTypes)
+}
+
+func arrayContains(value string, contains []string) bool {
+	for _, v := range contains {
+		if v == value {
+			return true
+		}
+	}
+	return false
 }
 
 type typeSet struct {
