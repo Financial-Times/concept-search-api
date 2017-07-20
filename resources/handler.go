@@ -23,7 +23,7 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	var searchErr, validationErr error
 	var concepts []service.Concept
 
-	_, isAutocomplete, modeErr := getSingleValueQueryParameter(req, "mode", "autocomplete")
+	mode, foundMode, modeErr := getSingleValueQueryParameter(req, "mode", "autocomplete", "search")
 	q, foundQ, qErr := getSingleValueQueryParameter(req, "q")
 	conceptTypes, foundConceptTypes := getMultipleValueQueryParameter(req, "type")
 	boostType, foundBoostType, boostTypeErr := getSingleValueQueryParameter(req, "boost") // we currently only accept authors, so ignoring the actual boost value
@@ -35,7 +35,13 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if foundConceptTypes {
-		if isAutocomplete {
+		if foundMode && mode == "search" {
+			if foundQ {
+				concepts, searchErr = h.service.SearchConceptByTextAndTypes(q, conceptTypes)
+			} else {
+				validationErr = errors.New("invalid or missing parameters for concept search (require q)")
+			}
+		} else if foundMode && mode == "autocomplete" {
 			if foundQ {
 				if foundBoostType {
 					concepts, searchErr = h.service.SuggestConceptByTextAndTypesWithBoost(q, conceptTypes, boostType)

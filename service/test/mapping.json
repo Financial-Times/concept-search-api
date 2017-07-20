@@ -10,13 +10,13 @@
                   "ascii_folding"
                ]
             },
-            "autocomplete": {
+            "edge_ngram": {
                "type": "custom",
                "tokenizer": "standard",
                "filter": [
                   "lowercase",
                   "ascii_folding",
-                  "autocomplete_filter"
+                  "edge_ngram_filter"
                ]
             }
          },
@@ -25,7 +25,7 @@
                "type": "asciifolding",
                "preserve_original": true
             },
-            "autocomplete_filter": {
+            "edge_ngram_filter": {
                "type": "edge_ngram",
                "min_gram": 1,
                "max_gram": 20
@@ -52,6 +52,10 @@
                "type": "string",
                "index": "not_analyzed"
             },
+            "authorities": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
             "prefLabel": {
                "type": "string",
                "analyzer": "standard",
@@ -60,9 +64,9 @@
                      "type": "string",
                      "index": "not_analyzed"
                   },
-                  "autocomplete": {
+                  "edge_ngram": {
                      "type": "string",
-                     "analyzer": "autocomplete",
+                     "analyzer": "edge_ngram",
                      "search_analyzer": "standard"
                   },
                   "mentionsCompletion": {
@@ -101,6 +105,10 @@
                "type": "string",
                "index": "not_analyzed"
             },
+            "authorities": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
             "prefLabel": {
                "type": "string",
                "analyzer": "standard",
@@ -109,9 +117,9 @@
                      "type": "string",
                      "index": "not_analyzed"
                   },
-                  "autocomplete": {
+                  "edge_ngram": {
                      "type": "string",
-                     "analyzer": "autocomplete",
+                     "analyzer": "edge_ngram",
                      "search_analyzer": "standard"
                   },
                   "mentionsCompletion": {
@@ -181,6 +189,10 @@
                "type": "string",
                "index": "not_analyzed"
             },
+            "authorities": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
             "prefLabel": {
                "type": "string",
                "analyzer": "standard",
@@ -189,9 +201,9 @@
                      "type": "string",
                      "index": "not_analyzed"
                   },
-                  "autocomplete": {
+                  "edge_ngram": {
                      "type": "string",
-                     "analyzer": "autocomplete",
+                     "analyzer": "edge_ngram",
                      "search_analyzer": "standard"
                   },
                   "mentionsCompletion": {
@@ -230,6 +242,10 @@
                "type": "string",
                "index": "not_analyzed"
             },
+            "authorities": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
             "prefLabel": {
                "type": "string",
                "analyzer": "standard",
@@ -238,9 +254,9 @@
                      "type": "string",
                      "index": "not_analyzed"
                   },
-                  "autocomplete": {
+                  "edge_ngram": {
                      "type": "string",
-                     "analyzer": "autocomplete",
+                     "analyzer": "edge_ngram",
                      "search_analyzer": "standard"
                   }
                }
@@ -275,6 +291,10 @@
                "type": "string",
                "index": "not_analyzed"
             },
+            "authorities": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
             "prefLabel": {
                "type": "string",
                "analyzer": "standard",
@@ -283,9 +303,9 @@
                      "type": "string",
                      "index": "not_analyzed"
                   },
-                  "autocomplete": {
+                  "edge_ngram": {
                      "type": "string",
-                     "analyzer": "autocomplete",
+                     "analyzer": "edge_ngram",
                      "search_analyzer": "standard"
                   }
                }
@@ -320,6 +340,10 @@
                "type": "string",
                "index": "not_analyzed"
             },
+            "authorities": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
             "prefLabel": {
                "type": "string",
                "analyzer": "standard",
@@ -328,9 +352,9 @@
                      "type": "string",
                      "index": "not_analyzed"
                   },
-                  "autocomplete": {
+                  "edge_ngram": {
                      "type": "string",
-                     "analyzer": "autocomplete",
+                     "analyzer": "edge_ngram",
                      "search_analyzer": "standard"
                   },
                   "completionByContext": {
@@ -376,6 +400,10 @@
                "type": "string",
                "index": "not_analyzed"
             },
+            "authorities": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
             "prefLabel": {
                "type": "string",
                "analyzer": "standard",
@@ -384,9 +412,9 @@
                      "type": "string",
                      "index": "not_analyzed"
                   },
-                  "autocomplete": {
+                  "edge_ngram": {
                      "type": "string",
-                     "analyzer": "autocomplete",
+                     "analyzer": "edge_ngram",
                      "search_analyzer": "standard"
                   }
                }
@@ -421,6 +449,10 @@
                "type": "string",
                "index": "not_analyzed"
             },
+            "authorities": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
             "prefLabel": {
                "type": "string",
                "analyzer": "standard",
@@ -429,9 +461,9 @@
                      "type": "string",
                      "index": "not_analyzed"
                   },
-                  "autocomplete": {
+                  "edge_ngram": {
                      "type": "string",
-                     "analyzer": "autocomplete",
+                     "analyzer": "edge_ngram",
                      "search_analyzer": "standard"
                   },
                   "mentionsCompletion": {
