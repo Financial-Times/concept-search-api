@@ -172,15 +172,6 @@ func (s *esConceptSearchService) initMappings(client *elastic.Client) {
 	s.mentionTypes.updateTypes(mentionTypes)
 }
 
-func arrayContains(value string, contains []string) bool {
-	for _, v := range contains {
-		if v == value {
-			return true
-		}
-	}
-	return false
-}
-
 type typeSet struct {
 	sync.RWMutex
 	types map[string]struct{}
