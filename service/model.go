@@ -40,11 +40,11 @@ var (
 	incorrectPath = "http://api.ft.com/things/"
 )
 
-func ConvertToSimpleConcept(esConcept EsConceptModel, esType string) Concept {
+func ConvertToSimpleConcept(esConcept EsConceptModel) Concept {
 	c := Concept{}
 	c.Id = correctPath(esConcept.Id)
 	c.ApiUrl = esConcept.ApiUrl
-	c.ConceptType = ftType(esType)
+	c.ConceptType = esConcept.DirectType
 	c.PrefLabel = esConcept.PrefLabel
 	if esConcept.IsFTAuthor != nil {
 		ftAuthor, err := strconv.ParseBool(*esConcept.IsFTAuthor)

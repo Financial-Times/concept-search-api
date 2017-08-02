@@ -52,21 +52,22 @@ func TestConvertToSimpleConcept(t *testing.T) {
 	id := "http://www.ft.com/thing/id"
 	apiUrl := "http://www.example.com/1"
 	label := "Test Concept"
+	directType :="http://www.ft.com/ontology/GenreSubClass"
 
 	esConcept := EsConceptModel{
 		Id:         id,
 		ApiUrl:     apiUrl,
 		PrefLabel:  label,
 		Types:      []string{"any"},
-		DirectType: "any",
+		DirectType: directType,
 		Aliases:    []string{},
 	}
 
-	actual := ConvertToSimpleConcept(esConcept, "genres")
+	actual := ConvertToSimpleConcept(esConcept)
 
 	assert.Equal(t, id, actual.Id, "http://www.ft.com/thing/id")
 	assert.Equal(t, apiUrl, actual.ApiUrl, "apiUrl")
-	assert.Equal(t, "http://www.ft.com/ontology/Genre", actual.ConceptType, "type")
+	assert.Equal(t, directType, actual.ConceptType, "the type is not correct")
 	assert.Equal(t, label, actual.PrefLabel, "prefLabel")
 }
 
@@ -84,7 +85,7 @@ func TestConvertToSimpleConceptWithIdCorrect(t *testing.T) {
 		Aliases:    []string{},
 	}
 
-	actual := ConvertToSimpleConcept(esConcept, "genres")
+	actual := ConvertToSimpleConcept(esConcept)
 	assert.Equal(t, "http://www.ft.com/thing/id", actual.Id, "The id did not get converted properly")
 }
 
@@ -104,7 +105,7 @@ func TestConvertToSimpleConceptWithFTAuthor(t *testing.T) {
 		IsFTAuthor: &isFtAuthor,
 	}
 
-	actual := ConvertToSimpleConcept(esConcept, "genres")
+	actual := ConvertToSimpleConcept(esConcept)
 	require.NotNil(t, actual.IsFTAuthor)
 	assert.True(t, *actual.IsFTAuthor)
 }
@@ -125,6 +126,6 @@ func TestConvertToSimpleConceptWithNonBoolFTAuthor(t *testing.T) {
 		IsFTAuthor: &isFtAuthor,
 	}
 
-	actual := ConvertToSimpleConcept(esConcept, "genres")
+	actual := ConvertToSimpleConcept(esConcept)
 	assert.Nil(t, actual.IsFTAuthor)
 }
