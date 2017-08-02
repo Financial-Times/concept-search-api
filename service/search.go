@@ -111,6 +111,7 @@ func searchResultToConcepts(result *elastic.SearchResult) Concepts {
 			log.Warnf("unmarshallable response from ElasticSearch: %v", err)
 			continue
 		}
+		log.WithField("score", *c.Score).Info(concept.PrefLabel)
 		concepts = append(concepts, concept)
 	}
 
@@ -153,10 +154,11 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	}
 
 	textMatch := elastic.NewMatchQuery("prefLabel.edge_ngram", textQuery)
+	exactMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)
 	mentionsFilter := elastic.NewTermsQuery("_type", toTerms(esTypes)...)
-	mentionsQuery := elastic.NewBoolQuery().Must(textMatch).Filter(mentionsFilter).Boost(1)
+	mentionsQuery := elastic.NewBoolQuery().Must(textMatch).Should(exactMatchQuery).Filter(mentionsFilter).Boost(1)
 
-	result, err := s.esClient.Search(s.index).Size(s.maxAutoCompleteResults).Query(mentionsQuery).Do(context.Background())
+	result, err := s.esClient.Search(s.index).Size(s.maxAutoCompleteResults).Query(mentionsQuery).SearchType("dfs_query_then_fetch").Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err

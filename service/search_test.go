@@ -149,22 +149,7 @@ func writeTestAuthors(ec *elastic.Client, amount int) error {
 func writeTestConcepts(ec *elastic.Client, esConceptType string, ftConceptType string, amount int) error {
 	for i := 0; i < amount; i++ {
 		uuid := uuid.NewV4().String()
-
-		payload := EsConceptModel{
-			Id:         uuid,
-			ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseURL, esConceptType, uuid),
-			PrefLabel:  fmt.Sprintf("Test concept %s %s", esConceptType, uuid),
-			Types:      []string{ftConceptType},
-			DirectType: ftConceptType,
-			Aliases:    []string{},
-		}
-
-		_, err := ec.Index().
-			Index(testIndexName).
-			Type(esConceptType).
-			Id(uuid).
-			BodyJson(payload).
-			Do(context.Background())
+		err := writeTestConcept(ec, uuid, esConceptType, ftConceptType, fmt.Sprintf("Test concept %s %s", esPeopleType, uuid))
 		if err != nil {
 			return err
 		}
@@ -172,6 +157,29 @@ func writeTestConcepts(ec *elastic.Client, esConceptType string, ftConceptType s
 
 	// ensure test data is immediately available from the index
 	_, err := ec.Refresh(testIndexName).Do(context.Background())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeTestConcept(ec *elastic.Client, uuid string, esConceptType string, ftConceptType string, prefLabel string) error {
+	payload := EsConceptModel{
+		Id:         uuid,
+		ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseURL, esConceptType, uuid),
+		PrefLabel:  prefLabel,
+		Types:      []string{ftConceptType},
+		DirectType: ftConceptType,
+		Aliases:    []string{},
+	}
+
+	_, err := ec.Index().
+		Index(testIndexName).
+		Type(esConceptType).
+		Id(uuid).
+		BodyJson(payload).
+		Do(context.Background())
+
 	if err != nil {
 		return err
 	}
@@ -272,4 +280,30 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesInvalid
 
 	_, err := service.SearchConceptByTextAndTypes("pippo", []string{"http://www.ft.com/ontology/Foo"})
 	assert.EqualError(s.T(), err, fmt.Sprintf(errInvalidConceptTypeFormat, "http://www.ft.com/ontology/Foo"))
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMatchBoosted() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	uuid1 := uuid.NewV4().String()
+	err := writeTestConcept(s.ec, uuid1, esPeopleType, ftPeopleType, "Donaldo Trump")
+	require.NoError(s.T(), err)
+
+	uuid2 := uuid.NewV4().String()
+	err = writeTestConcept(s.ec, uuid2, esPeopleType, ftPeopleType, "Donald J Trump")
+	require.NoError(s.T(), err)
+
+	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	require.NoError(s.T(), err)
+
+	concepts, err := service.SearchConceptByTextAndTypes("donald trump", []string{ftPeopleType})
+	assert.NoError(s.T(), err)
+	assert.Len(s.T(), concepts, 2)
+
+	elPresidente := concepts[0]
+	donaldo := concepts[1]
+
+	assert.Equal(s.T(), elPresidente.PrefLabel, "Donald J Trump")
+	assert.Equal(s.T(), donaldo.PrefLabel, "Donaldo Trump")
 }
