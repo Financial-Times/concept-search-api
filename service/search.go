@@ -111,7 +111,6 @@ func searchResultToConcepts(result *elastic.SearchResult) Concepts {
 			log.Warnf("unmarshallable response from ElasticSearch: %v", err)
 			continue
 		}
-		log.WithField("score", *c.Score).Info(concept.PrefLabel)
 		concepts = append(concepts, concept)
 	}
 
