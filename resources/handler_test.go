@@ -339,6 +339,33 @@ func TestTypeaheadConceptSearchErrorMissingQ(t *testing.T) {
 	svc.AssertExpectations(t)
 }
 
+func TestTypeaheadConceptSearchErrorBoostButModeSearch(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&mode=search&boost=authors", nil)
+
+	svc := mockConceptSearchService{}
+	endpoint := NewHandler(&svc)
+
+	router := vestigo.NewRouter()
+	router.Get("/concepts", endpoint.ConceptSearch)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	actual := w.Result()
+
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := make(map[string]string)
+	actualBody, _ := ioutil.ReadAll(actual.Body)
+	err := json.Unmarshal(actualBody, &respObject)
+	if err != nil {
+		t.Errorf("Unmarshalling request response failed. %v", err)
+	}
+
+	assert.Equal(t, "invalid parameters for concept search (boost not supported for mode=search)", respObject["message"], "error message")
+	svc.AssertExpectations(t)
+}
+
 func TestTypeaheadConceptSearchErrorInvalidMode(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?q=lucy&type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&mode=pippo", nil)
 

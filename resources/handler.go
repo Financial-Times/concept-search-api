@@ -36,7 +36,9 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 
 	if foundConceptTypes {
 		if foundMode && mode == "search" {
-			if foundQ {
+			if foundBoostType {
+				validationErr = errors.New("invalid parameters for concept search (boost not supported for mode=search)")
+			} else if foundQ {
 				concepts, searchErr = h.service.SearchConceptByTextAndTypes(q, conceptTypes)
 			} else {
 				validationErr = errors.New("invalid or missing parameters for concept search (require q)")
