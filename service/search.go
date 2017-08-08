@@ -37,6 +37,7 @@ var (
 	errEmptyTextParameter                      = NewInputError("empty text parameter")
 	errNotSupportedCombinationOfConceptTypes   = NewInputError("the combination of concept types is not supported")
 	errInvalidBoostTypeParameter               = NewInputError("invalid boost type")
+	mentionTypes                               = []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/organisation/Organisation", "http://www.ft.com/ontology/Location", "http://www.ft.com/ontology/Topic"}
 )
 
 type ConceptSearchService interface {
@@ -44,6 +45,7 @@ type ConceptSearchService interface {
 	FindAllConceptsByType(conceptType string) ([]Concept, error)
 	SuggestConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]Concept, error)
 	SuggestConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string) ([]Concept, error)
+	SearchConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]Concept, error)
 }
 
 type esConceptSearchService struct {
@@ -115,19 +117,6 @@ func searchResultToConcepts(result *elastic.SearchResult) Concepts {
 	return concepts
 }
 
-func suggestResultToConcepts(result *elastic.SearchResult) Concepts {
-	concepts := Concepts{}
-	for _, c := range result.Suggest["conceptSuggestion"][0].Options {
-		concept, err := transformToConcept(c.Source, c.Type)
-		if err != nil {
-			log.Warnf("unmarshallable response from ElasticSearch: %v", err)
-			continue
-		}
-		concepts = append(concepts, concept)
-	}
-	return concepts
-}
-
 func transformToConcept(source *json.RawMessage, esType string) (Concept, error) {
 	esConcept := EsConceptModel{}
 	err := json.Unmarshal(*source, &esConcept)
@@ -138,7 +127,11 @@ func transformToConcept(source *json.RawMessage, esType string) (Concept, error)
 	return ConvertToSimpleConcept(esConcept, esType), nil
 }
 
-func (s *esConceptSearchService) SuggestConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]Concept, error) {
+func (s *esConceptSearchService) isAutoCompleteType(t string) bool {
+	return s.autoCompleteTypes.contains(t)
+}
+
+func (s *esConceptSearchService) SearchConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]Concept, error) {
 	if textQuery == "" {
 		return nil, errEmptyTextParameter
 	}
@@ -149,114 +142,49 @@ func (s *esConceptSearchService) SuggestConceptByTextAndTypes(textQuery string, 
 	if err := s.checkElasticClient(); err != nil {
 		return nil, err
 	}
-	if len(conceptTypes) == 1 {
-		return s.suggestConceptByTextAndType(textQuery, conceptTypes[0])
-	}
-	return s.suggestConceptForMentions(textQuery, conceptTypes)
+
+	return s.searchConceptsForMultipleTypes(textQuery, conceptTypes)
 }
 
-func (s *esConceptSearchService) suggestConceptByTextAndType(textQuery string, conceptType string) ([]Concept, error) {
-	t := esType(conceptType)
-	if t == "" {
-		return nil, NewInputErrorf(errInvalidConceptTypeFormat, conceptType)
+func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string, conceptTypes []string) ([]Concept, error) {
+	esTypes, err := validateAndConvertToEsTypes(conceptTypes)
+	if err != nil {
+		return nil, err
 	}
 
-	if !s.isAutoCompleteType(t) {
-		return nil, errInvalidConceptTypeForAutocompleteByType
-	}
+	textMatch := elastic.NewMatchQuery("prefLabel.edge_ngram", textQuery)
+	exactMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)
+	mentionsFilter := elastic.NewTermsQuery("_type", toTerms(esTypes)...)
+	mentionsQuery := elastic.NewBoolQuery().Must(textMatch).Should(exactMatchQuery).Filter(mentionsFilter).Boost(1)
 
-	typeContext := elastic.NewSuggesterCategoryQuery("typeContext", t)
-	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.completionByContext").ContextQuery(typeContext).Size(s.maxAutoCompleteResults)
-	result, err := s.esClient.Search(s.index).Suggester(completionSuggester).Do(context.Background())
+	result, err := s.esClient.Search(s.index).Size(s.maxAutoCompleteResults).Query(mentionsQuery).SearchType("dfs_query_then_fetch").Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err
 	}
 
-	concepts := suggestResultToConcepts(result)
+	concepts := searchResultToConcepts(result)
 	return concepts, nil
 }
 
-func (s *esConceptSearchService) isAutoCompleteType(t string) bool {
-	return s.autoCompleteTypes.contains(t)
-}
-
-func (s *esConceptSearchService) suggestConceptForMentions(textQuery string, conceptTypes []string) ([]Concept, error) {
-	if err := s.validateTypesForMentionsCompletion(conceptTypes); err != nil {
-		return nil, err
-	}
-
-	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.mentionsCompletion").Size(s.maxAutoCompleteResults)
-	result, err := s.esClient.Search(s.index).Suggester(completionSuggester).Do(context.Background())
-	if err != nil {
-		log.Errorf("error: %v", err)
-		return nil, err
-	}
-
-	concepts := suggestResultToConcepts(result)
-	return concepts, nil
-}
-
-func (s *esConceptSearchService) validateTypesForMentionsCompletion(conceptTypes []string) error {
-	if len(conceptTypes) != s.mentionTypes.len() {
-		return errNotSupportedCombinationOfConceptTypes
-	}
-	for _, conceptType := range conceptTypes {
-		t := esType(conceptType)
-		if t == "" {
-			return NewInputErrorf(errInvalidConceptTypeFormat, conceptType)
+func validateAndConvertToEsTypes(conceptTypes []string) ([]string, error) {
+	esTypes := make([]string, len(conceptTypes))
+	for _, t := range conceptTypes {
+		esT := esType(t)
+		if esT == "" {
+			return esTypes, NewInputErrorf(errInvalidConceptTypeFormat, t)
 		}
-		if !s.mentionTypes.contains(t) {
-			return errNotSupportedCombinationOfConceptTypes
-		}
+		esTypes = append(esTypes, esT)
 	}
-	return nil
+	return esTypes, nil
 }
 
-func (s *esConceptSearchService) SuggestConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string) ([]Concept, error) {
-	if err := validateForAuthorsSearch(conceptTypes, boostType); err != nil {
-		return nil, err
+func toTerms(types []string) []interface{} {
+	i := make([]interface{}, 0)
+	for _, v := range types {
+		i = append(i, v)
 	}
-	return s.suggestAuthors(textQuery)
-}
-
-func validateForAuthorsSearch(conceptTypes []string, boostType string) error {
-	if len(conceptTypes) == 0 {
-		return errNoConceptTypeParameter
-	}
-	if len(conceptTypes) > 1 {
-		return errNotSupportedCombinationOfConceptTypes
-	}
-	if esType(conceptTypes[0]) != "people" {
-		return NewInputErrorf(errInvalidConceptTypeFormat, conceptTypes[0])
-	}
-	if boostType != "authors" {
-		return errInvalidBoostTypeParameter
-	}
-	return nil
-}
-
-func (s *esConceptSearchService) suggestAuthors(textQuery string) ([]Concept, error) {
-	if textQuery == "" {
-		return nil, errEmptyTextParameter
-	}
-	if err := s.checkElasticClient(); err != nil {
-		return nil, err
-	}
-
-	typeContext := elastic.NewSuggesterCategoryQuery("typeContext", "people")
-	authorContext := elastic.NewSuggesterCategoryQuery("authorContext").ValueWithBoost("true", s.authorsBoost)
-
-	completionSuggester := elastic.NewCompletionSuggester("conceptSuggestion").Text(textQuery).Field("prefLabel.authorCompletionByContext").ContextQueries(typeContext, authorContext).Size(s.maxAutoCompleteResults)
-
-	result, err := s.esClient.Search(s.index).Suggester(completionSuggester).Do(context.Background())
-	if err != nil {
-		log.Errorf("error: %v", err)
-		return nil, err
-	}
-
-	concepts := suggestResultToConcepts(result)
-	return concepts, nil
+	return i
 }
 
 func (s *esConceptSearchService) SetElasticClient(client *elastic.Client) {
@@ -281,69 +209,4 @@ func (s *esConceptSearchService) elasticClient() *elastic.Client {
 	s.clientLock.RLock()
 	defer s.clientLock.RUnlock()
 	return s.esClient
-}
-
-func (s *esConceptSearchService) initMappings(client *elastic.Client) {
-	mapping := elastic.NewIndicesGetFieldMappingService(client)
-	m, err := mapping.Index(s.index).Field("prefLabel").Do(context.Background())
-
-	if err != nil {
-		log.Errorf("unable to read ES mappings: %v", err)
-		return
-	}
-
-	if len(m) != 1 {
-		log.Errorf("mappings for index are unexpected size: %v", len(m))
-		return
-	}
-
-	autoCompleteTypes := []string{}
-	mentionTypes := []string{}
-	for _, v := range m {
-		for conceptType, fields := range v.(map[string]interface{})["mappings"].(map[string]interface{}) {
-			prefLabelFields := fields.(map[string]interface{})["prefLabel"].(map[string]interface{})["mapping"].(map[string]interface{})["prefLabel"].(map[string]interface{})["fields"].(map[string]interface{})
-			if _, hasContextCompletion := prefLabelFields["completionByContext"]; hasContextCompletion {
-				autoCompleteTypes = append(autoCompleteTypes, conceptType)
-			}
-			if _, hasMentionCompletion := prefLabelFields["mentionsCompletion"]; hasMentionCompletion {
-				mentionTypes = append(mentionTypes, conceptType)
-			}
-		}
-	}
-
-	log.Infof("autocomplete by type: %v", autoCompleteTypes)
-	s.autoCompleteTypes.updateTypes(autoCompleteTypes)
-	log.Infof("mention types: %v", mentionTypes)
-	s.mentionTypes.updateTypes(mentionTypes)
-}
-
-type typeSet struct {
-	sync.RWMutex
-	types map[string]struct{}
-}
-
-func newTypeSet() *typeSet {
-	return &typeSet{types: make(map[string]struct{})}
-}
-
-func (s *typeSet) updateTypes(types []string) {
-	s.Lock()
-	defer s.Unlock()
-	s.types = make(map[string]struct{})
-	for _, t := range types {
-		s.types[t] = struct{}{}
-	}
-}
-
-func (s *typeSet) contains(t string) bool {
-	s.RLock()
-	defer s.RUnlock()
-	_, found := s.types[t]
-	return found
-}
-
-func (s *typeSet) len() int {
-	s.RLock()
-	defer s.RUnlock()
-	return len(s.types)
 }

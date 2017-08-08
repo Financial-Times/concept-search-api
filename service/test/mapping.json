@@ -1,376 +1,488 @@
 {
-  "mappings" : {
-    "organisations": {
-      "properties": {
-        "id": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "apiUrl": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "directType": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "types": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "prefLabel": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+   "settings": {
+      "analysis": {
+         "analyzer": {
+            "folding": {
+               "tokenizer": "standard",
+               "filter": [
+                  "lowercase",
+                  "standard",
+                  "ascii_folding"
+               ]
             },
-            "mentionsCompletion": {
-              "type": "completion"
+            "edge_ngram": {
+               "type": "custom",
+               "tokenizer": "standard",
+               "filter": [
+                  "lowercase",
+                  "ascii_folding",
+                  "edge_ngram_filter"
+               ]
             }
-          }
-        },
-        "aliases": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
-            }
-          }
-        }
-      }
-    },
-    "people": {
-      "properties": {
-        "id": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "apiUrl": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "directType": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "types": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "prefLabel": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+         },
+         "filter": {
+            "ascii_folding": {
+               "type": "asciifolding",
+               "preserve_original": true
             },
-            "mentionsCompletion": {
-              "type": "completion"
+            "edge_ngram_filter": {
+               "type": "edge_ngram",
+               "min_gram": 1,
+               "max_gram": 20
+            }
+         }
+      }
+   },
+   "mappings": {
+      "organisations": {
+         "properties": {
+            "id": {
+               "type": "string",
+               "index": "not_analyzed"
             },
-            "completionByContext": {
-              "type": "completion",
-              "contexts": [{
-                "name" : "typeContext",
-                "type" : "category",
-                "path" : "_type"
-              }]
-              },
-            "authorCompletionByContext": {
-              "type": "completion",
-              "contexts": [
-              {
-                "name" : "typeContext",
-                "type" : "category",
-                "path" : "_type"
-              },
-              {
-                "name" : "authorContext",
-                "type" : "category",
-                "path" : "isFTAuthor"
-              }]
-            }
-          }
-        },
-        "isFTAuthor": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
-            }
-          }
-        },
-        "aliases": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
-            }
-          }
-        }
-      }
-    },
-    "locations": {
-      "properties": {
-        "id": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "apiUrl": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "directType": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "types": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "prefLabel": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+            "apiUrl": {
+               "type": "string",
+               "index": "not_analyzed"
             },
-            "mentionsCompletion": {
-              "type": "completion"
-            }
-          }
-        },
-        "aliases": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
-            }
-          }
-        }
-      }
-    },
-    "sections": {
-      "properties": {
-        "id": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "apiUrl": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "directType": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "types": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "prefLabel": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
-            }
-          }
-        },
-        "aliases": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
-            }
-          }
-        }
-      }
-    },
-    "subjects": {
-      "properties": {
-        "id": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "apiUrl": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "directType": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "types": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "prefLabel": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
-            }
-          }
-        },
-        "aliases": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
-            }
-          }
-        }
-      }
-    },
-    "brands": {
-      "properties": {
-        "id": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "apiUrl": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "directType": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "types": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "prefLabel": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+            "directType": {
+               "type": "string",
+               "index": "not_analyzed"
             },
-            "completionByContext": {
-              "type": "completion",
-              "contexts": [{
-                "name" : "typeContext",
-                "type" : "category",
-                "path" : "_type"
-              }]
-            }
-          }
-        },
-        "aliases": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
-            }
-          }
-        }
-      }
-    },
-    "genres": {
-      "properties": {
-        "id": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "apiUrl": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "directType": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "types": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "prefLabel": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
-            }
-          }
-        },
-        "aliases": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
-            }
-          }
-        }
-      }
-    },
-    "topics": {
-      "properties": {
-        "id": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "apiUrl": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "directType": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "types": {
-          "type": "string",
-          "index": "not_analyzed"
-        },
-        "prefLabel": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+            "types": {
+               "type": "string",
+               "index": "not_analyzed"
             },
-            "mentionsCompletion": {
-              "type": "completion"
+            "authorities": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "prefLabel": {
+               "type": "string",
+               "analyzer": "standard",
+               "fields": {
+                  "raw": {
+                     "type": "string",
+                     "index": "not_analyzed"
+                  },
+                  "edge_ngram": {
+                     "type": "string",
+                     "analyzer": "edge_ngram",
+                     "search_analyzer": "standard"
+                  },
+                  "mentionsCompletion": {
+                     "analyzer": "folding",
+                     "type": "completion"
+                  }
+               }
+            },
+            "aliases": {
+               "type": "string",
+               "analyzer": "standard",
+               "fields": {
+                  "raw": {
+                     "type": "string",
+                     "index": "not_analyzed"
+                  }
+               }
             }
-          }
-        },
-        "aliases": {
-          "type": "string",
-          "analyzer": "standard",
-          "fields": {
-            "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+         }
+      },
+      "people": {
+         "properties": {
+            "id": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "apiUrl": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "directType": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "types": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "authorities": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "prefLabel": {
+               "type": "string",
+               "analyzer": "standard",
+               "fields": {
+                  "raw": {
+                     "type": "string",
+                     "index": "not_analyzed"
+                  },
+                  "edge_ngram": {
+                     "type": "string",
+                     "analyzer": "edge_ngram",
+                     "search_analyzer": "standard"
+                  },
+                  "mentionsCompletion": {
+                     "analyzer": "folding",
+                     "type": "completion"
+                  },
+                  "authorCompletionByContext": {
+                     "analyzer": "folding",
+                     "type": "completion",
+                     "contexts": [
+                        {
+                           "name": "typeContext",
+                           "type": "category",
+                           "path": "_type"
+                        },
+                        {
+                           "name": "authorContext",
+                           "type": "category",
+                           "path": "isFTAuthor"
+                        }
+                     ]
+                  },
+                  "completionByContext": {
+                     "analyzer": "folding",
+                     "type": "completion",
+                     "contexts": [
+                        {
+                           "name": "typeContext",
+                           "type": "category",
+                           "path": "_type"
+                        }
+                     ]
+                  }
+               }
+            },
+            "isFTAuthor": {
+               "type": "text",
+               "index": true
+            },
+            "aliases": {
+               "type": "string",
+               "analyzer": "standard",
+               "fields": {
+                  "raw": {
+                     "type": "string",
+                     "index": "not_analyzed"
+                  }
+               }
             }
-          }
-        }
+         }
+      },
+      "locations": {
+         "properties": {
+            "id": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "apiUrl": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "directType": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "types": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "authorities": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "prefLabel": {
+               "type": "string",
+               "analyzer": "standard",
+               "fields": {
+                  "raw": {
+                     "type": "string",
+                     "index": "not_analyzed"
+                  },
+                  "edge_ngram": {
+                     "type": "string",
+                     "analyzer": "edge_ngram",
+                     "search_analyzer": "standard"
+                  },
+                  "mentionsCompletion": {
+                     "analyzer": "folding",
+                     "type": "completion"
+                  }
+               }
+            },
+            "aliases": {
+               "type": "string",
+               "analyzer": "standard",
+               "fields": {
+                  "raw": {
+                     "type": "string",
+                     "index": "not_analyzed"
+                  }
+               }
+            }
+         }
+      },
+      "sections": {
+         "properties": {
+            "id": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "apiUrl": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "directType": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "types": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "authorities": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "prefLabel": {
+               "type": "string",
+               "analyzer": "standard",
+               "fields": {
+                  "raw": {
+                     "type": "string",
+                     "index": "not_analyzed"
+                  },
+                  "edge_ngram": {
+                     "type": "string",
+                     "analyzer": "edge_ngram",
+                     "search_analyzer": "standard"
+                  }
+               }
+            },
+            "aliases": {
+               "type": "string",
+               "analyzer": "standard",
+               "fields": {
+                  "raw": {
+                     "type": "string",
+                     "index": "not_analyzed"
+                  }
+               }
+            }
+         }
+      },
+      "subjects": {
+         "properties": {
+            "id": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "apiUrl": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "directType": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "types": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "authorities": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "prefLabel": {
+               "type": "string",
+               "analyzer": "standard",
+               "fields": {
+                  "raw": {
+                     "type": "string",
+                     "index": "not_analyzed"
+                  },
+                  "edge_ngram": {
+                     "type": "string",
+                     "analyzer": "edge_ngram",
+                     "search_analyzer": "standard"
+                  }
+               }
+            },
+            "aliases": {
+               "type": "string",
+               "analyzer": "standard",
+               "fields": {
+                  "raw": {
+                     "type": "string",
+                     "index": "not_analyzed"
+                  }
+               }
+            }
+         }
+      },
+      "brands": {
+         "properties": {
+            "id": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "apiUrl": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "directType": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "types": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "authorities": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "prefLabel": {
+               "type": "string",
+               "analyzer": "standard",
+               "fields": {
+                  "raw": {
+                     "type": "string",
+                     "index": "not_analyzed"
+                  },
+                  "edge_ngram": {
+                     "type": "string",
+                     "analyzer": "edge_ngram",
+                     "search_analyzer": "standard"
+                  },
+                  "completionByContext": {
+                     "analyzer": "folding",
+                     "type": "completion",
+                     "contexts": [
+                        {
+                           "name": "typeContext",
+                           "type": "category",
+                           "path": "_type"
+                        }
+                     ]
+                  }
+               }
+            },
+            "aliases": {
+               "type": "string",
+               "analyzer": "standard",
+               "fields": {
+                  "raw": {
+                     "type": "string",
+                     "index": "not_analyzed"
+                  }
+               }
+            }
+         }
+      },
+      "genres": {
+         "properties": {
+            "id": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "apiUrl": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "directType": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "types": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "authorities": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "prefLabel": {
+               "type": "string",
+               "analyzer": "standard",
+               "fields": {
+                  "raw": {
+                     "type": "string",
+                     "index": "not_analyzed"
+                  },
+                  "edge_ngram": {
+                     "type": "string",
+                     "analyzer": "edge_ngram",
+                     "search_analyzer": "standard"
+                  }
+               }
+            },
+            "aliases": {
+               "type": "string",
+               "analyzer": "standard",
+               "fields": {
+                  "raw": {
+                     "type": "string",
+                     "index": "not_analyzed"
+                  }
+               }
+            }
+         }
+      },
+      "topics": {
+         "properties": {
+            "id": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "apiUrl": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "directType": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "types": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "authorities": {
+               "type": "string",
+               "index": "not_analyzed"
+            },
+            "prefLabel": {
+               "type": "string",
+               "analyzer": "standard",
+               "fields": {
+                  "raw": {
+                     "type": "string",
+                     "index": "not_analyzed"
+                  },
+                  "edge_ngram": {
+                     "type": "string",
+                     "analyzer": "edge_ngram",
+                     "search_analyzer": "standard"
+                  },
+                  "mentionsCompletion": {
+                     "analyzer": "folding",
+                     "type": "completion"
+                  }
+               }
+            },
+            "aliases": {
+               "type": "string",
+               "analyzer": "standard",
+               "fields": {
+                  "raw": {
+                     "type": "string",
+                     "index": "not_analyzed"
+                  }
+               }
+            }
+         }
       }
-    }
-  }
+   }
 }
