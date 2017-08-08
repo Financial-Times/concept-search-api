@@ -38,16 +38,22 @@ paths:
             Multiple types can be specified in the request.
             However, the only current supported combination is Person + Organisation
             + Location + Topic with `mode=autocomplete`.
-          type: string
-          enum:
-            - http://www.ft.com/ontology/Genre
-            - http://www.ft.com/ontology/product/Brand
-            - http://www.ft.com/ontology/person/Person
-            - http://www.ft.com/ontology/organisation/Organisation
-            - http://www.ft.com/ontology/Location
-            - http://www.ft.com/ontology/Topic
+          type: array
+          items:
+            type: string
+            minimum: 1
+            uniqueItems: true
+            enum:
+              - http://www.ft.com/ontology/Genre
+              - http://www.ft.com/ontology/product/Brand
+              - http://www.ft.com/ontology/person/Person
+              - http://www.ft.com/ontology/organisation/Organisation
+              - http://www.ft.com/ontology/Location
+              - http://www.ft.com/ontology/Topic
+          collectionFormat: multi
           required: true
-          allowMultiple: true
+          x-example:
+            - http://www.ft.com/ontology/Genre
         - name: q
           in: query
           description: The query text to use to find concepts. Must be set if the `mode=autocomplete`.
@@ -57,12 +63,17 @@ paths:
         - name: mode
           in: query
           description: >
-            The mode for the search request. Currently only supports a value of
-            autocomplete, which will provide fast typeahead search functionality.
-            If set to autocomplete, then a value for `q` is required.
+            The mode for the search request. Currently supports a value of either
+            autocomplete or search. Setting the mode to autocomplete,
+            will provide fast typeahead search functionality.
+            Setting the mode to search will sacrifice speed for a more intuitive
+            search experience.
+            If mode is set to either `autocomplete` or `search`,
+            then a value for `q` is required.
           type: string
           enum:
             - autocomplete
+            - search
           required: false
         - name: boost
           in: query
