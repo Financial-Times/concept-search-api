@@ -11,7 +11,7 @@ import (
 func suggestResultToConcepts(result *elastic.SearchResult) Concepts {
 	concepts := Concepts{}
 	for _, c := range result.Suggest["conceptSuggestion"][0].Options {
-		concept, err := transformToConcept(c.Source, c.Type)
+		concept, err := transformToConcept(c.Source)
 		if err != nil {
 			log.Warnf("unmarshallable response from ElasticSearch: %v", err)
 			continue

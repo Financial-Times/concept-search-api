@@ -106,7 +106,7 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string) ([]Co
 func searchResultToConcepts(result *elastic.SearchResult) Concepts {
 	concepts := Concepts{}
 	for _, c := range result.Hits.Hits {
-		concept, err := transformToConcept(c.Source, c.Type)
+		concept, err := transformToConcept(c.Source)
 		if err != nil {
 			log.Warnf("unmarshallable response from ElasticSearch: %v", err)
 			continue
@@ -117,14 +117,14 @@ func searchResultToConcepts(result *elastic.SearchResult) Concepts {
 	return concepts
 }
 
-func transformToConcept(source *json.RawMessage, esType string) (Concept, error) {
+func transformToConcept(source *json.RawMessage) (Concept, error) {
 	esConcept := EsConceptModel{}
 	err := json.Unmarshal(*source, &esConcept)
 	if err != nil {
 		return Concept{}, err
 	}
 
-	return ConvertToSimpleConcept(esConcept, esType), nil
+	return ConvertToSimpleConcept(esConcept), nil
 }
 
 func (s *esConceptSearchService) isAutoCompleteType(t string) bool {
