@@ -1,0 +1,4 @@
+apiVersion: v1
+description: concept-search-api Helm chart for Kubernetes
+name: concept-search-api
+version: 0.0.0
