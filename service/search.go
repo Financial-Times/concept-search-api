@@ -153,9 +153,11 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	}
 
 	textMatch := elastic.NewMatchQuery("prefLabel.edge_ngram", textQuery)
-	exactMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)
+	termMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)
+	exactMatchQuery := elastic.NewMatchQuery("prefLabel.exact_match", textQuery).Boost(0.3)
 	mentionsFilter := elastic.NewTermsQuery("_type", toTerms(esTypes)...)
-	mentionsQuery := elastic.NewBoolQuery().Must(textMatch).Should(exactMatchQuery).Filter(mentionsFilter).Boost(1)
+
+	mentionsQuery := elastic.NewBoolQuery().Must(textMatch).Should(termMatchQuery, exactMatchQuery).Filter(mentionsFilter).Boost(1)
 
 	result, err := s.esClient.Search(s.index).Size(s.maxAutoCompleteResults).Query(mentionsQuery).SearchType("dfs_query_then_fetch").Do(context.Background())
 	if err != nil {

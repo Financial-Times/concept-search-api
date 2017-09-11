@@ -282,7 +282,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesInvalid
 	assert.EqualError(s.T(), err, fmt.Sprintf(errInvalidConceptTypeFormat, "http://www.ft.com/ontology/Foo"))
 }
 
-func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMatchBoosted() {
+func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesTermMatchBoosted() {
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
@@ -304,6 +304,32 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMa
 	elPresidente := concepts[0]
 	donaldo := concepts[1]
 
-	assert.Equal(s.T(), elPresidente.PrefLabel, "Donald J Trump")
-	assert.Equal(s.T(), donaldo.PrefLabel, "Donaldo Trump")
+	assert.Equal(s.T(), elPresidente.PrefLabel, "Donald J Trump", "Failure could indicate that the wrong concept had the higher boost")
+	assert.Equal(s.T(), donaldo.PrefLabel, "Donaldo Trump", "Failure could indicate that the wrong concept had the higher boost")
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMatchBoosted() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	uuid1 := uuid.NewV4().String()
+	err := writeTestConcept(s.ec, uuid1, esPeopleType, ftPeopleType, "New York")
+	require.NoError(s.T(), err)
+
+	uuid2 := uuid.NewV4().String()
+	err = writeTestConcept(s.ec, uuid2, esPeopleType, ftPeopleType, "New York City Magistrates (New York)")
+	require.NoError(s.T(), err)
+
+	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	require.NoError(s.T(), err)
+
+	concepts, err := service.SearchConceptByTextAndTypes("new york", []string{ftPeopleType})
+	assert.NoError(s.T(), err)
+	assert.Len(s.T(), concepts, 2)
+
+	nyc := concepts[0]
+	magistrates := concepts[1]
+
+	assert.Equal(s.T(), nyc.PrefLabel, "New York", "Failure could indicate that the wrong concept had the higher boost")
+	assert.Equal(s.T(), magistrates.PrefLabel, "New York City Magistrates (New York)", "Failure could indicate that the wrong concept had the higher boost")
 }
