@@ -36,8 +36,8 @@ paths:
             When used in combination with other modes such as `mode=autocomplete`,
             this will restrict queries to search for concepts by the given type.
             Multiple types can be specified in the request.
-            However, the only current supported combination is Person + Organisation
-            + Location + Topic with `mode=autocomplete`.
+            However, with `mode=autocomplete` (see mode parameter) the only current supported combination is Person + Organisation
+            + Location + Topic .
           type: array
           items:
             type: string
@@ -56,7 +56,7 @@ paths:
             - http://www.ft.com/ontology/Genre
         - name: q
           in: query
-          description: The query text to use to find concepts. Must be set if the `mode=autocomplete`.
+          description: The query text to use to find concepts. Must be set if the `mode` is set.
           type: string
           required: false
           x-example: analysis
