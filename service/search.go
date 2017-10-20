@@ -43,7 +43,7 @@ var (
 
 type ConceptSearchService interface {
 	SetElasticClient(client *elastic.Client)
-	FindConceptsById(ids []string)([]Concept, error)
+	FindConceptsById(ids []string) ([]Concept, error)
 	FindAllConceptsByType(conceptType string) ([]Concept, error)
 	SuggestConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]Concept, error)
 	SuggestConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string) ([]Concept, error)
@@ -80,7 +80,6 @@ func (s *esConceptSearchService) checkElasticClient() error {
 	if s.elasticClient() == nil {
 		return ErrNoElasticClient
 	}
-
 	return nil
 }
 
@@ -99,22 +98,19 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string) ([]Co
 		log.Errorf("error: %v", err)
 		return nil, err
 	}
-
 	concepts := searchResultToConcepts(result)
 	sort.Sort(concepts)
 	return concepts, nil
 }
 
-
-
-func (s *esConceptSearchService) FindConceptsById(ids []string)([]Concept, error){
-	if ids==nil || len(ids) ==0 || !hasNonEmptyValues(ids){
+func (s *esConceptSearchService) FindConceptsById(ids []string) ([]Concept, error) {
+	if ids == nil || len(ids) == 0 || !hasNonEmptyValues(ids) {
 		return nil, errEmptyIdsParameter
 	}
 	if err := s.checkElasticClient(); err != nil {
 		return nil, err
 	}
-	idsQuery:=elastic.NewIdsQuery("_all").Ids(ids...)
+	idsQuery := elastic.NewIdsQuery("_all").Ids(ids...)
 	result, err := s.esClient.Search(s.index).Size(s.maxSearchResults).Query(idsQuery).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
@@ -138,7 +134,6 @@ func searchResultToConcepts(result *elastic.SearchResult) Concepts {
 		}
 		concepts = append(concepts, concept)
 	}
-
 	return concepts
 }
 
@@ -148,7 +143,6 @@ func transformToConcept(source *json.RawMessage) (Concept, error) {
 	if err != nil {
 		return Concept{}, err
 	}
-
 	return ConvertToSimpleConcept(esConcept), nil
 }
 
@@ -167,7 +161,6 @@ func (s *esConceptSearchService) SearchConceptByTextAndTypes(textQuery string, c
 	if err := s.checkElasticClient(); err != nil {
 		return nil, err
 	}
-
 	return s.searchConceptsForMultipleTypes(textQuery, conceptTypes)
 }
 
@@ -187,7 +180,6 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 		log.Errorf("error: %v", err)
 		return nil, err
 	}
-
 	concepts := searchResultToConcepts(result)
 	return concepts, nil
 }

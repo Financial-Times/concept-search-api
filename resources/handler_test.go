@@ -10,12 +10,10 @@ import (
 	"testing"
 
 	"github.com/Financial-Times/concept-search-api/service"
-    "github.com/husobee/vestigo"
+	"github.com/husobee/vestigo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	elastic "gopkg.in/olivere/elastic.v5"
-
-
+	"gopkg.in/olivere/elastic.v5"
 )
 
 var (
@@ -79,12 +77,12 @@ func TestAllConceptsByType(t *testing.T) {
 	svc := mockConceptSearchService{}
 	svc.On("FindAllConceptsByType", "http://www.ft.com/ontology/Genre").Return(concepts, nil)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusOK, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponse(t,actual)
+	respObject := unmarshallResponse(t, actual)
 
 	assert.Len(t, respObject["concepts"], 2, "concepts")
 	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
@@ -95,12 +93,12 @@ func TestAllConceptsByTypeInputError(t *testing.T) {
 	svc := mockConceptSearchService{}
 	svc.On("FindAllConceptsByType", mock.AnythingOfType("string")).Return([]service.Concept{}, expectedInputErr)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, expectedInputErr.Error(), respObject["message"], "error message")
 }
@@ -110,12 +108,12 @@ func TestAllConceptByTypeNoElasticsearchError(t *testing.T) {
 	svc := mockConceptSearchService{}
 	svc.On("FindAllConceptsByType", mock.AnythingOfType("string")).Return([]service.Concept{}, elastic.ErrNoClient)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusServiceUnavailable, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, elastic.ErrNoClient.Error(), respObject["message"], "error message")
 }
@@ -125,12 +123,12 @@ func TestAllConceptByTypeNoElasticsearchClientError(t *testing.T) {
 	svc := mockConceptSearchService{}
 	svc.On("FindAllConceptsByType", mock.AnythingOfType("string")).Return([]service.Concept{}, service.ErrNoElasticClient)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusServiceUnavailable, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, service.ErrNoElasticClient.Error(), respObject["message"], "error message")
 }
@@ -142,12 +140,12 @@ func TestAllConceptByTypeServerError(t *testing.T) {
 	svc := mockConceptSearchService{}
 	svc.On("FindAllConceptsByType", mock.AnythingOfType("string")).Return([]service.Concept{}, expectedError)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusInternalServerError, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, expectedError.Error(), respObject["message"], "error message")
 }
@@ -156,12 +154,12 @@ func TestConceptSearchNoParams(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts", nil)
 	svc := mockConceptSearchService{}
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, "invalid or missing parameters for concept search", respObject["message"], "error message")
 	svc.AssertExpectations(t)
@@ -171,12 +169,12 @@ func TestAllConceptsByTypeMultipleTypes(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre", nil)
 	svc := mockConceptSearchService{}
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, "only a single type is supported by this kind of request", respObject["message"], "error message")
 	svc.AssertExpectations(t)
@@ -187,12 +185,12 @@ func TestConceptSeachByTypeAndValue(t *testing.T) {
 
 	svc := mockConceptSearchService{}
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, "invalid or missing parameters for concept search (q but no mode)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
@@ -202,14 +200,14 @@ func TestTypeaheadConceptSearchErrorMissingType(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?q=lucy&mode=autocomplete", nil)
 	svc := mockConceptSearchService{}
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
-	assert.Equal(t, "invalid or missing parameters for concept search", respObject["message"], "error message")
+	assert.Equal(t, "invalid or missing parameters for concept search (require type)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
 
@@ -218,12 +216,12 @@ func TestTypeaheadConceptSearchErrorMissingQ(t *testing.T) {
 
 	svc := mockConceptSearchService{}
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, "invalid or missing parameters for autocomplete concept search (require q)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
@@ -233,12 +231,12 @@ func TestTypeaheadConceptSearchErrorBoostButModeSearch(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&mode=search&boost=authors", nil)
 
 	svc := mockConceptSearchService{}
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, "invalid parameters for concept search (boost not supported for mode=search)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
@@ -248,12 +246,12 @@ func TestTypeaheadConceptSearchErrorInvalidMode(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?q=lucy&type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&mode=pippo", nil)
 
 	svc := mockConceptSearchService{}
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, "'pippo' is not a valid value for parameter 'mode'", respObject["message"], "error message")
 	svc.AssertExpectations(t)
@@ -266,12 +264,12 @@ func TestTypeaheadConceptSearchByTextAndSingleType(t *testing.T) {
 	svc := mockConceptSearchService{}
 	svc.On("SuggestConceptByTextAndTypes", "lucy", []string{"http://www.ft.com/product/Brand"}).Return(concepts, nil)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusOK, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponse(t,actual)
+	respObject := unmarshallResponse(t, actual)
 
 	assert.Len(t, respObject["concepts"], 2, "concepts")
 	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
@@ -286,12 +284,12 @@ func TestTypeaheadConceptSearchByTextAndMultipleTypes(t *testing.T) {
 	svc := mockConceptSearchService{}
 	svc.On("SuggestConceptByTextAndTypes", "lucy", expectedTypes).Return(concepts, nil)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusOK, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponse(t,actual)
+	respObject := unmarshallResponse(t, actual)
 
 	assert.Len(t, respObject["concepts"], 2, "concepts")
 	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
@@ -305,12 +303,12 @@ func TestTypeaheadConceptSearchByTextAndMultipleTypesServerError(t *testing.T) {
 	expectedTypes := []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/Genre"}
 	svc.On("SuggestConceptByTextAndTypes", "lucy", expectedTypes).Return([]service.Concept{}, expectedErr)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusInternalServerError, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, "test error", respObject["message"], "error message")
 	svc.AssertExpectations(t)
@@ -323,12 +321,12 @@ func TestTypeaheadConceptSearchByTextAndMultipleTypesInputError(t *testing.T) {
 	expectedTypes := []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/Genre"}
 	svc.On("SuggestConceptByTextAndTypes", "lucy", expectedTypes).Return([]service.Concept{}, expectedInputErr)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, "computer says no", respObject["message"], "error message")
 	svc.AssertExpectations(t)
@@ -341,12 +339,12 @@ func TestTypeaheadConceptSearchForAuthors(t *testing.T) {
 	concepts := dummyConcepts()
 	svc.On("SuggestConceptByTextAndTypesWithBoost", "pippo", []string{"http://www.ft.com/ontology/person/Person"}, "authors").Return(concepts, nil)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusOK, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponse(t,actual)
+	respObject := unmarshallResponse(t, actual)
 
 	assert.Len(t, respObject["concepts"], 2, "concepts")
 	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
@@ -360,12 +358,12 @@ func TestTypeaheadConceptSearchForAuthorsServerError(t *testing.T) {
 	expectedErr := errors.New("test error")
 	svc.On("SuggestConceptByTextAndTypesWithBoost", "pippo", []string{"http://www.ft.com/product/Brand"}, "authors").Return([]service.Concept{}, expectedErr)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusInternalServerError, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, expectedErr.Error(), respObject["message"])
 	svc.AssertExpectations(t)
@@ -377,12 +375,12 @@ func TestTypeaheadInvalidBoost(t *testing.T) {
 	svc := mockConceptSearchService{}
 	svc.On("SuggestConceptByTextAndTypesWithBoost", "pippo", []string{"http://www.ft.com/ontology/person/Person"}, "somethingThatWeDontSupport").Return([]service.Concept{}, expectedInputErr)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, expectedInputErr.Error(), respObject["message"])
 	svc.AssertExpectations(t)
@@ -392,12 +390,12 @@ func TestTypeaheadMultipleBoostValues(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&q=pippo&mode=autocomplete&boost=somethingThatWeDontSupport&boost=anotherThingWeDontSupport", nil)
 	svc := mockConceptSearchService{}
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, "specified multiple boost query parameters in the URL", respObject["message"])
 	svc.AssertExpectations(t)
@@ -407,12 +405,12 @@ func TestTypeaheadConceptSearchNoText(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?mode=autocomplete&type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson", nil)
 	svc := mockConceptSearchService{}
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, "invalid or missing parameters for autocomplete concept search (require q)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
@@ -422,14 +420,14 @@ func TestTypeaheadConceptSearchBoostButNoType(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?mode=autocomplete&boost=authors&q=blah", nil)
 	svc := mockConceptSearchService{}
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
-	assert.Equal(t, "invalid or missing parameters for concept search", respObject["message"], "error message")
+	assert.Equal(t, "invalid or missing parameters for concept search (require type)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
 }
 
@@ -437,12 +435,12 @@ func TestTypeaheadConceptSearchBoostButNoMode(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http://www.ft.com/ontology/Genre&boost=authors", nil)
 	svc := mockConceptSearchService{}
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, "invalid or missing parameters for concept search (boost but no mode)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
@@ -455,12 +453,12 @@ func TestSearchMode(t *testing.T) {
 	concepts := dummyConcepts()
 	svc.On("SearchConceptByTextAndTypes", "pippo", []string{"http://www.ft.com/ontology/person/Person"}).Return(concepts, nil)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusOK, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponse(t,actual)
+	respObject := unmarshallResponse(t, actual)
 
 	assert.Len(t, respObject["concepts"], 2, "concepts")
 	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
@@ -471,12 +469,12 @@ func TestSearchModeWithNoQ(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http://www.ft.com/ontology/Genre&mode=search", nil)
 	svc := mockConceptSearchService{}
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, "invalid or missing parameters for concept search (require q)", respObject["message"], "error message")
 	svc.AssertExpectations(t)
@@ -487,19 +485,18 @@ func TestConceptsById(t *testing.T) {
 
 	concepts := dummyConcepts()
 	svc := mockConceptSearchService{}
-	svc.On("FindConceptsById", []string{"1","2"}).Return(concepts, nil)
+	svc.On("FindConceptsById", []string{"1", "2"}).Return(concepts, nil)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusOK, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponse(t,actual)
+	respObject := unmarshallResponse(t, actual)
 
 	assert.Len(t, respObject["concepts"], 2, "concepts")
 	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
 }
-
 
 func TestConceptsByIdInputError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?ids=", nil)
@@ -507,12 +504,12 @@ func TestConceptsByIdInputError(t *testing.T) {
 	svc := mockConceptSearchService{}
 	svc.On("FindConceptsById", []string{""}).Return([]service.Concept{}, expectedInputErr)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, expectedInputErr.Error(), respObject["message"], "error message")
 }
@@ -520,14 +517,14 @@ func TestConceptsByIdInputError(t *testing.T) {
 func TestConceptsByIdNoElasticsearchError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?ids=1&ids=2", nil)
 	svc := mockConceptSearchService{}
-	svc.On("FindConceptsById", []string{"1","2"}).Return([]service.Concept{}, elastic.ErrNoClient)
+	svc.On("FindConceptsById", []string{"1", "2"}).Return([]service.Concept{}, elastic.ErrNoClient)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusServiceUnavailable, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, elastic.ErrNoClient.Error(), respObject["message"], "error message")
 }
@@ -535,14 +532,14 @@ func TestConceptsByIdNoElasticsearchError(t *testing.T) {
 func TestConceptsByIdNoElasticsearchClientError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?ids=1&ids=2", nil)
 	svc := mockConceptSearchService{}
-	svc.On("FindConceptsById", []string{"1","2"}).Return([]service.Concept{}, service.ErrNoElasticClient)
+	svc.On("FindConceptsById", []string{"1", "2"}).Return([]service.Concept{}, service.ErrNoElasticClient)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusServiceUnavailable, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, service.ErrNoElasticClient.Error(), respObject["message"], "error message")
 }
@@ -551,20 +548,19 @@ func TestConceptsByIdServerError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?ids=1&ids=2", nil)
 	expectedError := errors.New("Test error")
 	svc := mockConceptSearchService{}
-	svc.On("FindConceptsById", []string{"1","2"}).Return([]service.Concept{}, expectedError)
+	svc.On("FindConceptsById", []string{"1", "2"}).Return([]service.Concept{}, expectedError)
 
-	actual:= doHttpCall(svc, req)
+	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusInternalServerError, actual.StatusCode, "http status")
 	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 
-	respObject := unmarshallResponseMessage(t,actual)
+	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, expectedError.Error(), respObject["message"], "error message")
 }
 
-
-func doHttpCall(svc mockConceptSearchService,req *http.Request ) *http.Response{
+func doHttpCall(svc mockConceptSearchService, req *http.Request) *http.Response {
 	endpoint := NewHandler(&svc)
 
 	router := vestigo.NewRouter()
@@ -574,7 +570,7 @@ func doHttpCall(svc mockConceptSearchService,req *http.Request ) *http.Response{
 	return w.Result()
 }
 
-func unmarshallResponseMessage( t *testing.T, resp *http.Response) map[string]string{
+func unmarshallResponseMessage(t *testing.T, resp *http.Response) map[string]string {
 	respObject := make(map[string]string)
 	actualBody, _ := ioutil.ReadAll(resp.Body)
 	err := json.Unmarshal(actualBody, &respObject)
@@ -584,7 +580,7 @@ func unmarshallResponseMessage( t *testing.T, resp *http.Response) map[string]st
 	return respObject
 }
 
-func unmarshallResponse( t *testing.T, resp *http.Response) map[string][]service.Concept{
+func unmarshallResponse(t *testing.T, resp *http.Response) map[string][]service.Concept {
 	respObject := make(map[string][]service.Concept)
 	actualBody, _ := ioutil.ReadAll(resp.Body)
 	err := json.Unmarshal(actualBody, &respObject)
@@ -593,5 +589,3 @@ func unmarshallResponse( t *testing.T, resp *http.Response) map[string][]service
 	}
 	return respObject
 }
-
-

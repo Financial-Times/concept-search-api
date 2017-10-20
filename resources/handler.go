@@ -2,19 +2,29 @@ package resources
 
 import (
 	"encoding/json"
-	"errors"
+	//"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/Financial-Times/concept-search-api/service"
-	elastic "gopkg.in/olivere/elastic.v5"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 type Handler struct {
 	service service.ConceptSearchService
 }
 
+type validationError struct {
+	msg string
+}
 
+func NewValidationError(msg string) validationError {
+	return validationError{msg}
+}
+
+func (e validationError) Error() string {
+	return e.msg
+}
 
 func NewHandler(service service.ConceptSearchService) *Handler {
 	return &Handler{service}
@@ -22,7 +32,7 @@ func NewHandler(service service.ConceptSearchService) *Handler {
 
 func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	response := make(map[string]interface{})
-	var searchErr, validationErr error
+	var err error
 	var concepts []service.Concept
 
 	mode, foundMode, modeErr := getSingleValueQueryParameter(req, "mode", "autocomplete", "search")
@@ -31,105 +41,49 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	boostType, foundBoostType, boostTypeErr := getSingleValueQueryParameter(req, "boost") // we currently only accept authors, so ignoring the actual boost value
 	ids, foundIds := getMultipleValueQueryParameter(req, "ids")
 
-	err := firstError(modeErr, qErr, boostTypeErr)
+	err = firstError(modeErr, qErr, boostTypeErr)
 	if err != nil {
 		writeHTTPError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	if foundIds {
-		concepts, searchErr = h.service.FindConceptsById(ids)
-	} else{
-	if foundConceptTypes {
-		if foundMode && mode == "search" {
-			if foundBoostType {
-				validationErr = errors.New("invalid parameters for concept search (boost not supported for mode=search)")
-			} else if foundQ {
-				concepts, searchErr = h.service.SearchConceptByTextAndTypes(q, conceptTypes)
-			} else {
-				validationErr = errors.New("invalid or missing parameters for concept search (require q)")
-			}
-		} else if foundMode && mode == "autocomplete" {
-			if foundQ {
-				if foundBoostType {
-					concepts, searchErr = h.service.SuggestConceptByTextAndTypesWithBoost(q, conceptTypes, boostType)
-				} else {
-					concepts, searchErr = h.service.SuggestConceptByTextAndTypes(q, conceptTypes)
-				}
-			} else {
-				validationErr = errors.New("invalid or missing parameters for autocomplete concept search (require q)")
-			}
+	if foundMode {
+		if !foundConceptTypes {
+			err = NewValidationError("invalid or missing parameters for concept search (require type)")
 		} else {
-			if !foundQ && len(conceptTypes) == 1 && !foundBoostType {
-				concepts, searchErr = h.service.FindAllConceptsByType(conceptTypes[0])
-			} else if len(conceptTypes) > 1 {
-				validationErr = errors.New("only a single type is supported by this kind of request")
-			} else if foundBoostType {
-				validationErr = errors.New("invalid or missing parameters for concept search (boost but no mode)")
-			} else {
-				validationErr = errors.New("invalid or missing parameters for concept search (q but no mode)")
+			if mode == "search" {
+				concepts, err = h.searchConcepts(foundBoostType, foundQ, q, conceptTypes)
+			} else if mode == "autocomplete" {
+				concepts, err = h.suggestConcepts(foundQ, q, conceptTypes, foundBoostType, boostType)
 			}
 		}
 	} else {
-		validationErr = errors.New("invalid or missing parameters for concept search")
+		if foundQ {
+			err = NewValidationError("invalid or missing parameters for concept search (q but no mode)")
+		} else if foundBoostType {
+			err = NewValidationError("invalid or missing parameters for concept search (boost but no mode)")
+		} else if foundConceptTypes {
+			concepts, err = h.findtConceptsByType(conceptTypes)
+		} else if foundIds {
+			concepts, err = h.service.FindConceptsById(ids)
+		} else {
+			err = NewValidationError("invalid or missing parameters for concept search")
+		}
 	}
 
+	if err != nil {
+		switch err.(type) {
 
+		case validationError, service.InputError:
 
+			writeHTTPError(w, http.StatusBadRequest, err)
 
-	/*	if foundIds {
-			concepts, searchErr = h.service.FindConceptsById(ids)
-		} else{
-			if foundConceptTypes {
-				if foundMode && mode == "search" {
-					if foundBoostType {
-						validationErr = errors.New("invalid parameters for concept search (boost not supported for mode=search)")
-					} else if foundQ {
-						concepts, searchErr = h.service.SearchConceptByTextAndTypes(q, conceptTypes)
-					} else {
-						validationErr = errors.New("invalid or missing parameters for concept search (require q)")
-					}
-				} else if foundMode && mode == "autocomplete" {
-					if foundQ {
-						if foundBoostType {
-							concepts, searchErr = h.service.SuggestConceptByTextAndTypesWithBoost(q, conceptTypes, boostType)
-						} else {
-							concepts, searchErr = h.service.SuggestConceptByTextAndTypes(q, conceptTypes)
-						}
-					} else {
-						validationErr = errors.New("invalid or missing parameters for autocomplete concept search (require q)")
-					}
-				} else {
-					if !foundQ && len(conceptTypes) == 1 && !foundBoostType {
-						concepts, searchErr = h.service.FindAllConceptsByType(conceptTypes[0])
-					} else if len(conceptTypes) > 1 {
-						validationErr = errors.New("only a single type is supported by this kind of request")
-					} else if foundBoostType {
-						validationErr = errors.New("invalid or missing parameters for concept search (boost but no mode)")
-					} else {
-						validationErr = errors.New("invalid or missing parameters for concept search (q but no mode)")
-					}
-				}
-			} else {
-				validationErr = errors.New("invalid or missing parameters for concept search")
-			}
-*/
-}
-
-	if validationErr != nil {
-		writeHTTPError(w, http.StatusBadRequest, validationErr)
-		return
-	}
-
-	if searchErr != nil {
-		switch searchErr.(type) {
-		case service.InputError:
-			writeHTTPError(w, http.StatusBadRequest, searchErr)
 		default:
-			if searchErr == service.ErrNoElasticClient || searchErr == elastic.ErrNoClient {
-				writeHTTPError(w, http.StatusServiceUnavailable, searchErr)
+			if err == service.ErrNoElasticClient || err == elastic.ErrNoClient {
+				writeHTTPError(w, http.StatusServiceUnavailable, err)
 			} else {
-				writeHTTPError(w, http.StatusInternalServerError, searchErr)
+
+				writeHTTPError(w, http.StatusInternalServerError, err)
 			}
 		}
 		return
@@ -138,6 +92,38 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	response["concepts"] = concepts
 	w.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+
+func (h *Handler) searchConcepts(foundBoostType bool, foundQ bool, q string, conceptTypes []string) ([]service.Concept, error) {
+	if foundBoostType {
+		return nil, NewValidationError("invalid parameters for concept search (boost not supported for mode=search)")
+	} else if foundQ {
+		return h.service.SearchConceptByTextAndTypes(q, conceptTypes)
+	} else {
+		return nil, NewValidationError("invalid or missing parameters for concept search (require q)")
+	}
+	return []service.Concept{}, nil
+}
+
+func (h *Handler) suggestConcepts(foundQ bool, q string, conceptTypes []string, foundBoostType bool, boostType string) ([]service.Concept, error) {
+	if !foundQ {
+		return nil, NewValidationError("invalid or missing parameters for autocomplete concept search (require q)")
+	} else if foundBoostType {
+		return h.service.SuggestConceptByTextAndTypesWithBoost(q, conceptTypes, boostType)
+	} else {
+		return h.service.SuggestConceptByTextAndTypes(q, conceptTypes)
+	}
+	return []service.Concept{}, nil
+}
+
+func (h *Handler) findtConceptsByType(conceptTypes []string) ([]service.Concept, error) {
+	if len(conceptTypes) == 1 {
+		return h.service.FindAllConceptsByType(conceptTypes[0])
+	} else if len(conceptTypes) > 1 {
+		return nil, NewValidationError("only a single type is supported by this kind of request")
+	}
+	return []service.Concept{}, nil
 }
 
 func getSingleValueQueryParameter(req *http.Request, param string, allowed ...string) (string, bool, error) {
