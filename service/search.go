@@ -35,6 +35,7 @@ var (
 	errInvalidConceptTypeFormat                = "invalid concept type %v"
 	errInvalidConceptTypeForAutocompleteByType = NewInputError("invalid concept type for this search")
 	errEmptyTextParameter                      = NewInputError("empty text parameter")
+	errEmptyIdsParameter                       = NewInputError("empty Ids parameter")
 	errNotSupportedCombinationOfConceptTypes   = NewInputError("the combination of concept types is not supported")
 	errInvalidBoostTypeParameter               = NewInputError("invalid boost type")
 	mentionTypes                               = []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/organisation/Organisation", "http://www.ft.com/ontology/Location", "http://www.ft.com/ontology/Topic"}
@@ -42,6 +43,7 @@ var (
 
 type ConceptSearchService interface {
 	SetElasticClient(client *elastic.Client)
+	FindConceptsById(ids []string)([]Concept, error)
 	FindAllConceptsByType(conceptType string) ([]Concept, error)
 	SuggestConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]Concept, error)
 	SuggestConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string) ([]Concept, error)
@@ -100,6 +102,29 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string) ([]Co
 
 	concepts := searchResultToConcepts(result)
 	sort.Sort(concepts)
+	return concepts, nil
+}
+
+
+
+func (s *esConceptSearchService) FindConceptsById(ids []string)([]Concept, error){
+	if ids==nil || len(ids) ==0 || !hasNonEmptyValues(ids){
+		return nil, errEmptyIdsParameter
+	}
+	if err := s.checkElasticClient(); err != nil {
+		return nil, err
+	}
+	idsQuery:=elastic.NewIdsQuery("_all").Ids(ids...)
+	result, err := s.esClient.Search(s.index).Size(s.maxSearchResults).Query(idsQuery).Do(context.Background())
+	if err != nil {
+		log.Errorf("error: %v", err)
+		return nil, err
+	}
+	if err != nil {
+		log.Errorf("error: %v", err)
+		return nil, err
+	}
+	concepts := searchResultToConcepts(result)
 	return concepts, nil
 }
 
@@ -185,6 +210,15 @@ func toTerms(types []string) []interface{} {
 		i = append(i, v)
 	}
 	return i
+}
+
+func hasNonEmptyValues(ids []string) bool {
+	for _, v := range ids {
+		if v != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *esConceptSearchService) SetElasticClient(client *elastic.Client) {

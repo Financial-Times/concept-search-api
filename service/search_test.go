@@ -149,7 +149,7 @@ func writeTestAuthors(ec *elastic.Client, amount int) error {
 func writeTestConcepts(ec *elastic.Client, esConceptType string, ftConceptType string, amount int) error {
 	for i := 0; i < amount; i++ {
 		uuid := uuid.NewV4().String()
-		err := writeTestConcept(ec, uuid, esConceptType, ftConceptType, fmt.Sprintf("Test concept %s %s", esPeopleType, uuid))
+		err := writeTestConcept(ec, uuid, esConceptType, ftConceptType, fmt.Sprintf("Test concept %s %s", esConceptType, uuid))
 		if err != nil {
 			return err
 		}
@@ -264,6 +264,116 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesNoText(
 
 	_, err := service.SearchConceptByTextAndTypes("", []string{ftPeopleType})
 	assert.EqualError(s.T(), err, errEmptyTextParameter.Error())
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsSingle() {
+	uuid1 := uuid.NewV4().String()
+	err := writeTestConcept(s.ec, uuid1, esPeopleType, ftPeopleType, "Eric Phillips inc")
+	require.NoError(s.T(), err)
+	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	require.NoError(s.T(), err)
+
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.FindConceptsById([]string{uuid1})
+
+	assert.NoError(s.T(), err, "expected no error for ES read")
+	assert.Len(s.T(), concepts, 1, "there should be one concept")
+	assert.Equal(s.T(), uuid1, concepts[0].Id, "retrieved concepts should have id %s ", uuid1)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsMultiple() {
+	uuid1 := uuid.NewV4().String()
+	err := writeTestConcept(s.ec, uuid1, esOrganisationType, ftOrganisationType, "Matilda Phillips")
+	require.NoError(s.T(), err)
+
+	uuid2 := uuid.NewV4().String()
+	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "little pond")
+	require.NoError(s.T(), err)
+
+	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	require.NoError(s.T(), err)
+
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	testIds := []string{uuid1, uuid2}
+
+	concepts, err := service.FindConceptsById(testIds)
+
+	assert.NoError(s.T(), err, "expected no error for ES read")
+	assert.Len(s.T(), concepts, 2, "there should be two concepts")
+	conceptIds := []string{}
+	for _, concept := range concepts {
+		conceptIds = append(conceptIds, concept.Id)
+	}
+	assert.Contains(s.T(), conceptIds, uuid1, "retrieved concepts should contain id %s ", uuid1)
+	assert.Contains(s.T(), conceptIds, uuid2, "retrieved concepts should contain id %s ", uuid2)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsSingleInvalidUUID() {
+
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.FindConceptsById([]string{"uuid1"})
+
+	assert.NoError(s.T(), err, "expected no error for ES read")
+	assert.Len(s.T(), concepts, 0, "there should be one concept")
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsMultipleMixValidInvalid() {
+	uuid1 := uuid.NewV4().String()
+	err := writeTestConcept(s.ec, uuid1, esOrganisationType, ftOrganisationType, "Betty Phillips")
+	require.NoError(s.T(), err)
+
+	uuid2 := uuid.NewV4().String()
+	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "big pond")
+	require.NoError(s.T(), err)
+
+	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	require.NoError(s.T(), err)
+
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	testIds := []string{uuid1, "xxx", uuid2, "zzzz"}
+
+	concepts, err := service.FindConceptsById(testIds)
+
+	assert.NoError(s.T(), err, "expected no error for ES read")
+	assert.Len(s.T(), concepts, 2, "there should be two concepts")
+	conceptIds := []string{}
+	for _, concept := range concepts {
+		conceptIds = append(conceptIds, concept.Id)
+	}
+	assert.Contains(s.T(), conceptIds, uuid1, "retrieved concepts should contain id %s ", uuid1)
+	assert.Contains(s.T(), conceptIds, uuid2, "retrieved concepts should contain id %s ", uuid2)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsEmptyStringValue() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	_, err := service.FindConceptsById([]string{""})
+	assert.EqualError(s.T(), err, errEmptyIdsParameter.Error())
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsEmptySlice() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	_, err := service.FindConceptsById([]string{})
+	assert.EqualError(s.T(), err, errEmptyIdsParameter.Error())
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsNilSlice() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	_, err := service.FindConceptsById(nil)
+	assert.EqualError(s.T(), err, errEmptyIdsParameter.Error())
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesNoConceptTypes() {

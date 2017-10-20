@@ -34,6 +34,22 @@ Other parameters:
 - search-result-limit (defaults to 50)
 - elasticsearch-trace (defaults to false)
 
+## How to test
+
+To run the full test suite of integration tests , you must have a running instance of elasticsearch and set the env var 
+e.g
+
+```
+export ELASTICSEARCH_TEST_URL=http://localhost:9200
+``` 
+
+run the command
+
+```
+go test -race ./...
+```
+to skip the itegration tests use the -short option.
+
 ## Available DATA endpoints:
 
 ### POST /concept/search
