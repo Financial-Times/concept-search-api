@@ -320,7 +320,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsSingleInvalidUUID
 	concepts, err := service.FindConceptsById([]string{"uuid1"})
 
 	assert.NoError(s.T(), err, "expected no error for ES read")
-	assert.Len(s.T(), concepts, 0, "there should be one concept")
+	assert.Len(s.T(), concepts, 0, "there should be no concepts")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsMultipleMixValidInvalid() {

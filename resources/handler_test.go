@@ -74,7 +74,7 @@ func TestAllConceptsByType(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre", nil)
 
 	concepts := dummyConcepts()
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	svc.On("FindAllConceptsByType", "http://www.ft.com/ontology/Genre").Return(concepts, nil)
 
 	actual := doHttpCall(svc, req)
@@ -90,7 +90,7 @@ func TestAllConceptsByType(t *testing.T) {
 
 func TestAllConceptsByTypeInputError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FFoo", nil)
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	svc.On("FindAllConceptsByType", mock.AnythingOfType("string")).Return([]service.Concept{}, expectedInputErr)
 
 	actual := doHttpCall(svc, req)
@@ -105,7 +105,7 @@ func TestAllConceptsByTypeInputError(t *testing.T) {
 
 func TestAllConceptByTypeNoElasticsearchError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FFoo", nil)
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	svc.On("FindAllConceptsByType", mock.AnythingOfType("string")).Return([]service.Concept{}, elastic.ErrNoClient)
 
 	actual := doHttpCall(svc, req)
@@ -120,7 +120,7 @@ func TestAllConceptByTypeNoElasticsearchError(t *testing.T) {
 
 func TestAllConceptByTypeNoElasticsearchClientError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FFoo", nil)
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	svc.On("FindAllConceptsByType", mock.AnythingOfType("string")).Return([]service.Concept{}, service.ErrNoElasticClient)
 
 	actual := doHttpCall(svc, req)
@@ -137,7 +137,7 @@ func TestAllConceptByTypeServerError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre", nil)
 
 	expectedError := errors.New("Test error")
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	svc.On("FindAllConceptsByType", mock.AnythingOfType("string")).Return([]service.Concept{}, expectedError)
 
 	actual := doHttpCall(svc, req)
@@ -152,7 +152,7 @@ func TestAllConceptByTypeServerError(t *testing.T) {
 
 func TestConceptSearchNoParams(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts", nil)
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 
 	actual := doHttpCall(svc, req)
 
@@ -167,7 +167,7 @@ func TestConceptSearchNoParams(t *testing.T) {
 
 func TestAllConceptsByTypeMultipleTypes(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre", nil)
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 
 	actual := doHttpCall(svc, req)
 
@@ -183,7 +183,7 @@ func TestAllConceptsByTypeMultipleTypes(t *testing.T) {
 func TestConceptSeachByTypeAndValue(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=fast", nil)
 
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 
 	actual := doHttpCall(svc, req)
 
@@ -198,7 +198,7 @@ func TestConceptSeachByTypeAndValue(t *testing.T) {
 
 func TestTypeaheadConceptSearchErrorMissingType(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?q=lucy&mode=autocomplete", nil)
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 
 	actual := doHttpCall(svc, req)
 
@@ -214,7 +214,7 @@ func TestTypeaheadConceptSearchErrorMissingType(t *testing.T) {
 func TestTypeaheadConceptSearchErrorMissingQ(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&mode=autocomplete", nil)
 
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 
 	actual := doHttpCall(svc, req)
 
@@ -230,7 +230,7 @@ func TestTypeaheadConceptSearchErrorMissingQ(t *testing.T) {
 func TestTypeaheadConceptSearchErrorBoostButModeSearch(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&mode=search&boost=authors", nil)
 
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
@@ -245,7 +245,7 @@ func TestTypeaheadConceptSearchErrorBoostButModeSearch(t *testing.T) {
 func TestTypeaheadConceptSearchErrorInvalidMode(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?q=lucy&type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&mode=pippo", nil)
 
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
@@ -261,7 +261,7 @@ func TestTypeaheadConceptSearchByTextAndSingleType(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&q=lucy&mode=autocomplete", nil)
 
 	concepts := dummyConcepts()
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	svc.On("SuggestConceptByTextAndTypes", "lucy", []string{"http://www.ft.com/product/Brand"}).Return(concepts, nil)
 
 	actual := doHttpCall(svc, req)
@@ -281,7 +281,7 @@ func TestTypeaheadConceptSearchByTextAndMultipleTypes(t *testing.T) {
 	concepts := dummyConcepts()
 	expectedTypes := []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/Genre"}
 
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	svc.On("SuggestConceptByTextAndTypes", "lucy", expectedTypes).Return(concepts, nil)
 
 	actual := doHttpCall(svc, req)
@@ -298,7 +298,7 @@ func TestTypeaheadConceptSearchByTextAndMultipleTypes(t *testing.T) {
 func TestTypeaheadConceptSearchByTextAndMultipleTypesServerError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=lucy&mode=autocomplete", nil)
 
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	expectedErr := errors.New("test error")
 	expectedTypes := []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/Genre"}
 	svc.On("SuggestConceptByTextAndTypes", "lucy", expectedTypes).Return([]service.Concept{}, expectedErr)
@@ -317,7 +317,7 @@ func TestTypeaheadConceptSearchByTextAndMultipleTypesServerError(t *testing.T) {
 func TestTypeaheadConceptSearchByTextAndMultipleTypesInputError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=lucy&mode=autocomplete", nil)
 
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	expectedTypes := []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/Genre"}
 	svc.On("SuggestConceptByTextAndTypes", "lucy", expectedTypes).Return([]service.Concept{}, expectedInputErr)
 
@@ -334,7 +334,7 @@ func TestTypeaheadConceptSearchByTextAndMultipleTypesInputError(t *testing.T) {
 
 func TestTypeaheadConceptSearchForAuthors(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&q=pippo&mode=autocomplete&boost=authors", nil)
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 
 	concepts := dummyConcepts()
 	svc.On("SuggestConceptByTextAndTypesWithBoost", "pippo", []string{"http://www.ft.com/ontology/person/Person"}, "authors").Return(concepts, nil)
@@ -353,7 +353,7 @@ func TestTypeaheadConceptSearchForAuthors(t *testing.T) {
 
 func TestTypeaheadConceptSearchForAuthorsServerError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&q=pippo&mode=autocomplete&boost=authors", nil)
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 
 	expectedErr := errors.New("test error")
 	svc.On("SuggestConceptByTextAndTypesWithBoost", "pippo", []string{"http://www.ft.com/product/Brand"}, "authors").Return([]service.Concept{}, expectedErr)
@@ -372,7 +372,7 @@ func TestTypeaheadConceptSearchForAuthorsServerError(t *testing.T) {
 func TestTypeaheadInvalidBoost(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&q=pippo&mode=autocomplete&boost=somethingThatWeDontSupport", nil)
 
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	svc.On("SuggestConceptByTextAndTypesWithBoost", "pippo", []string{"http://www.ft.com/ontology/person/Person"}, "somethingThatWeDontSupport").Return([]service.Concept{}, expectedInputErr)
 
 	actual := doHttpCall(svc, req)
@@ -388,7 +388,7 @@ func TestTypeaheadInvalidBoost(t *testing.T) {
 
 func TestTypeaheadMultipleBoostValues(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&q=pippo&mode=autocomplete&boost=somethingThatWeDontSupport&boost=anotherThingWeDontSupport", nil)
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 
 	actual := doHttpCall(svc, req)
 
@@ -403,7 +403,7 @@ func TestTypeaheadMultipleBoostValues(t *testing.T) {
 
 func TestTypeaheadConceptSearchNoText(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?mode=autocomplete&type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson", nil)
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 
 	actual := doHttpCall(svc, req)
 
@@ -418,7 +418,7 @@ func TestTypeaheadConceptSearchNoText(t *testing.T) {
 
 func TestTypeaheadConceptSearchBoostButNoType(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?mode=autocomplete&boost=authors&q=blah", nil)
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 
 	actual := doHttpCall(svc, req)
 
@@ -433,7 +433,7 @@ func TestTypeaheadConceptSearchBoostButNoType(t *testing.T) {
 
 func TestTypeaheadConceptSearchBoostButNoMode(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http://www.ft.com/ontology/Genre&boost=authors", nil)
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 
 	actual := doHttpCall(svc, req)
 
@@ -448,7 +448,7 @@ func TestTypeaheadConceptSearchBoostButNoMode(t *testing.T) {
 
 func TestSearchMode(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http://www.ft.com/ontology/person/Person&mode=search&q=pippo", nil)
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 
 	concepts := dummyConcepts()
 	svc.On("SearchConceptByTextAndTypes", "pippo", []string{"http://www.ft.com/ontology/person/Person"}).Return(concepts, nil)
@@ -467,7 +467,7 @@ func TestSearchMode(t *testing.T) {
 
 func TestSearchModeWithNoQ(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http://www.ft.com/ontology/Genre&mode=search", nil)
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 
 	actual := doHttpCall(svc, req)
 
@@ -484,7 +484,7 @@ func TestConceptsById(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?ids=1&ids=2", nil)
 
 	concepts := dummyConcepts()
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	svc.On("FindConceptsById", []string{"1", "2"}).Return(concepts, nil)
 
 	actual := doHttpCall(svc, req)
@@ -501,7 +501,7 @@ func TestConceptsById(t *testing.T) {
 func TestConceptsByIdInputError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?ids=", nil)
 
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	svc.On("FindConceptsById", []string{""}).Return([]service.Concept{}, expectedInputErr)
 
 	actual := doHttpCall(svc, req)
@@ -516,7 +516,7 @@ func TestConceptsByIdInputError(t *testing.T) {
 
 func TestConceptsByIdNoElasticsearchError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?ids=1&ids=2", nil)
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	svc.On("FindConceptsById", []string{"1", "2"}).Return([]service.Concept{}, elastic.ErrNoClient)
 
 	actual := doHttpCall(svc, req)
@@ -531,7 +531,7 @@ func TestConceptsByIdNoElasticsearchError(t *testing.T) {
 
 func TestConceptsByIdNoElasticsearchClientError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?ids=1&ids=2", nil)
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	svc.On("FindConceptsById", []string{"1", "2"}).Return([]service.Concept{}, service.ErrNoElasticClient)
 
 	actual := doHttpCall(svc, req)
@@ -547,7 +547,7 @@ func TestConceptsByIdNoElasticsearchClientError(t *testing.T) {
 func TestConceptsByIdServerError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?ids=1&ids=2", nil)
 	expectedError := errors.New("Test error")
-	svc := mockConceptSearchService{}
+	svc := &mockConceptSearchService{}
 	svc.On("FindConceptsById", []string{"1", "2"}).Return([]service.Concept{}, expectedError)
 
 	actual := doHttpCall(svc, req)
@@ -560,8 +560,8 @@ func TestConceptsByIdServerError(t *testing.T) {
 	assert.Equal(t, expectedError.Error(), respObject["message"], "error message")
 }
 
-func doHttpCall(svc mockConceptSearchService, req *http.Request) *http.Response {
-	endpoint := NewHandler(&svc)
+func doHttpCall(svc *mockConceptSearchService, req *http.Request) *http.Response {
+	endpoint := NewHandler(svc)
 
 	router := vestigo.NewRouter()
 	router.Get("/concepts", endpoint.ConceptSearch)

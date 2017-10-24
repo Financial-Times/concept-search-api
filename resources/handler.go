@@ -2,7 +2,6 @@ package resources
 
 import (
 	"encoding/json"
-	//"errors"
 	"fmt"
 	"net/http"
 
@@ -63,7 +62,7 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 		} else if foundBoostType {
 			err = NewValidationError("invalid or missing parameters for concept search (boost but no mode)")
 		} else if foundConceptTypes {
-			concepts, err = h.findtConceptsByType(conceptTypes)
+			concepts, err = h.findConceptsByType(conceptTypes)
 		} else if foundIds {
 			concepts, err = h.service.FindConceptsById(ids)
 		} else {
@@ -94,16 +93,13 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-
 func (h *Handler) searchConcepts(foundBoostType bool, foundQ bool, q string, conceptTypes []string) ([]service.Concept, error) {
 	if foundBoostType {
 		return nil, NewValidationError("invalid parameters for concept search (boost not supported for mode=search)")
 	} else if foundQ {
 		return h.service.SearchConceptByTextAndTypes(q, conceptTypes)
-	} else {
-		return nil, NewValidationError("invalid or missing parameters for concept search (require q)")
 	}
-	return []service.Concept{}, nil
+	return nil, NewValidationError("invalid or missing parameters for concept search (require q)")
 }
 
 func (h *Handler) suggestConcepts(foundQ bool, q string, conceptTypes []string, foundBoostType bool, boostType string) ([]service.Concept, error) {
@@ -111,13 +107,11 @@ func (h *Handler) suggestConcepts(foundQ bool, q string, conceptTypes []string, 
 		return nil, NewValidationError("invalid or missing parameters for autocomplete concept search (require q)")
 	} else if foundBoostType {
 		return h.service.SuggestConceptByTextAndTypesWithBoost(q, conceptTypes, boostType)
-	} else {
-		return h.service.SuggestConceptByTextAndTypes(q, conceptTypes)
 	}
-	return []service.Concept{}, nil
+	return h.service.SuggestConceptByTextAndTypes(q, conceptTypes)
 }
 
-func (h *Handler) findtConceptsByType(conceptTypes []string) ([]service.Concept, error) {
+func (h *Handler) findConceptsByType(conceptTypes []string) ([]service.Concept, error) {
 	if len(conceptTypes) == 1 {
 		return h.service.FindAllConceptsByType(conceptTypes[0])
 	} else if len(conceptTypes) > 1 {

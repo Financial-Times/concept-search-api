@@ -116,10 +116,6 @@ func (s *esConceptSearchService) FindConceptsById(ids []string) ([]Concept, erro
 		log.Errorf("error: %v", err)
 		return nil, err
 	}
-	if err != nil {
-		log.Errorf("error: %v", err)
-		return nil, err
-	}
 	concepts := searchResultToConcepts(result)
 	return concepts, nil
 }
