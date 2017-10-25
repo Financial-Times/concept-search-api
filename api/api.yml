@@ -85,6 +85,18 @@ paths:
           enum:
             - authors
           required: false
+          - name: ids
+                    in: query
+                    description: >
+                     returns concepts by id (i.e. a valid uuid). This is the only parameter required for this type of query.
+                    items:
+                      type: string
+                      minimum: 1
+                      uniqueItems: true
+                    collectionFormat: multi
+                    required: false
+                    x-example:
+                      - 951d904e-f613-4960-acd5-1e7a5218867d
       responses:
         200:
           description: Returns concepts based on the provided query parameters.
