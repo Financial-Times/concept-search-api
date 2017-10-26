@@ -45,28 +45,33 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 		writeHTTPError(w, http.StatusBadRequest, err)
 		return
 	}
-
-	if foundMode {
-		if !foundConceptTypes {
-			err = NewValidationError("invalid or missing parameters for concept search (require type)")
+	if foundIds {
+		if foundBoostType || foundQ || foundConceptTypes || foundMode {
+			err = NewValidationError("invalid parameters, 'ids' cannot be combined with any other parameter")
 		} else {
-			if mode == "search" {
-				concepts, err = h.searchConcepts(foundBoostType, foundQ, q, conceptTypes)
-			} else if mode == "autocomplete" {
-				concepts, err = h.suggestConcepts(foundQ, q, conceptTypes, foundBoostType, boostType)
-			}
+			concepts, err = h.service.FindConceptsById(ids)
 		}
 	} else {
-		if foundQ {
-			err = NewValidationError("invalid or missing parameters for concept search (q but no mode)")
-		} else if foundBoostType {
-			err = NewValidationError("invalid or missing parameters for concept search (boost but no mode)")
-		} else if foundConceptTypes {
-			concepts, err = h.findConceptsByType(conceptTypes)
-		} else if foundIds {
-			concepts, err = h.service.FindConceptsById(ids)
+		if foundMode {
+			if !foundConceptTypes {
+				err = NewValidationError("invalid or missing parameters for concept search (require type)")
+			} else {
+				if mode == "search" {
+					concepts, err = h.searchConcepts(foundBoostType, foundQ, q, conceptTypes)
+				} else if mode == "autocomplete" {
+					concepts, err = h.suggestConcepts(foundQ, q, conceptTypes, foundBoostType, boostType)
+				}
+			}
 		} else {
-			err = NewValidationError("invalid or missing parameters for concept search")
+			if foundQ {
+				err = NewValidationError("invalid or missing parameters for concept search (q but no mode)")
+			} else if foundBoostType {
+				err = NewValidationError("invalid or missing parameters for concept search (boost but no mode)")
+			} else if foundConceptTypes {
+				concepts, err = h.findConceptsByType(conceptTypes)
+			} else {
+				err = NewValidationError("invalid or missing parameters for concept search")
+			}
 		}
 	}
 

@@ -514,6 +514,25 @@ func TestConceptsByIdInputError(t *testing.T) {
 	assert.Equal(t, expectedInputErr.Error(), respObject["message"], "error message")
 }
 
+
+
+func TestConceptsByIdParameterCombinationError(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?ids=1&q=xyz", nil)
+
+	svc := &mockConceptSearchService{}
+
+	actual := doHttpCall(svc, req)
+
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := unmarshallResponseMessage(t, actual)
+
+	assert.Equal(t, "invalid parameters, 'ids' cannot be combined with any other parameter" , respObject["message"])
+	svc.AssertExpectations(t)
+}
+
+
 func TestConceptsByIdNoElasticsearchError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?ids=1&ids=2", nil)
 	svc := &mockConceptSearchService{}

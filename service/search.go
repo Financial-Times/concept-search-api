@@ -104,7 +104,7 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string) ([]Co
 }
 
 func (s *esConceptSearchService) FindConceptsById(ids []string) ([]Concept, error) {
-	if ids == nil || len(ids) == 0 || !hasNonEmptyValues(ids) {
+	if ids == nil || len(ids) == 0 || containsOnlyEmptyValues(ids) {
 		return nil, errEmptyIdsParameter
 	}
 	if err := s.checkElasticClient(); err != nil {
@@ -200,13 +200,13 @@ func toTerms(types []string) []interface{} {
 	return i
 }
 
-func hasNonEmptyValues(ids []string) bool {
+func containsOnlyEmptyValues(ids []string) bool {
 	for _, v := range ids {
 		if v != "" {
-			return true
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 func (s *esConceptSearchService) SetElasticClient(client *elastic.Client) {
