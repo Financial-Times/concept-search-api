@@ -99,21 +99,6 @@ func (s *esConceptSearchService) SuggestConceptByTextAndTypesWithBoost(textQuery
 	return s.suggestAuthors(textQuery)
 }
 
-func validateForAuthorsSearch(conceptTypes []string, boostType string) error {
-	if len(conceptTypes) == 0 {
-		return errNoConceptTypeParameter
-	}
-	if len(conceptTypes) > 1 {
-		return errNotSupportedCombinationOfConceptTypes
-	}
-	if esType(conceptTypes[0]) != "people" {
-		return NewInputErrorf(errInvalidConceptTypeFormat, conceptTypes[0])
-	}
-	if boostType != "authors" {
-		return errInvalidBoostTypeParameter
-	}
-	return nil
-}
 
 func (s *esConceptSearchService) suggestAuthors(textQuery string) ([]Concept, error) {
 	if textQuery == "" {

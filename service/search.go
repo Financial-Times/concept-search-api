@@ -48,6 +48,7 @@ type ConceptSearchService interface {
 	SuggestConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]Concept, error)
 	SuggestConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string) ([]Concept, error)
 	SearchConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]Concept, error)
+	SearchConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string) ([]Concept, error)
 }
 
 type esConceptSearchService struct {
@@ -157,19 +158,46 @@ func (s *esConceptSearchService) SearchConceptByTextAndTypes(textQuery string, c
 	if err := s.checkElasticClient(); err != nil {
 		return nil, err
 	}
-	return s.searchConceptsForMultipleTypes(textQuery, conceptTypes)
+	return s.searchConceptsForMultipleTypes(textQuery, conceptTypes, "")
 }
 
-func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string, conceptTypes []string) ([]Concept, error) {
+func (s *esConceptSearchService) SearchConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string) ([]Concept, error) {
+	if err := validateForAuthorsSearch(conceptTypes, boostType); err != nil {
+		return nil, err
+	}
+	if textQuery == "" {
+		return nil, errEmptyTextParameter
+	}
+	if len(conceptTypes) == 0 {
+		return nil, errNoConceptTypeParameter
+	}
+	if err := s.checkElasticClient(); err != nil {
+		return nil, err
+	}
+	return s.searchConceptsForMultipleTypes(textQuery, conceptTypes, boostType)
+}
+
+func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string, conceptTypes []string, boostType string) ([]Concept, error, ) {
 	esTypes, err := validateAndConvertToEsTypes(conceptTypes)
 	if err != nil {
 		return nil, err
 	}
 
+	var authorBoost *elastic.TermQuery
+	if boostType != "" {
+		authorBoost = elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8)
+	}
+
 	textMatch := elastic.NewMatchQuery("prefLabel.edge_ngram", textQuery)
 	exactMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)
 	mentionsFilter := elastic.NewTermsQuery("_type", toTerms(esTypes)...)
-	mentionsQuery := elastic.NewBoolQuery().Must(textMatch).Should(exactMatchQuery).Filter(mentionsFilter).Boost(1)
+
+	var mentionsQuery *elastic.BoolQuery
+	if boostType != "" {
+		mentionsQuery = elastic.NewBoolQuery().Must(textMatch).Should(authorBoost, exactMatchQuery).Filter(mentionsFilter).MinimumNumberShouldMatch(0).Boost(1)
+	}  else {
+		mentionsQuery = elastic.NewBoolQuery().Must(textMatch).Should(exactMatchQuery).Filter(mentionsFilter).MinimumNumberShouldMatch(0).Boost(1)
+	}
 
 	result, err := s.esClient.Search(s.index).Size(s.maxAutoCompleteResults).Query(mentionsQuery).SearchType("dfs_query_then_fetch").Do(context.Background())
 	if err != nil {
@@ -179,6 +207,23 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	concepts := searchResultToConcepts(result)
 	return concepts, nil
 }
+
+func validateForAuthorsSearch(conceptTypes []string, boostType string) error {
+	if len(conceptTypes) == 0 {
+		return errNoConceptTypeParameter
+	}
+	if len(conceptTypes) > 1 {
+		return errNotSupportedCombinationOfConceptTypes
+	}
+	if esType(conceptTypes[0]) != "people" {
+		return NewInputErrorf(errInvalidConceptTypeFormat, conceptTypes[0])
+	}
+	if boostType != "authors" {
+		return errInvalidBoostTypeParameter
+	}
+	return nil
+}
+
 
 func validateAndConvertToEsTypes(conceptTypes []string) ([]string, error) {
 	esTypes := make([]string, len(conceptTypes))

@@ -57,7 +57,7 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 				err = NewValidationError("invalid or missing parameters for concept search (require type)")
 			} else {
 				if mode == "search" {
-					concepts, err = h.searchConcepts(foundBoostType, foundQ, q, conceptTypes)
+					concepts, err = h.searchConcepts(foundBoostType, boostType, foundQ, q, conceptTypes)
 				} else if mode == "autocomplete" {
 					concepts, err = h.suggestConcepts(foundQ, q, conceptTypes, foundBoostType, boostType)
 				}
@@ -98,13 +98,13 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func (h *Handler) searchConcepts(foundBoostType bool, foundQ bool, q string, conceptTypes []string) ([]service.Concept, error) {
-	if foundBoostType {
-		return nil, NewValidationError("invalid parameters for concept search (boost not supported for mode=search)")
-	} else if foundQ {
-		return h.service.SearchConceptByTextAndTypes(q, conceptTypes)
+func (h *Handler) searchConcepts(foundBoostType bool, boostType string, foundQ bool, q string, conceptTypes []string) ([]service.Concept, error) {
+	if !foundQ {
+		return nil, NewValidationError("invalid or missing parameters for concept search (require q)")
+	} else if foundBoostType {
+		return h.service.SearchConceptByTextAndTypesWithBoost(q, conceptTypes, boostType)
 	}
-	return nil, NewValidationError("invalid or missing parameters for concept search (require q)")
+	return h.service.SearchConceptByTextAndTypes(q, conceptTypes)
 }
 
 func (h *Handler) suggestConcepts(foundQ bool, q string, conceptTypes []string, foundBoostType bool, boostType string) ([]service.Concept, error) {
