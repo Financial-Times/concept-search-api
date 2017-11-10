@@ -183,23 +183,21 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 		return nil, err
 	}
 
-	var authorBoost *elastic.TermQuery
-	if boostType != "" {
-		authorBoost = elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8)
-	}
 
 	textMatch := elastic.NewMatchQuery("prefLabel.edge_ngram", textQuery)
 	exactMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)
-	mentionsFilter := elastic.NewTermsQuery("_type", toTerms(esTypes)...)
+	typeFilter := elastic.NewTermsQuery("_type", toTerms(esTypes)...)
 
-	var mentionsQuery *elastic.BoolQuery
+	shouldMatch := []elastic.Query{exactMatchQuery}
+
 	if boostType != "" {
-		mentionsQuery = elastic.NewBoolQuery().Must(textMatch).Should(authorBoost, exactMatchQuery).Filter(mentionsFilter).MinimumNumberShouldMatch(0).Boost(1)
-	}  else {
-		mentionsQuery = elastic.NewBoolQuery().Must(textMatch).Should(exactMatchQuery).Filter(mentionsFilter).MinimumNumberShouldMatch(0).Boost(1)
+		shouldMatch = append(shouldMatch,elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8))
 	}
 
-	result, err := s.esClient.Search(s.index).Size(s.maxAutoCompleteResults).Query(mentionsQuery).SearchType("dfs_query_then_fetch").Do(context.Background())
+	var theQuery *elastic.BoolQuery
+	theQuery = elastic.NewBoolQuery().Must(textMatch).Should(shouldMatch...).Filter(typeFilter).MinimumNumberShouldMatch(0).Boost(1)
+
+	result, err := s.esClient.Search(s.index).Size(s.maxAutoCompleteResults).Query(theQuery).SearchType("dfs_query_then_fetch").Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err
