@@ -194,8 +194,7 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 		shouldMatch = append(shouldMatch,elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8))
 	}
 
-	var theQuery *elastic.BoolQuery
-	theQuery = elastic.NewBoolQuery().Must(textMatch).Should(shouldMatch...).Filter(typeFilter).MinimumNumberShouldMatch(0).Boost(1)
+	theQuery := elastic.NewBoolQuery().Must(textMatch).Should(shouldMatch...).Filter(typeFilter).MinimumNumberShouldMatch(0).Boost(1)
 
 	result, err := s.esClient.Search(s.index).Size(s.maxAutoCompleteResults).Query(theQuery).SearchType("dfs_query_then_fetch").Do(context.Background())
 	if err != nil {
