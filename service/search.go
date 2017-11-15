@@ -185,10 +185,11 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 
 
 	textMatch := elastic.NewMatchQuery("prefLabel.edge_ngram", textQuery)
-	exactMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)
+	termMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)
+	exactMatchQuery := elastic.NewMatchQuery("prefLabel.exact_match", textQuery).Boost(0.3)
 	typeFilter := elastic.NewTermsQuery("_type", toTerms(esTypes)...)
 
-	shouldMatch := []elastic.Query{exactMatchQuery}
+	shouldMatch := []elastic.Query{termMatchQuery,exactMatchQuery}
 
 	if boostType != "" {
 		shouldMatch = append(shouldMatch,elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8))
