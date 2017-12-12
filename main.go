@@ -138,19 +138,22 @@ func routeRequest(port *string, apiYml *string, conceptFinder conceptFinder, han
 	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
 	monitoringRouter = httphandlers.HTTPMetricsHandler(metrics.DefaultRegistry, monitoringRouter)
 
-	healthCheck := fthealth.HealthCheck{
-		SystemCode:  "up-csa",
-		Name:        "Amazon Elasticsearch Service Healthcheck",
-		Description: "Checks for AES",
-		Checks: []fthealth.Check{
-			healthService.connectivityHealthyCheck(),
-			healthService.clusterIsHealthyCheck(),
+	healthCheck := fthealth.TimedHealthCheck{
+		HealthCheck: fthealth.HealthCheck{
+			SystemCode:  "up-csa",
+			Name:        "Amazon Elasticsearch Service Healthcheck",
+			Description: "Checks for AES",
+			Checks: []fthealth.Check{
+				healthService.connectivityHealthyCheck(),
+				healthService.clusterIsHealthyCheck(),
+			},
 		},
+		Timeout: 10 * time.Second,
 	}
 	http.HandleFunc("/__health", fthealth.Handler(healthCheck))
 	http.HandleFunc("/__health-details", healthService.healthDetails)
 
-	http.HandleFunc(status.GTGPath, healthService.goodToGo)
+	http.HandleFunc(status.GTGPath, status.NewGoodToGoHandler(healthService.GTG))
 	http.HandleFunc(status.BuildInfoPath, status.BuildInfoHandler)
 
 	http.Handle("/", monitoringRouter)

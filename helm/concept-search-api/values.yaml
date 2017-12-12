@@ -9,5 +9,7 @@ image:
   repository: coco/concept-search-api
   pullPolicy: Always
 resources:
+  requests:
+    memory: 30Mi
   limits:
     memory: 256Mi
