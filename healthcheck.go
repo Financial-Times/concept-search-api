@@ -7,13 +7,14 @@ import (
 	"sync"
 
 	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
+	"github.com/Financial-Times/service-status-go/gtg"
 	log "github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
 	"gopkg.in/olivere/elastic.v5"
 )
 
 const (
-	deweyUrl = "https://dewey.ft.com/up-csa.html"
+	deweyURL = "https://dewey.ft.com/up-csa.html"
 )
 
 type esHealthService struct {
@@ -36,7 +37,7 @@ func (service *esHealthService) clusterIsHealthyCheck() fthealth.Check {
 		ID:               "elasticsearch-cluster-health",
 		BusinessImpact:   "Full or partial degradation in serving requests from Elasticsearch",
 		Name:             "Check Elasticsearch cluster health",
-		PanicGuide:       deweyUrl,
+		PanicGuide:       deweyURL,
 		Severity:         1,
 		TechnicalSummary: "Elasticsearch cluster is not healthy. Details on /__health-details",
 		Checker:          service.healthChecker,
@@ -49,12 +50,12 @@ func (service *esHealthService) healthChecker() (string, error) {
 		if err != nil {
 			return "Cluster is not healthy: ", err
 		} else if output.Status != "green" {
-			return fmt.Sprintf("Cluster is %v", output.Status), errors.New(fmt.Sprintf("Cluster is %v", output.Status))
+			return fmt.Sprintf("Cluster is %v", output.Status), fmt.Errorf("Cluster is %v", output.Status)
 		}
 		return "Cluster is healthy", nil
 	}
 
-	return "Couldn't check the cluster's health.", errors.New("Couldn't establish connectivity.")
+	return "Couldn't check the cluster's health", errors.New("Couldn't establish connectivity")
 }
 
 func (service *esHealthService) connectivityHealthyCheck() fthealth.Check {
@@ -62,7 +63,7 @@ func (service *esHealthService) connectivityHealthyCheck() fthealth.Check {
 		ID:               "elasticsearch-connectivity",
 		BusinessImpact:   "Could not connect to Elasticsearch",
 		Name:             "Check connectivity to the Elasticsearch cluster",
-		PanicGuide:       deweyUrl,
+		PanicGuide:       deweyURL,
 		Severity:         1,
 		TechnicalSummary: "Connection to Elasticsearch cluster could not be created. Please check your AWS credentials.",
 		Checker:          service.connectivityChecker,
@@ -71,7 +72,7 @@ func (service *esHealthService) connectivityHealthyCheck() fthealth.Check {
 
 func (service *esHealthService) connectivityChecker() (string, error) {
 	if service.esClient() == nil {
-		return "", errors.New("Could not connect to elasticsearch, please check the application parameters/env variables, and restart the service.")
+		return "", errors.New("Could not connect to elasticsearch, please check the application parameters/env variables, and restart the service")
 	}
 
 	_, err := service.getClusterHealth()
@@ -81,17 +82,23 @@ func (service *esHealthService) connectivityChecker() (string, error) {
 	return "Successfully connected to the cluster", nil
 }
 
-//GoodToGo returns a 503 if the healthcheck fails - suitable for use from varnish to check availability of a node
-func (service *esHealthService) goodToGo(writer http.ResponseWriter, req *http.Request) {
-	writer.Header().Add("Cache-Control", "no-cache")
-	if _, err := service.healthChecker(); err != nil {
-		writer.WriteHeader(http.StatusServiceUnavailable)
+func (service *esHealthService) GTG() gtg.Status {
+	statusCheck := func() gtg.Status {
+		return gtgCheck(service.healthChecker)
 	}
+
+	return gtg.FailFastParallelCheck([]gtg.StatusChecker{statusCheck})()
+}
+
+func gtgCheck(handler func() (string, error)) gtg.Status {
+	if _, err := handler(); err != nil {
+		return gtg.Status{GoodToGo: false, Message: err.Error()}
+	}
+	return gtg.Status{GoodToGo: true}
 }
 
 //HealthDetails returns the response from elasticsearch service /__health endpoint - describing the cluster health
 func (service *esHealthService) healthDetails(writer http.ResponseWriter, req *http.Request) {
-
 	writer.Header().Set("Content-Type", "application/json")
 
 	if writer == nil || service.esClient() == nil {

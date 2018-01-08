@@ -3,11 +3,11 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	status "github.com/Financial-Times/service-status-go/httphandlers"
 	"github.com/stretchr/testify/assert"
 
 	"strings"
@@ -89,7 +89,7 @@ func TestHealthDetailsReturnsError(t *testing.T) {
 	}
 }
 
-func TestGoodToGoUnhealthyCluster(t *testing.T) {
+func TestGTGUnhealthyCluster(t *testing.T) {
 	//create a request to pass to our handler
 	req := httptest.NewRequest("GET", "/__gtg", nil)
 
@@ -97,7 +97,7 @@ func TestGoodToGoUnhealthyCluster(t *testing.T) {
 	healthService.client = hcClient{returnError: errors.New("test error")}
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(healthService.goodToGo)
+	handler := http.HandlerFunc(status.NewGoodToGoHandler(healthService.GTG))
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
@@ -107,18 +107,17 @@ func TestGoodToGoUnhealthyCluster(t *testing.T) {
 	// Series of verifications:
 	assert.Equal(t, http.StatusServiceUnavailable, actual.StatusCode, "status code")
 	assert.Equal(t, "no-cache", actual.Header.Get("Cache-Control"), "cache-control header")
-	actualBody, _ := ioutil.ReadAll(actual.Body)
-	assert.Len(t, actualBody, 0, "Response body should be empty")
+	assert.Equal(t, "test error", rr.Body.String(), "GTG response body")
 }
 
-func TestGoodToGoHealthyCluster(t *testing.T) {
+func TestGTGHealthyCluster(t *testing.T) {
 	//create a request to pass to our handler
 	req := httptest.NewRequest("GET", "/__gtg", nil)
 	healthService := newEsHealthService()
 	healthService.client = hcClient{healthy: true}
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(healthService.goodToGo)
+	handler := http.HandlerFunc(status.NewGoodToGoHandler(healthService.GTG))
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
@@ -128,8 +127,7 @@ func TestGoodToGoHealthyCluster(t *testing.T) {
 	// Series of verifications:
 	assert.Equal(t, http.StatusOK, actual.StatusCode, "status code")
 	assert.Equal(t, "no-cache", actual.Header.Get("Cache-Control"), "cache-control header")
-	actualBody, _ := ioutil.ReadAll(actual.Body)
-	assert.Len(t, actualBody, 0, "Response body should be empty")
+	assert.Equal(t, "OK", rr.Body.String(), "GTG response body")
 }
 
 func TestHealthServiceConnectivityChecker(t *testing.T) {
