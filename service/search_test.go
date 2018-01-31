@@ -112,18 +112,32 @@ func createIndex(ec *elastic.Client, mappingFile string) error {
 	return nil
 }
 
+func cleanup(t *testing.T, ec *elastic.Client, esType string, uuids ...string) {
+	for _, uuid := range uuids {
+		_, err := ec.Delete().
+			Index(testIndexName).
+			Type(esType).
+			Id(uuid).
+			Do(context.TODO())
+		assert.NoError(t, err)
+	}
+	_, err := ec.Refresh(testIndexName).Do(context.TODO())
+	assert.NoError(t, err)
+}
+
 func writeTestAuthors(ec *elastic.Client, amount int) error {
 	for i := 0; i < amount; i++ {
 		uuid := uuid.NewV4().String()
 
 		ftAuthor := "true"
+		prefLabel := fmt.Sprintf("Test concept %s %s", esPeopleType, uuid)
 		payload := EsConceptModel{
 			Id:         uuid,
 			ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseURL, esPeopleType, uuid),
-			PrefLabel:  fmt.Sprintf("Test concept %s %s", esPeopleType, uuid),
+			PrefLabel:  prefLabel,
 			Types:      []string{ftPeopleType},
 			DirectType: ftPeopleType,
-			Aliases:    []string{},
+			Aliases:    []string{prefLabel},
 			IsFTAuthor: &ftAuthor,
 		}
 
@@ -149,7 +163,8 @@ func writeTestAuthors(ec *elastic.Client, amount int) error {
 func writeTestConcepts(ec *elastic.Client, esConceptType string, ftConceptType string, amount int) error {
 	for i := 0; i < amount; i++ {
 		uuid := uuid.NewV4().String()
-		err := writeTestConcept(ec, uuid, esConceptType, ftConceptType, fmt.Sprintf("Test concept %s %s", esConceptType, uuid))
+		prefLabel := fmt.Sprintf("Test concept %s %s", esConceptType, uuid)
+		err := writeTestConcept(ec, uuid, esConceptType, ftConceptType, prefLabel, []string{prefLabel})
 		if err != nil {
 			return err
 		}
@@ -170,7 +185,7 @@ func writeTestPerson(ec *elastic.Client, uuid string, prefLabel string, ftAuthor
 		PrefLabel:  fmt.Sprintf(prefLabel),
 		Types:      []string{ftPeopleType},
 		DirectType: ftPeopleType,
-		Aliases:    []string{},
+		Aliases:    []string{prefLabel},
 		IsFTAuthor: &ftAuthor,
 	}
 
@@ -186,14 +201,14 @@ func writeTestPerson(ec *elastic.Client, uuid string, prefLabel string, ftAuthor
 	return nil
 }
 
-func writeTestConcept(ec *elastic.Client, uuid string, esConceptType string, ftConceptType string, prefLabel string) error {
+func writeTestConcept(ec *elastic.Client, uuid string, esConceptType string, ftConceptType string, prefLabel string, aliases []string) error {
 	payload := EsConceptModel{
 		Id:         uuid,
 		ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseURL, esConceptType, uuid),
 		PrefLabel:  prefLabel,
 		Types:      []string{ftConceptType},
 		DirectType: ftConceptType,
-		Aliases:    []string{},
+		Aliases:    aliases,
 	}
 
 	_, err := ec.Index().
@@ -291,7 +306,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesNoText(
 
 func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsSingle() {
 	uuid1 := uuid.NewV4().String()
-	err := writeTestConcept(s.ec, uuid1, esPeopleType, ftPeopleType, "Eric Phillips inc")
+	err := writeTestConcept(s.ec, uuid1, esPeopleType, ftPeopleType, "Eric Phillips inc", []string{})
 	require.NoError(s.T(), err)
 	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
 	require.NoError(s.T(), err)
@@ -304,15 +319,17 @@ func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsSingle() {
 	assert.NoError(s.T(), err, "expected no error for ES read")
 	assert.Len(s.T(), concepts, 1, "there should be one concept")
 	assert.Equal(s.T(), uuid1, concepts[0].Id, "retrieved concepts should have id %s ", uuid1)
+
+	cleanup(s.T(), s.ec, esPeopleType, uuid1)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsMultiple() {
 	uuid1 := uuid.NewV4().String()
-	err := writeTestConcept(s.ec, uuid1, esOrganisationType, ftOrganisationType, "Matilda Phillips")
+	err := writeTestConcept(s.ec, uuid1, esOrganisationType, ftOrganisationType, "Matilda Phillips", []string{})
 	require.NoError(s.T(), err)
 
 	uuid2 := uuid.NewV4().String()
-	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "little pond")
+	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "little pond", []string{})
 	require.NoError(s.T(), err)
 
 	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
@@ -333,10 +350,11 @@ func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsMultiple() {
 	}
 	assert.Contains(s.T(), conceptIds, uuid1, "retrieved concepts should contain id %s ", uuid1)
 	assert.Contains(s.T(), conceptIds, uuid2, "retrieved concepts should contain id %s ", uuid2)
+	cleanup(s.T(), s.ec, esOrganisationType, uuid1)
+	cleanup(s.T(), s.ec, esLocationType, uuid2)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsSingleInvalidUUID() {
-
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
@@ -348,11 +366,11 @@ func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsSingleInvalidUUID
 
 func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsMultipleMixValidInvalid() {
 	uuid1 := uuid.NewV4().String()
-	err := writeTestConcept(s.ec, uuid1, esOrganisationType, ftOrganisationType, "Betty Phillips")
+	err := writeTestConcept(s.ec, uuid1, esOrganisationType, ftOrganisationType, "Betty Phillips", []string{})
 	require.NoError(s.T(), err)
 
 	uuid2 := uuid.NewV4().String()
-	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "big pond")
+	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "big pond", []string{})
 	require.NoError(s.T(), err)
 
 	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
@@ -373,6 +391,9 @@ func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsMultipleMixValidI
 	}
 	assert.Contains(s.T(), conceptIds, uuid1, "retrieved concepts should contain id %s ", uuid1)
 	assert.Contains(s.T(), conceptIds, uuid2, "retrieved concepts should contain id %s ", uuid2)
+
+	cleanup(s.T(), s.ec, esOrganisationType, uuid1)
+	cleanup(s.T(), s.ec, esLocationType, uuid2)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsEmptyStringValue() {
@@ -420,11 +441,11 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesTermMat
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
-	err := writeTestConcept(s.ec, uuid1, esPeopleType, ftPeopleType, "Donaldo Trump")
+	err := writeTestConcept(s.ec, uuid1, esPeopleType, ftPeopleType, "Donaldo Trump", []string{})
 	require.NoError(s.T(), err)
 
 	uuid2 := uuid.NewV4().String()
-	err = writeTestConcept(s.ec, uuid2, esPeopleType, ftPeopleType, "Donald J Trump")
+	err = writeTestConcept(s.ec, uuid2, esPeopleType, ftPeopleType, "Donald J Trump", []string{})
 	require.NoError(s.T(), err)
 
 	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
@@ -439,6 +460,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesTermMat
 
 	assert.Equal(s.T(), elPresidente.PrefLabel, "Donald J Trump", "Failure could indicate that the wrong concept had the higher boost")
 	assert.Equal(s.T(), donaldo.PrefLabel, "Donaldo Trump", "Failure could indicate that the wrong concept had the higher boost")
+	cleanup(s.T(), s.ec, esPeopleType, uuid1, uuid2)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMatchBoosted() {
@@ -446,38 +468,38 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMa
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
-	err := writeTestConcept(s.ec, uuid1, esPeopleType, ftPeopleType, "New York")
+	err := writeTestConcept(s.ec, uuid1, esLocationType, ftLocationType, "New York", []string{})
 	require.NoError(s.T(), err)
 
 	uuid2 := uuid.NewV4().String()
-	err = writeTestConcept(s.ec, uuid2, esPeopleType, ftPeopleType, "New York City Magistrates (New York)")
+	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "New York City Magistrates (New York, New York)", []string{})
 	require.NoError(s.T(), err)
 
 	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypes("new york", []string{ftPeopleType})
+	concepts, err := service.SearchConceptByTextAndTypes("new york", []string{ftLocationType})
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), concepts, 2)
 
 	nyc := concepts[0]
 	magistrates := concepts[1]
 
-	assert.Equal(s.T(), nyc.PrefLabel, "New York", "Failure could indicate that the wrong concept had the higher boost")
-	assert.Equal(s.T(), magistrates.PrefLabel, "New York City Magistrates (New York)", "Failure could indicate that the wrong concept had the higher boost")
+	assert.Equal(s.T(), "New York", nyc.PrefLabel, "Failure could indicate that the wrong concept had the higher boost")
+	assert.Equal(s.T(), "New York City Magistrates (New York, New York)", magistrates.PrefLabel, "Failure could indicate that the wrong concept had the higher boost")
+	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
 }
-
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAuthorsBoost() {
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
-	err := writeTestConcept(s.ec, uuid1, esPeopleType, ftPeopleType, "Roberto Shrimpley")
+	err := writeTestConcept(s.ec, uuid1, esPeopleType, ftPeopleType, "Roberto Shrimpley", []string{})
 	require.NoError(s.T(), err)
 
 	uuid2 := uuid.NewV4().String()
-	err = writeTestConcept(s.ec, uuid2, esPeopleType, ftPeopleType, "Robert Real Shrimpley")
+	err = writeTestConcept(s.ec, uuid2, esPeopleType, ftPeopleType, "Robert Real Shrimpley", []string{})
 	require.NoError(s.T(), err)
 
 	uuid3 := uuid.NewV4().String()
@@ -495,11 +517,38 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 	theEditor := concepts[1]
 	theFraud := concepts[2]
 
-	assert.Equal(s.T(),"Robert Author Shrimpley", theAuthor.PrefLabel)
+	assert.Equal(s.T(), "Robert Author Shrimpley", theAuthor.PrefLabel)
 	assert.Equal(s.T(), "Robert Real Shrimpley", theEditor.PrefLabel)
 	assert.Equal(s.T(), "Roberto Shrimpley", theFraud.PrefLabel)
+	cleanup(s.T(), s.ec, esPeopleType, uuid1, uuid2, uuid3)
 }
 
+func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByExactMatchAliases() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	uuid1 := uuid.NewV4().String()
+	err := writeTestConcept(s.ec, uuid1, esLocationType, ftLocationType, "United States of America", []string{"USA"})
+	require.NoError(s.T(), err)
+
+	uuid2 := uuid.NewV4().String()
+	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "USADA", []string{"USADA"})
+	require.NoError(s.T(), err)
+
+	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	require.NoError(s.T(), err)
+
+	concepts, err := service.SearchConceptByTextAndTypes("USA", []string{ftLocationType})
+	require.NoError(s.T(), err)
+	require.Len(s.T(), concepts, 2)
+
+	theCountry := concepts[0]
+	theFraud := concepts[1]
+
+	assert.Equal(s.T(), "United States of America", theCountry.PrefLabel)
+	assert.Equal(s.T(), "USADA", theFraud.PrefLabel)
+	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
+}
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoostRestrictedSize() {
 	service := NewEsConceptSearchService(testIndexName, 10, 1, 2)
