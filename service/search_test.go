@@ -532,7 +532,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByExactMatchAliases(
 	require.NoError(s.T(), err)
 
 	uuid2 := uuid.NewV4().String()
-	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "USADA", []string{"USADA"})
+	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "USADA", []string{})
 	require.NoError(s.T(), err)
 
 	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
