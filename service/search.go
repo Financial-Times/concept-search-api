@@ -177,25 +177,30 @@ func (s *esConceptSearchService) SearchConceptByTextAndTypesWithBoost(textQuery 
 	return s.searchConceptsForMultipleTypes(textQuery, conceptTypes, boostType)
 }
 
-func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string, conceptTypes []string, boostType string) ([]Concept, error, ) {
+func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string, conceptTypes []string, boostType string) ([]Concept, error) {
 	esTypes, err := validateAndConvertToEsTypes(conceptTypes)
 	if err != nil {
 		return nil, err
 	}
 
-
 	textMatch := elastic.NewMatchQuery("prefLabel.edge_ngram", textQuery)
-	termMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)
-	exactMatchQuery := elastic.NewMatchQuery("prefLabel.exact_match", textQuery).Boost(0.3)
-	typeFilter := elastic.NewTermsQuery("_type", toTerms(esTypes)...)
+	aliasesExactMatchMustQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery)
+	mustQuery := elastic.NewBoolQuery().Should(textMatch, aliasesExactMatchMustQuery).MinimumNumberShouldMatch(1) // All searches must either match loosely on `prefLabel`, or exactly on `aliases`
 
-	shouldMatch := []elastic.Query{termMatchQuery,exactMatchQuery}
+	termMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.25)              // Additional boost added if whole terms match, i.e. Donald Trump =returns=> Donald J Trump higher than Donald Trumpy
+	exactMatchQuery := elastic.NewMatchQuery("prefLabel.exact_match", textQuery).Boost(0.75) // Further boost if the prefLabel matches exactly (barring special characters)
+
+	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery).Boost(0.65) // Also boost if an alias matches exactly, but this should not precede exact matched prefLabels
+
+	typeFilter := elastic.NewTermsQuery("_type", toTerms(esTypes)...) // filter by type
+
+	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery}
 
 	if boostType != "" {
-		shouldMatch = append(shouldMatch,elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8))
+		shouldMatch = append(shouldMatch, elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8))
 	}
 
-	theQuery := elastic.NewBoolQuery().Must(textMatch).Should(shouldMatch...).Filter(typeFilter).MinimumNumberShouldMatch(0).Boost(1)
+	theQuery := elastic.NewBoolQuery().Must(mustQuery).Should(shouldMatch...).Filter(typeFilter).MinimumNumberShouldMatch(0).Boost(1)
 
 	result, err := s.esClient.Search(s.index).Size(s.maxAutoCompleteResults).Query(theQuery).SearchType("dfs_query_then_fetch").Do(context.Background())
 	if err != nil {
@@ -221,7 +226,6 @@ func validateForAuthorsSearch(conceptTypes []string, boostType string) error {
 	}
 	return nil
 }
-
 
 func validateAndConvertToEsTypes(conceptTypes []string) ([]string, error) {
 	esTypes := make([]string, len(conceptTypes))
