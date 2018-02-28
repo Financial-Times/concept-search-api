@@ -76,7 +76,7 @@ workflows:
   version: 2
   test-and-build-docker:
     jobs:
-      - build:
+      - build
       - dredd
       - dockerfile:
           requires:
