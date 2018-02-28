@@ -19,7 +19,7 @@ hooks.beforeAll(function(t, done) {
    setTimeout(()=>{
       updateIndexSettings();
       done();
-   }, 5000);
+   }, 8000);
 });
 
 var writeMapping = function(callback){
