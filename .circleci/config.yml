@@ -8,6 +8,7 @@ jobs:
           GOPATH: /go
           CIRCLE_TEST_REPORTS: /tmp/test-results
           CIRCLE_COVERAGE_REPORT: /tmp/coverage-results
+          ELASTICSEARCH_TEST_URL: http://localhost:9200
       - image: elasticsearch:5.1
     steps:
       - checkout
