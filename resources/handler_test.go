@@ -34,16 +34,6 @@ func (s *mockConceptSearchService) FindConceptsById(ids []string) ([]service.Con
 	return args.Get(0).([]service.Concept), args.Error(1)
 }
 
-func (s *mockConceptSearchService) SuggestConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]service.Concept, error) {
-	args := s.Called(textQuery, conceptTypes)
-	return args.Get(0).([]service.Concept), args.Error(1)
-}
-
-func (s *mockConceptSearchService) SuggestConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string) ([]service.Concept, error) {
-	args := s.Called(textQuery, conceptTypes, boostType)
-	return args.Get(0).([]service.Concept), args.Error(1)
-}
-
 func (s *mockConceptSearchService) SearchConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]service.Concept, error) {
 	args := s.Called(textQuery, conceptTypes)
 	return args.Get(0).([]service.Concept), args.Error(1)
@@ -201,10 +191,40 @@ func TestConceptSeachByTypeAndValue(t *testing.T) {
 	svc.AssertExpectations(t)
 }
 
-func TestTypeaheadConceptSearchErrorMissingType(t *testing.T) {
-	req := httptest.NewRequest("GET", "/concepts?q=lucy&mode=autocomplete", nil)
-	svc := &mockConceptSearchService{}
+func TestTypeaheadConceptSearchErrorInvalidMode(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?q=lucy&type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&mode=autocomplete", nil)
 
+	svc := &mockConceptSearchService{}
+	actual := doHttpCall(svc, req)
+
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := unmarshallResponseMessage(t, actual)
+
+	assert.Equal(t, "'autocomplete' is not a valid value for parameter 'mode'", respObject["message"], "error message")
+	svc.AssertExpectations(t)
+}
+
+func TestConceptSearchErrorMultipleMode(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?q=lucy&type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&mode=search&mode=ids", nil)
+
+	svc := &mockConceptSearchService{}
+	actual := doHttpCall(svc, req)
+
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := unmarshallResponseMessage(t, actual)
+
+	assert.Equal(t, "specified multiple mode query parameters in the URL", respObject["message"], "error message")
+	svc.AssertExpectations(t)
+}
+
+func TestConceptSearchErrorMissingType(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?q=lucy&mode=search", nil)
+
+	svc := &mockConceptSearchService{}
 	actual := doHttpCall(svc, req)
 
 	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
@@ -213,131 +233,6 @@ func TestTypeaheadConceptSearchErrorMissingType(t *testing.T) {
 	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, "invalid or missing parameters for concept search (require type)", respObject["message"], "error message")
-	svc.AssertExpectations(t)
-}
-
-func TestTypeaheadConceptSearchErrorMissingQ(t *testing.T) {
-	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&mode=autocomplete", nil)
-
-	svc := &mockConceptSearchService{}
-
-	actual := doHttpCall(svc, req)
-
-	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
-	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
-
-	respObject := unmarshallResponseMessage(t, actual)
-
-	assert.Equal(t, "invalid or missing parameters for autocomplete concept search (require q)", respObject["message"], "error message")
-	svc.AssertExpectations(t)
-}
-
-func TestTypeaheadConceptSearchErrorInvalidMode(t *testing.T) {
-	req := httptest.NewRequest("GET", "/concepts?q=lucy&type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&mode=pippo", nil)
-
-	svc := &mockConceptSearchService{}
-	actual := doHttpCall(svc, req)
-
-	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
-	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
-
-	respObject := unmarshallResponseMessage(t, actual)
-
-	assert.Equal(t, "'pippo' is not a valid value for parameter 'mode'", respObject["message"], "error message")
-	svc.AssertExpectations(t)
-}
-
-func TestTypeaheadConceptSearchByTextAndSingleType(t *testing.T) {
-	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&q=lucy&mode=autocomplete", nil)
-
-	concepts := dummyConcepts()
-	svc := &mockConceptSearchService{}
-	svc.On("SuggestConceptByTextAndTypes", "lucy", []string{"http://www.ft.com/product/Brand"}).Return(concepts, nil)
-
-	actual := doHttpCall(svc, req)
-
-	assert.Equal(t, http.StatusOK, actual.StatusCode, "http status")
-	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
-
-	respObject := unmarshallResponse(t, actual)
-
-	assert.Len(t, respObject["concepts"], 2, "concepts")
-	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
-}
-
-func TestTypeaheadConceptSearchByTextAndMultipleTypes(t *testing.T) {
-	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=lucy&mode=autocomplete", nil)
-
-	concepts := dummyConcepts()
-	expectedTypes := []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/Genre"}
-
-	svc := &mockConceptSearchService{}
-	svc.On("SuggestConceptByTextAndTypes", "lucy", expectedTypes).Return(concepts, nil)
-
-	actual := doHttpCall(svc, req)
-
-	assert.Equal(t, http.StatusOK, actual.StatusCode, "http status")
-	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
-
-	respObject := unmarshallResponse(t, actual)
-
-	assert.Len(t, respObject["concepts"], 2, "concepts")
-	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
-}
-
-func TestTypeaheadConceptSearchByTextAndMultipleTypesServerError(t *testing.T) {
-	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=lucy&mode=autocomplete", nil)
-
-	svc := &mockConceptSearchService{}
-	expectedErr := errors.New("test error")
-	expectedTypes := []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/Genre"}
-	svc.On("SuggestConceptByTextAndTypes", "lucy", expectedTypes).Return([]service.Concept{}, expectedErr)
-
-	actual := doHttpCall(svc, req)
-
-	assert.Equal(t, http.StatusInternalServerError, actual.StatusCode, "http status")
-	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
-
-	respObject := unmarshallResponseMessage(t, actual)
-
-	assert.Equal(t, "test error", respObject["message"], "error message")
-	svc.AssertExpectations(t)
-}
-
-func TestTypeaheadConceptSearchByTextAndMultipleTypesInputError(t *testing.T) {
-	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=lucy&mode=autocomplete", nil)
-
-	svc := &mockConceptSearchService{}
-	expectedTypes := []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/Genre"}
-	svc.On("SuggestConceptByTextAndTypes", "lucy", expectedTypes).Return([]service.Concept{}, expectedInputErr)
-
-	actual := doHttpCall(svc, req)
-
-	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
-	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
-
-	respObject := unmarshallResponseMessage(t, actual)
-
-	assert.Equal(t, "computer says no", respObject["message"], "error message")
-	svc.AssertExpectations(t)
-}
-
-func TestTypeaheadConceptSearchForAuthors(t *testing.T) {
-	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&q=pippo&mode=autocomplete&boost=authors", nil)
-	svc := &mockConceptSearchService{}
-
-	concepts := dummyConcepts()
-	svc.On("SuggestConceptByTextAndTypesWithBoost", "pippo", []string{"http://www.ft.com/ontology/person/Person"}, "authors").Return(concepts, nil)
-
-	actual := doHttpCall(svc, req)
-
-	assert.Equal(t, http.StatusOK, actual.StatusCode, "http status")
-	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
-
-	respObject := unmarshallResponse(t, actual)
-
-	assert.Len(t, respObject["concepts"], 2, "concepts")
-	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
 	svc.AssertExpectations(t)
 }
 
@@ -360,41 +255,6 @@ func TestConceptSearchForAuthors(t *testing.T) {
 	svc.AssertExpectations(t)
 }
 
-func TestTypeaheadConceptSearchForAuthorsServerError(t *testing.T) {
-	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fproduct%2FBrand&q=pippo&mode=autocomplete&boost=authors", nil)
-	svc := &mockConceptSearchService{}
-
-	expectedErr := errors.New("test error")
-	svc.On("SuggestConceptByTextAndTypesWithBoost", "pippo", []string{"http://www.ft.com/product/Brand"}, "authors").Return([]service.Concept{}, expectedErr)
-
-	actual := doHttpCall(svc, req)
-
-	assert.Equal(t, http.StatusInternalServerError, actual.StatusCode, "http status")
-	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
-
-	respObject := unmarshallResponseMessage(t, actual)
-
-	assert.Equal(t, expectedErr.Error(), respObject["message"])
-	svc.AssertExpectations(t)
-}
-
-func TestTypeaheadInvalidBoost(t *testing.T) {
-	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&q=pippo&mode=autocomplete&boost=somethingThatWeDontSupport", nil)
-
-	svc := &mockConceptSearchService{}
-	svc.On("SuggestConceptByTextAndTypesWithBoost", "pippo", []string{"http://www.ft.com/ontology/person/Person"}, "somethingThatWeDontSupport").Return([]service.Concept{}, expectedInputErr)
-
-	actual := doHttpCall(svc, req)
-
-	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
-	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
-
-	respObject := unmarshallResponseMessage(t, actual)
-
-	assert.Equal(t, expectedInputErr.Error(), respObject["message"])
-	svc.AssertExpectations(t)
-}
-
 func TestConceptSearchInvalidBoost(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&q=pippo&mode=search&boost=somethingThatWeDontSupport", nil)
 
@@ -412,52 +272,7 @@ func TestConceptSearchInvalidBoost(t *testing.T) {
 	svc.AssertExpectations(t)
 }
 
-func TestTypeaheadMultipleBoostValues(t *testing.T) {
-	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&q=pippo&mode=autocomplete&boost=somethingThatWeDontSupport&boost=anotherThingWeDontSupport", nil)
-	svc := &mockConceptSearchService{}
-
-	actual := doHttpCall(svc, req)
-
-	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
-	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
-
-	respObject := unmarshallResponseMessage(t, actual)
-
-	assert.Equal(t, "specified multiple boost query parameters in the URL", respObject["message"])
-	svc.AssertExpectations(t)
-}
-
-func TestTypeaheadConceptSearchNoText(t *testing.T) {
-	req := httptest.NewRequest("GET", "/concepts?mode=autocomplete&type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson", nil)
-	svc := &mockConceptSearchService{}
-
-	actual := doHttpCall(svc, req)
-
-	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
-	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
-
-	respObject := unmarshallResponseMessage(t, actual)
-
-	assert.Equal(t, "invalid or missing parameters for autocomplete concept search (require q)", respObject["message"], "error message")
-	svc.AssertExpectations(t)
-}
-
-func TestTypeaheadConceptSearchBoostButNoType(t *testing.T) {
-	req := httptest.NewRequest("GET", "/concepts?mode=autocomplete&boost=authors&q=blah", nil)
-	svc := &mockConceptSearchService{}
-
-	actual := doHttpCall(svc, req)
-
-	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
-	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
-
-	respObject := unmarshallResponseMessage(t, actual)
-
-	assert.Equal(t, "invalid or missing parameters for concept search (require type)", respObject["message"], "error message")
-	svc.AssertExpectations(t)
-}
-
-func TestTypeaheadConceptSearchBoostButNoMode(t *testing.T) {
+func TestConceptSearchBoostButNoMode(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http://www.ft.com/ontology/Genre&boost=authors", nil)
 	svc := &mockConceptSearchService{}
 
@@ -540,8 +355,6 @@ func TestConceptsByIdInputError(t *testing.T) {
 	assert.Equal(t, expectedInputErr.Error(), respObject["message"], "error message")
 }
 
-
-
 func TestConceptsByIdParameterCombinationError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?ids=1&q=xyz", nil)
 
@@ -554,10 +367,9 @@ func TestConceptsByIdParameterCombinationError(t *testing.T) {
 
 	respObject := unmarshallResponseMessage(t, actual)
 
-	assert.Equal(t, "invalid parameters, 'ids' cannot be combined with any other parameter" , respObject["message"])
+	assert.Equal(t, "invalid parameters, 'ids' cannot be combined with any other parameter", respObject["message"])
 	svc.AssertExpectations(t)
 }
-
 
 func TestConceptsByIdNoElasticsearchError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?ids=1&ids=2", nil)

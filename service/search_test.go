@@ -39,7 +39,7 @@ func TestNoElasticClient(t *testing.T) {
 	_, err := service.FindAllConceptsByType(ftGenreType)
 	assert.EqualError(t, err, ErrNoElasticClient.Error(), "error response")
 
-	_, err = service.SuggestConceptByTextAndTypes("lucy", []string{ftBrandType})
+	_, err = service.SearchConceptByTextAndTypes("lucy", []string{ftBrandType})
 	assert.EqualError(t, err, ErrNoElasticClient.Error(), "error response")
 }
 
