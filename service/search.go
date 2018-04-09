@@ -30,23 +30,20 @@ func (e InputError) Error() string {
 }
 
 var (
-	ErrNoElasticClient                         = errors.New("no ElasticSearch client available")
-	errNoConceptTypeParameter                  = NewInputError("no concept type specified")
-	errInvalidConceptTypeFormat                = "invalid concept type %v"
-	errInvalidConceptTypeForAutocompleteByType = NewInputError("invalid concept type for this search")
-	errEmptyTextParameter                      = NewInputError("empty text parameter")
-	errEmptyIdsParameter                       = NewInputError("empty Ids parameter")
-	errNotSupportedCombinationOfConceptTypes   = NewInputError("the combination of concept types is not supported")
-	errInvalidBoostTypeParameter               = NewInputError("invalid boost type")
-	mentionTypes                               = []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/organisation/Organisation", "http://www.ft.com/ontology/Location", "http://www.ft.com/ontology/Topic"}
+	ErrNoElasticClient                       = errors.New("no ElasticSearch client available")
+	errNoConceptTypeParameter                = NewInputError("no concept type specified")
+	errInvalidConceptTypeFormat              = "invalid concept type %v"
+	errEmptyTextParameter                    = NewInputError("empty text parameter")
+	errEmptyIdsParameter                     = NewInputError("empty Ids parameter")
+	errNotSupportedCombinationOfConceptTypes = NewInputError("the combination of concept types is not supported")
+	errInvalidBoostTypeParameter             = NewInputError("invalid boost type")
+	mentionTypes                             = []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/organisation/Organisation", "http://www.ft.com/ontology/Location", "http://www.ft.com/ontology/Topic"}
 )
 
 type ConceptSearchService interface {
 	SetElasticClient(client *elastic.Client)
 	FindConceptsById(ids []string) ([]Concept, error)
 	FindAllConceptsByType(conceptType string) ([]Concept, error)
-	SuggestConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]Concept, error)
-	SuggestConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string) ([]Concept, error)
 	SearchConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]Concept, error)
 	SearchConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string) ([]Concept, error)
 }
@@ -56,8 +53,6 @@ type esConceptSearchService struct {
 	index                  string
 	maxSearchResults       int
 	maxAutoCompleteResults int
-	autoCompleteTypes      *typeSet
-	mentionTypes           *typeSet
 	mappingRefreshTicker   *time.Ticker
 	mappingRefreshInterval time.Duration
 	authorsBoost           int
@@ -69,9 +64,6 @@ func NewEsConceptSearchService(index string, maxSearchResults int, maxAutoComple
 		index:                  index,
 		maxSearchResults:       maxSearchResults,
 		maxAutoCompleteResults: maxAutoCompleteResults,
-		autoCompleteTypes:      newTypeSet(),
-		mentionTypes:           newTypeSet(),
-		mappingRefreshInterval: 5 * time.Minute,
 		authorsBoost:           authorsBoost,
 		clientLock:             &sync.RWMutex{},
 	}
@@ -141,10 +133,6 @@ func transformToConcept(source *json.RawMessage) (Concept, error) {
 		return Concept{}, err
 	}
 	return ConvertToSimpleConcept(esConcept), nil
-}
-
-func (s *esConceptSearchService) isAutoCompleteType(t string) bool {
-	return s.autoCompleteTypes.contains(t)
 }
 
 func (s *esConceptSearchService) SearchConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]Concept, error) {
@@ -260,18 +248,6 @@ func (s *esConceptSearchService) SetElasticClient(client *elastic.Client) {
 	s.clientLock.Lock()
 	defer s.clientLock.Unlock()
 	s.esClient = client
-
-	if s.mappingRefreshTicker != nil {
-		s.mappingRefreshTicker.Stop()
-	}
-
-	s.initMappings(client)
-	s.mappingRefreshTicker = time.NewTicker(s.mappingRefreshInterval)
-	go func() {
-		for range s.mappingRefreshTicker.C {
-			s.initMappings(client)
-		}
-	}()
 }
 
 func (s *esConceptSearchService) elasticClient() *elastic.Client {

@@ -33,11 +33,9 @@ paths:
             When used without a mode, only a single value for type can be used.
             The results will be the first 50 concepts of
             that type - this is only useful for small collections such as Genres.
-            When used in combination with other modes such as `mode=autocomplete`,
+            When used in combination with other modes such as `mode=search`,
             this will restrict queries to search for concepts by the given type.
             Multiple types can be specified in the request.
-            However, with `mode=autocomplete` (see mode parameter) the only current supported combination is Person + Organisation
-            + Location + Topic .
           type: array
           items:
             type: string
@@ -53,26 +51,20 @@ paths:
           collectionFormat: multi
           required: true
           x-example:
-            - http://www.ft.com/ontology/Genre
+            - http://www.ft.com/ontology/person/Person
         - name: q
           in: query
           description: The query text to use to find concepts. Must be set if the `mode` is set.
           type: string
           required: false
-          x-example: analysis
+          x-example: Fred
         - name: mode
           in: query
           description: >
-            The mode for the search request. Currently supports a value of either
-            autocomplete or search. Setting the mode to autocomplete,
-            will provide fast typeahead search functionality.
-            Setting the mode to search will sacrifice speed for a more intuitive
-            search experience.
-            If mode is set to either `autocomplete` or `search`,
-            then a value for `q` is required.
+            The mode for the search request. Currently only supports a value 'search' which provides an intuitive search experience.
+            If mode is set, then a value for `q` is required.
           type: string
           enum:
-            - autocomplete
             - search
           required: false
         - name: boost
@@ -96,8 +88,6 @@ paths:
             uniqueItems: true
           collectionFormat: multi
           required: false
-          x-example:
-            - 951d904e-f613-4960-acd5-1e7a5218867d
       responses:
         200:
           description: Returns concepts based on the provided query parameters.
@@ -138,7 +128,7 @@ paths:
             required:
               - term
             example:
-              term: Analysis
+              term: donald trump
       responses:
         200:
           description: Returns concepts based on the provided query parameters.
@@ -262,9 +252,13 @@ paths:
       description: Lightly healthchecks the application, and returns a 200 if it's Good-To-Go.
       tags:
         - Health
+      produces:
+          - text/plain; charset=US-ASCII
       responses:
         200:
           description: The application is healthy enough to perform all its functions correctly - i.e. good to go.
+          examples:
+               text/plain; charset=US-ASCII: OK
         503:
           description: >
             One or more of the applications healthchecks have failed,
