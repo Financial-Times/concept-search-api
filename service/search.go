@@ -178,7 +178,7 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	termMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)               // Additional boost added if whole terms match, i.e. Donald Trump =returns=> Donald J Trump higher than Donald Trumpy
 	exactMatchQuery := elastic.NewMatchQuery("prefLabel.exact_match", textQuery).Boost(0.75) // Further boost if the prefLabel matches exactly (barring special characters)
 
-	topicsBoost := elastic.NewTermQuery("_type", "topics").Boost(1)
+	topicsBoost := elastic.NewTermQuery("_type", "topics").Boost(1.5)
 	locationBoost := elastic.NewTermQuery("_type", "locations").Boost(0.65)
 	peopleBoost := elastic.NewTermQuery("_type", "people").Boost(0.65)
 
