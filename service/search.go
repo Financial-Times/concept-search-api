@@ -178,14 +178,15 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	termMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)               // Additional boost added if whole terms match, i.e. Donald Trump =returns=> Donald J Trump higher than Donald Trumpy
 	exactMatchQuery := elastic.NewMatchQuery("prefLabel.exact_match", textQuery).Boost(0.75) // Further boost if the prefLabel matches exactly (barring special characters)
 
-	topicsBoost := elastic.NewTermQuery("_type", "topics").Boost(0.45)
-	locationBoost := elastic.NewTermQuery("_type", "locations").Boost(0.35)
+	topicsBoost := elastic.NewTermQuery("_type", "topics").Boost(1)
+	locationBoost := elastic.NewTermQuery("_type", "locations").Boost(0.65)
+	peopleBoost := elastic.NewTermQuery("_type", "people").Boost(0.65)
 
 	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery).Boost(0.65) // Also boost if an alias matches exactly, but this should not precede exact matched prefLabels
 
 	typeFilter := elastic.NewTermsQuery("_type", toTerms(esTypes)...) // filter by type
 
-	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, topicsBoost, locationBoost}
+	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, topicsBoost, locationBoost, peopleBoost}
 
 	if boostType != "" {
 		shouldMatch = append(shouldMatch, elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8))
