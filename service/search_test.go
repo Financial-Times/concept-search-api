@@ -523,6 +523,50 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 	cleanup(s.T(), s.ec, esPeopleType, uuid1, uuid2, uuid3)
 }
 
+// If 4 concepts are equivalent, then the type boosts should order them as expected.
+func (s *EsConceptSearchServiceTestSuite) TestSearch__SpecificTypesAreBoosted() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	uuid1 := uuid.NewV4().String()
+	err := writeTestConcept(s.ec, uuid1, esPeopleType, ftPeopleType, "Fannie Mae", []string{})
+	require.NoError(s.T(), err)
+
+	uuid2 := uuid.NewV4().String()
+	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "Fannie Mae", []string{})
+	require.NoError(s.T(), err)
+
+	uuid3 := uuid.NewV4().String()
+	err = writeTestConcept(s.ec, uuid3, esOrganisationType, ftOrganisationType, "Fannie Mae", []string{})
+	require.NoError(s.T(), err)
+
+	uuid4 := uuid.NewV4().String()
+	err = writeTestConcept(s.ec, uuid4, esTopicType, ftTopicType, "Fannie Mae", []string{})
+	require.NoError(s.T(), err)
+
+	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	require.NoError(s.T(), err)
+
+	concepts, err := service.SearchConceptByTextAndTypes("Fannie Mae", []string{ftPeopleType, ftTopicType, ftLocationType, ftOrganisationType})
+	assert.NoError(s.T(), err)
+	assert.Len(s.T(), concepts, 4)
+
+	topic := concepts[0]
+	location := concepts[1]
+	person := concepts[2]
+	org := concepts[3]
+
+	assert.Equal(s.T(), ftTopicType, topic.ConceptType)
+	assert.Equal(s.T(), ftLocationType, location.ConceptType)
+	assert.Equal(s.T(), ftPeopleType, person.ConceptType)
+	assert.Equal(s.T(), ftOrganisationType, org.ConceptType)
+
+	cleanup(s.T(), s.ec, esPeopleType, uuid1)
+	cleanup(s.T(), s.ec, esLocationType, uuid2)
+	cleanup(s.T(), s.ec, esOrganisationType, uuid3)
+	cleanup(s.T(), s.ec, esTopicType, uuid4)
+}
+
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByExactMatchAliases() {
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
