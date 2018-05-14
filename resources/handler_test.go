@@ -24,7 +24,7 @@ type mockConceptSearchService struct {
 	mock.Mock
 }
 
-func (s *mockConceptSearchService) FindAllConceptsByType(conceptType string) ([]service.Concept, error) {
+func (s *mockConceptSearchService) FindAllConceptsByType(conceptType string, includeDeprecated bool) ([]service.Concept, error) {
 	args := s.Called(conceptType)
 	return args.Get(0).([]service.Concept), args.Error(1)
 }
@@ -34,7 +34,7 @@ func (s *mockConceptSearchService) FindConceptsById(ids []string) ([]service.Con
 	return args.Get(0).([]service.Concept), args.Error(1)
 }
 
-func (s *mockConceptSearchService) SearchConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]service.Concept, error) {
+func (s *mockConceptSearchService) SearchConceptByTextAndTypes(textQuery string, conceptTypes []string, includeDeprecated bool) ([]service.Concept, error) {
 	args := s.Called(textQuery, conceptTypes)
 	return args.Get(0).([]service.Concept), args.Error(1)
 }
@@ -43,7 +43,7 @@ func (s *mockConceptSearchService) SetElasticClient(client *elastic.Client) {
 	s.Called(client)
 }
 
-func (s *mockConceptSearchService) SearchConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string) ([]service.Concept, error) {
+func (s *mockConceptSearchService) SearchConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string, includeDeprecated bool) ([]service.Concept, error) {
 	args := s.Called(textQuery, conceptTypes, boostType)
 	return args.Get(0).([]service.Concept), args.Error(1)
 }

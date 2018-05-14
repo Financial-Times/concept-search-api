@@ -77,6 +77,16 @@ func TestConceptFinder(t *testing.T) {
 		},
 		{
 			mockClient{
+				queryResponse: validResponseDeprecated,
+			},
+			http.StatusOK,
+			requestURLWithScoreAndDeprecated,
+			validRequestBodyForDeprecated,
+			[]string{"74877f31-6c39-4e07-a85a-39236354a93e", "9a0dd8b8-2ae4-34ca-8639-cfef69711eb9", "6084734d-f4c2-3375-b298-dbbc6c00a680"},
+			[]float64{113.70959, 9.992676, 2.68152},
+		},
+		{
+			mockClient{
 				queryResponse: invalidResponseBadHits,
 			},
 			http.StatusInternalServerError,
@@ -129,7 +139,8 @@ func TestConceptFinder(t *testing.T) {
 			assert.True(t, strings.Contains(searchResults.Results[i].ID, uuid))
 		}
 
-		if testCase.requestURL == requestURLWithScore {
+		if testCase.requestURL == requestURLWithScore ||
+			testCase.requestURL == requestURLWithScoreAndDeprecated {
 			for i, score := range testCase.expectedScore {
 				assert.Equal(t, score, searchResults.Results[i].Score)
 			}
@@ -167,11 +178,13 @@ func (mc mockClient) getClusterHealth() (*elastic.ClusterHealthResponse, error) 
 }
 
 const validRequestBody = `{"term":"Foobar"}`
+const validRequestBodyForDeprecated = `{"term": "Rick And Morty"}`
 const invalidRequestBody = `{"term":"Foobar}`
 const missingTermRequestBody = `{"ter":"Foobar"}`
 
 const defaultRequestURL = "http://nothing/at/all"
 const requestURLWithScore = "http://nothing/at/all?include_score=true"
+const requestURLWithScoreAndDeprecated = "http://nothing/at/all?include_score=true&include_deprecated=true"
 
 const validResponse = `{
   "took": 111,
@@ -185,6 +198,82 @@ const validResponse = `{
     "total": 540,
     "max_score": 9.992676,
     "hits": [
+      {
+        "_index": "concept",
+        "_type": "organisations",
+        "_id": "9a0dd8b8-2ae4-34ca-8639-cfef69711eb9",
+        "_score": 9.992676,
+        "_source": {
+          "id": "http://api.ft.com/things/9a0dd8b8-2ae4-34ca-8639-cfef69711eb9",
+          "apiUrl": "http://api.ft.com/organisations/9a0dd8b8-2ae4-34ca-8639-cfef69711eb9",
+          "prefLabel": "Foobar SpA",
+          "types": [
+            "http://www.ft.com/ontology/core/Thing",
+            "http://www.ft.com/ontology/concept/Concept",
+            "http://www.ft.com/ontology/organisation/Organisation"
+          ],
+          "directType": "http://www.ft.com/ontology/organisation/Organisation",
+          "aliases": [
+            "Foobar SpA"
+          ]
+        }
+      },
+      {
+        "_index": "concept",
+        "_type": "organisations",
+        "_id": "6084734d-f4c2-3375-b298-dbbc6c00a680",
+        "_score": 2.68152,
+        "_source": {
+          "id": "http://api.ft.com/things/6084734d-f4c2-3375-b298-dbbc6c00a680",
+          "apiUrl": "http://api.ft.com/organisations/6084734d-f4c2-3375-b298-dbbc6c00a680",
+          "prefLabel": "Foobar GmbH",
+          "types": [
+            "http://www.ft.com/ontology/core/Thing",
+            "http://www.ft.com/ontology/concept/Concept",
+            "http://www.ft.com/ontology/organisation/Organisation"
+          ],
+          "directType": "http://www.ft.com/ontology/organisation/Organisation",
+          "aliases": [
+            "Foobar GMBH"
+          ]}}]}
+}`
+const validResponseDeprecated = `{
+  "took": 111,
+  "timed_out": false,
+  "_shards": {
+    "total": 5,
+    "successful": 5,
+    "failed": 0
+  },
+  "hits": {
+    "total": 540,
+    "max_score": 113.70959,
+    "hits": [
+			{
+				"_index": "concept",
+				"_type": "genres",
+				"_id": "74877f31-6c39-4e07-a85a-39236354a93e",
+				"_score": 113.70959,
+				"_source": {
+						"id": "http://api.ft.com/things/74877f31-6c39-4e07-a85a-39236354a93e",
+						"apiUrl": "http://api.ft.com/things/74877f31-6c39-4e07-a85a-39236354a93e",
+						"prefLabel": "Rick And Morty",
+						"types": [
+								"http://www.ft.com/ontology/core/Thing",
+								"http://www.ft.com/ontology/concept/Concept",
+								"http://www.ft.com/ontology/classification/Classification",
+								"http://www.ft.com/ontology/Genre"
+						],
+						"authorities": [
+								"TME"
+						],
+						"directType": "http://www.ft.com/ontology/Genre",
+						"aliases": [
+								"Rick And Morty"
+						],
+						"isDeprecated": true
+				}
+			},
       {
         "_index": "concept",
         "_type": "organisations",

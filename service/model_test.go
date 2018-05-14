@@ -52,7 +52,7 @@ func TestConvertToSimpleConcept(t *testing.T) {
 	id := "http://www.ft.com/thing/id"
 	apiUrl := "http://www.example.com/1"
 	label := "Test Concept"
-	directType :="http://www.ft.com/ontology/GenreSubClass"
+	directType := "http://www.ft.com/ontology/GenreSubClass"
 
 	esConcept := EsConceptModel{
 		Id:         id,
@@ -128,4 +128,45 @@ func TestConvertToSimpleConceptWithNonBoolFTAuthor(t *testing.T) {
 
 	actual := ConvertToSimpleConcept(esConcept)
 	assert.Nil(t, actual.IsFTAuthor)
+}
+
+func TestConvertToSimpleConceptWithDeprecated(t *testing.T) {
+	id := "http://api.ft.com/things/id"
+	apiUrl := "http://www.example.com/1"
+	label := "Another Test Concept"
+	deprecated := "true"
+
+	esConcept := EsConceptModel{
+		Id:           id,
+		ApiUrl:       apiUrl,
+		PrefLabel:    label,
+		Types:        []string{"any"},
+		DirectType:   "any",
+		Aliases:      []string{},
+		IsDeprecated: &deprecated,
+	}
+
+	actual := ConvertToSimpleConcept(esConcept)
+	require.NotNil(t, actual.IsDeprecated)
+	assert.True(t, *actual.IsDeprecated)
+}
+
+func TestConvertToSimpleConceptWithNonBoolDeprecated(t *testing.T) {
+	id := "http://api.ft.com/things/id"
+	apiUrl := "http://www.example.com/1"
+	label := "Another Test Concept"
+	deprecated := "ahhh i'm not a bool!"
+
+	esConcept := EsConceptModel{
+		Id:           id,
+		ApiUrl:       apiUrl,
+		PrefLabel:    label,
+		Types:        []string{"any"},
+		DirectType:   "any",
+		Aliases:      []string{},
+		IsDeprecated: &deprecated,
+	}
+
+	actual := ConvertToSimpleConcept(esConcept)
+	assert.Nil(t, actual.IsDeprecated)
 }

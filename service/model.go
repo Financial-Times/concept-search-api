@@ -8,21 +8,23 @@ import (
 )
 
 type EsConceptModel struct {
-	Id         string   `json:"id"`
-	ApiUrl     string   `json:"apiUrl"`
-	PrefLabel  string   `json:"prefLabel"`
-	Types      []string `json:"types"`
-	DirectType string   `json:"directType"`
-	Aliases    []string `json:"aliases,omitempty"`
-	IsFTAuthor *string  `json:"isFTAuthor,omitempty"`
+	Id           string   `json:"id"`
+	ApiUrl       string   `json:"apiUrl"`
+	PrefLabel    string   `json:"prefLabel"`
+	Types        []string `json:"types"`
+	DirectType   string   `json:"directType"`
+	Aliases      []string `json:"aliases,omitempty"`
+	IsFTAuthor   *string  `json:"isFTAuthor,omitempty"`
+	IsDeprecated *string  `json:"isDeprecated,omitempty"`
 }
 
 type Concept struct {
-	Id          string `json:"id"`
-	ApiUrl      string `json:"apiUrl"`
-	PrefLabel   string `json:"prefLabel"`
-	ConceptType string `json:"type"`
-	IsFTAuthor  *bool  `json:"isFTAuthor,omitempty"`
+	Id           string `json:"id"`
+	ApiUrl       string `json:"apiUrl"`
+	PrefLabel    string `json:"prefLabel"`
+	ConceptType  string `json:"type"`
+	IsFTAuthor   *bool  `json:"isFTAuthor,omitempty"`
+	IsDeprecated *bool  `json:"isDeprecated,omitempty"`
 }
 
 type Concepts []Concept
@@ -52,6 +54,14 @@ func ConvertToSimpleConcept(esConcept EsConceptModel) Concept {
 			log.WithField("id", esConcept.Id).WithField("isFtAuthor", esConcept.IsFTAuthor).Warn("Failed to parse boolean field isFtAuthor - is there a data issue")
 		} else {
 			c.IsFTAuthor = &ftAuthor
+		}
+	}
+	if esConcept.IsDeprecated != nil {
+		deprecated, err := strconv.ParseBool(*esConcept.IsDeprecated)
+		if err != nil {
+			log.WithField("id", esConcept.Id).WithField("isDeprecated", esConcept.IsDeprecated).Warn("Failed to parse boolean field isDeprecated - is there a data issue")
+		} else {
+			c.IsDeprecated = &deprecated
 		}
 	}
 

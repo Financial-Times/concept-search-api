@@ -66,6 +66,11 @@ To include the score you need to add the query parameter `include_score` with th
 curl -XPOST {concept-search-api-url}/concept/search?include_score=true -d '{"term":"FOO"}'
 ```
 
+By default the endpoint returns only *non-deprecated* concepts. In order to get the deprecated concepts too, you should provide query parameter `include_deprecated` with the value `true`. If the parameter has a value other than `true` the default behavior will be applied.
+```
+curl -XPOST {concept-search-api-url}/concept/search?include_deprecated=true -d '{"term":"FOO"}'
+```
+
 Exact matches are preferred over partial ones and an example of search results with scoring would look like this:
 ```
 [
@@ -113,7 +118,7 @@ This endpoint is used for typeahead style queries for concepts. The request has 
 curl {concept-search-api-url}/concepts?type=http://www.ft.com/ontology/Genre
 ```
 
-Please see the [Swagger YML](./api/api.yml) for more details.
+Please see the [Swagger YML](./_ft/api.yml) for more details.
 
 ## Available HEALTH endpoints:
 
