@@ -180,10 +180,14 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	aliasesExactMatchMustQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery)
 	mustQuery := elastic.NewBoolQuery().Should(textMatch, aliasesExactMatchMustQuery).MinimumNumberShouldMatch(1) // All searches must either match loosely on `prefLabel`, or exactly on `aliases`
 
-	termMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.25)              // Additional boost added if whole terms match, i.e. Donald Trump =returns=> Donald J Trump higher than Donald Trumpy
+	termMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)               // Additional boost added if whole terms match, i.e. Donald Trump =returns=> Donald J Trump higher than Donald Trumpy
 	exactMatchQuery := elastic.NewMatchQuery("prefLabel.exact_match", textQuery).Boost(0.75) // Further boost if the prefLabel matches exactly (barring special characters)
 
 	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery).Boost(0.65) // Also boost if an alias matches exactly, but this should not precede exact matched prefLabels
+
+	topicsBoost := elastic.NewTermQuery("_type", "topics").Boost(1.5)
+	locationBoost := elastic.NewTermQuery("_type", "locations").Boost(0.25)
+	peopleBoost := elastic.NewTermQuery("_type", "people").Boost(0.1)
 
 	filters := []elastic.Query{}
 	typeFilter := elastic.NewTermsQuery("_type", toTerms(esTypes)...) // filter by type
@@ -193,7 +197,7 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	if !includeDeprecated {
 		filters = append(filters, excludeDeprecatedFilterQ())
 	}
-	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery}
+	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, topicsBoost, locationBoost, peopleBoost}
 
 	if boostType != "" {
 		shouldMatch = append(shouldMatch, elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8))
