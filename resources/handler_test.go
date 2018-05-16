@@ -440,7 +440,7 @@ func TestWrongDeprecatedFlagVal(t *testing.T) {
 
 	concepts := dummyConcepts()
 	svc := &mockConceptSearchService{}
-	svc.On("FindAllConceptsByType", "http://www.ft.com/ontology/Genre", true).Return(concepts, nil)
+	svc.On("FindAllConceptsByType", "http://www.ft.com/ontology/Genre", mock.AnythingOfType("bool")).Return(concepts, nil)
 
 	actual := doHttpCall(svc, req)
 
