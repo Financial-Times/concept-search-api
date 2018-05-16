@@ -628,6 +628,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 	cleanup(s.T(), s.ec, esPeopleType, uuid1, uuid2, uuid3)
 }
 
+// If 4 concepts are equivalent, then the type boosts should order them as expected.
 func (s *EsConceptSearchServiceTestSuite) TestSearch__SpecificTypesAreBoosted() {
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
@@ -651,7 +652,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearch__SpecificTypesAreBoosted() 
 	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypes("Fannie Mae", []string{ftPeopleType, ftTopicType, ftLocationType, ftOrganisationType}, true)
+	concepts, err := service.SearchConceptByTextAndTypes("Fannie Mae", []string{ftPeopleType, ftTopicType, ftLocationType, ftOrganisationType})
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), concepts, 4)
 
