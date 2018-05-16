@@ -578,10 +578,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesDepreca
 	nycDeprecated := concepts[1]
 
 	assert.Equal(s.T(), "New York", nyc.PrefLabel, "Failure could indicate that the wrong concept had the higher boost")
-	assert.Nil(s.T(), nyc.IsDeprecated, "Failure could indicate wrong data processing. This should be nil")
 	assert.Equal(s.T(), "New York Deprecated", nycDeprecated.PrefLabel, "Failure could indicate that the wrong concept had the higher boost")
-	assert.NotNil(s.T(), nycDeprecated.IsDeprecated, "Failure could indicate wrong data processing. This should be not nil")
-	assert.True(s.T(), *nycDeprecated.IsDeprecated, "Failure could indicate wrong data processing. This should be true")
 
 	concepts, err = service.SearchConceptByTextAndTypes("new york", []string{ftLocationType}, false)
 	assert.NoError(s.T(), err)
@@ -590,7 +587,6 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesDepreca
 	nyc = concepts[0]
 
 	assert.Equal(s.T(), "New York", nyc.PrefLabel, "Failure could indicate that the wrong concept had the higher boost")
-	assert.Nil(s.T(), nyc.IsDeprecated, "Failure could indicate wrong data processing. This should be nil")
 
 	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
 }
