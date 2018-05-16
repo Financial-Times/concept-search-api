@@ -82,8 +82,8 @@ func TestConceptFinder(t *testing.T) {
 			http.StatusOK,
 			requestURLWithScoreAndDeprecated,
 			validRequestBodyForDeprecated,
-			[]string{"74877f31-6c39-4e07-a85a-39236354a93e", "9a0dd8b8-2ae4-34ca-8639-cfef69711eb9", "6084734d-f4c2-3375-b298-dbbc6c00a680"},
-			[]float64{113.70959, 9.992676, 2.68152},
+			[]string{"74877f31-6c39-4e07-a85a-39236354a93e"},
+			[]float64{113.70959},
 		},
 		{
 			mockClient{
@@ -246,7 +246,7 @@ const validResponseDeprecated = `{
     "failed": 0
   },
   "hits": {
-    "total": 540,
+    "total": 1,
     "max_score": 113.70959,
     "hits": [
 			{
@@ -273,45 +273,7 @@ const validResponseDeprecated = `{
 						],
 						"isDeprecated": true
 				}
-			},
-      {
-        "_index": "concept",
-        "_type": "organisations",
-        "_id": "9a0dd8b8-2ae4-34ca-8639-cfef69711eb9",
-        "_score": 9.992676,
-        "_source": {
-          "id": "http://api.ft.com/things/9a0dd8b8-2ae4-34ca-8639-cfef69711eb9",
-          "apiUrl": "http://api.ft.com/organisations/9a0dd8b8-2ae4-34ca-8639-cfef69711eb9",
-          "prefLabel": "Foobar SpA",
-          "types": [
-            "http://www.ft.com/ontology/core/Thing",
-            "http://www.ft.com/ontology/concept/Concept",
-            "http://www.ft.com/ontology/organisation/Organisation"
-          ],
-          "directType": "http://www.ft.com/ontology/organisation/Organisation",
-          "aliases": [
-            "Foobar SpA"
-          ]
-        }
-      },
-      {
-        "_index": "concept",
-        "_type": "organisations",
-        "_id": "6084734d-f4c2-3375-b298-dbbc6c00a680",
-        "_score": 2.68152,
-        "_source": {
-          "id": "http://api.ft.com/things/6084734d-f4c2-3375-b298-dbbc6c00a680",
-          "apiUrl": "http://api.ft.com/organisations/6084734d-f4c2-3375-b298-dbbc6c00a680",
-          "prefLabel": "Foobar GmbH",
-          "types": [
-            "http://www.ft.com/ontology/core/Thing",
-            "http://www.ft.com/ontology/concept/Concept",
-            "http://www.ft.com/ontology/organisation/Organisation"
-          ],
-          "directType": "http://www.ft.com/ontology/organisation/Organisation",
-          "aliases": [
-            "Foobar GMBH"
-          ]}}]}
+			}]}
 }`
 
 const emptyResponse = `{

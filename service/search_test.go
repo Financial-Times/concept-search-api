@@ -652,7 +652,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearch__SpecificTypesAreBoosted() 
 	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypes("Fannie Mae", []string{ftPeopleType, ftTopicType, ftLocationType, ftOrganisationType})
+	concepts, err := service.SearchConceptByTextAndTypes("Fannie Mae", []string{ftPeopleType, ftTopicType, ftLocationType, ftOrganisationType}, true)
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), concepts, 4)
 
