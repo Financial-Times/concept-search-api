@@ -258,7 +258,7 @@ type hcClient struct {
 	returnError error
 }
 
-func (c hcClient) query(indexName string, query elastic.Query, resultLimit int) (*elastic.SearchResult, error) {
+func (c hcClient) query(indexName string, query elastic.Query, filters elastic.Query, resultLimit int) (*elastic.SearchResult, error) {
 	return &elastic.SearchResult{}, nil
 }
 

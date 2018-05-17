@@ -88,7 +88,7 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string, inclu
 
 	query := s.esClient.Search(s.index).Type(t).Size(s.maxSearchResults)
 	if !includeDeprecated {
-		query = query.Query(elastic.NewBoolQuery().Filter(excludeDeprecatedFilterQ()))
+		query = query.PostFilter(excludeDeprecatedFilterQ())
 	}
 
 	result, err := query.Do(context.Background())
@@ -189,13 +189,12 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 
 	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery).Boost(0.65) // Also boost if an alias matches exactly, but this should not precede exact matched prefLabels
 
-	filters := []elastic.Query{
-		elastic.NewTermsQuery("_type", toTerms(esTypes)...), // filter by type
-	}
+	typeFilter := elastic.NewTermsQuery("_type", toTerms(esTypes)...) // filter by type
 
 	// by default (include_deprecated is false) the deprecated entities are excluded
+	var postFilters elastic.Query
 	if !includeDeprecated {
-		filters = append(filters, excludeDeprecatedFilterQ())
+		postFilters = excludeDeprecatedFilterQ()
 	}
 	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, topicsBoost, locationBoost, peopleBoost}
 
@@ -203,9 +202,13 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 		shouldMatch = append(shouldMatch, elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8))
 	}
 
-	theQuery := elastic.NewBoolQuery().Must(mustQuery).Should(shouldMatch...).Filter(filters...).MinimumNumberShouldMatch(0).Boost(1)
+	theQuery := elastic.NewBoolQuery().Must(mustQuery).Should(shouldMatch...).Filter(typeFilter).MinimumNumberShouldMatch(0).Boost(1)
 
-	result, err := s.esClient.Search(s.index).Size(s.maxAutoCompleteResults).Query(theQuery).SearchType("dfs_query_then_fetch").Do(context.Background())
+	search := s.esClient.Search(s.index).Size(s.maxAutoCompleteResults).Query(theQuery)
+	if postFilters != nil {
+		search = search.PostFilter(postFilters)
+	}
+	result, err := search.SearchType("dfs_query_then_fetch").Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err
@@ -272,8 +275,12 @@ func (s *esConceptSearchService) elasticClient() *elastic.Client {
 }
 
 func excludeDeprecatedFilterQ() elastic.Query {
-	return elastic.NewBoolQuery().MustNot(
-		elastic.NewExistsQuery("isDeprecated"),
-		elastic.NewTermQuery("isDeprecated", "true"),
+	return elastic.NewBoolQuery().Should(
+		elastic.NewBoolQuery().MustNot(
+			elastic.NewExistsQuery("isDeprecated"),
+		),
+		elastic.NewBoolQuery().MustNot(
+			elastic.NewTermQuery("isDeprecated", "true"),
+		),
 	)
 }

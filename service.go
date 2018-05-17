@@ -68,15 +68,19 @@ func (service *esConceptFinder) FindConcept(writer http.ResponseWriter, request 
 	finalQuery := elastic.NewBoolQuery().Should(multiMatchQuery, termQueryForPreflabelExactMatches, termQueryForAliasesExactMatches)
 
 	// by default {include_deprecated in (nil, false)} the deprecated entities are excluded
+	var postFilters elastic.Query
 	if !isDeprecatedIncluded(request) {
-		deprecationFilter := elastic.NewBoolQuery().MustNot(
-			elastic.NewExistsQuery("isDeprecated"),
-			elastic.NewTermQuery("isDeprecated", "true"),
+		postFilters = elastic.NewBoolQuery().Should(
+			elastic.NewBoolQuery().MustNot(
+				elastic.NewExistsQuery("isDeprecated"),
+			),
+			elastic.NewBoolQuery().MustNot(
+				elastic.NewTermQuery("isDeprecated", "true"),
+			),
 		)
-		finalQuery = finalQuery.Filter(deprecationFilter)
 	}
 
-	searchResult, err := service.esClient().query(service.indexName, finalQuery, service.searchResultLimit)
+	searchResult, err := service.esClient().query(service.indexName, finalQuery, postFilters, service.searchResultLimit)
 
 	if err != nil {
 		log.Errorf("There was an error executing the query on ES: %s", err.Error())
