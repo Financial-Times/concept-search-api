@@ -124,6 +124,9 @@ func getFoundConcepts(elasticResult *elastic.SearchResult, isScoreIncluded bool)
 
 func isDeprecatedIncluded(request *http.Request) bool {
 	queryParam := request.URL.Query().Get("include_deprecated")
+	if len(queryParam) == 0 {
+		return false
+	}
 	includeDeprecated, err := strconv.ParseBool(queryParam)
 	if err != nil {
 		return false
