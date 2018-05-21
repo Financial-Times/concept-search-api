@@ -88,7 +88,7 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string, inclu
 
 	query := s.esClient.Search(s.index).Type(t).Size(s.maxSearchResults)
 	if !includeDeprecated {
-		query = query.Query(excludeDeprecatedFilterQ())
+		query = query.Query(elastic.NewBoolQuery().Must(elastic.NewMatchAllQuery()).Filter(excludeDeprecatedFilterQ()))
 		query.MinScore(0.0001) // just to force docs that are with score=0 not to be included in the final result set
 	}
 
