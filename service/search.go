@@ -88,7 +88,8 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string, inclu
 
 	query := s.esClient.Search(s.index).Type(t).Size(s.maxSearchResults)
 	if !includeDeprecated {
-		query = query.PostFilter(excludeDeprecatedFilterQ())
+		query = query.Query(excludeDeprecatedFilterQ())
+		query.MinScore(0.0001) // just to force docs that are with score=0 not to be included in the final result set
 	}
 
 	result, err := query.Do(context.Background())
@@ -189,12 +190,13 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 
 	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery).Boost(0.65) // Also boost if an alias matches exactly, but this should not precede exact matched prefLabels
 
-	typeFilter := elastic.NewTermsQuery("_type", toTerms(esTypes)...) // filter by type
+	filters := []elastic.Query{
+		elastic.NewTermsQuery("_type", toTerms(esTypes)...), // filter by type
+	}
 
 	// by default (include_deprecated is false) the deprecated entities are excluded
-	var postFilters elastic.Query
 	if !includeDeprecated {
-		postFilters = excludeDeprecatedFilterQ()
+		filters = append(filters, excludeDeprecatedFilterQ()) // exclude deprecated docs
 	}
 	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, topicsBoost, locationBoost, peopleBoost}
 
@@ -202,12 +204,11 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 		shouldMatch = append(shouldMatch, elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8))
 	}
 
-	theQuery := elastic.NewBoolQuery().Must(mustQuery).Should(shouldMatch...).Filter(typeFilter).MinimumNumberShouldMatch(0).Boost(1)
+	theQuery := elastic.NewBoolQuery().Must(mustQuery).Should(shouldMatch...).Filter(filters...).MinimumNumberShouldMatch(0).Boost(1)
 
 	search := s.esClient.Search(s.index).Size(s.maxAutoCompleteResults).Query(theQuery)
-	if postFilters != nil {
-		search = search.PostFilter(postFilters)
-	}
+	search.MinScore(0.0001) // just to force docs that are with score=0 not to be included in the final result set
+
 	result, err := search.SearchType("dfs_query_then_fetch").Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
@@ -275,12 +276,7 @@ func (s *esConceptSearchService) elasticClient() *elastic.Client {
 }
 
 func excludeDeprecatedFilterQ() elastic.Query {
-	return elastic.NewBoolQuery().Should(
-		elastic.NewBoolQuery().MustNot(
-			elastic.NewExistsQuery("isDeprecated"),
-		),
-		elastic.NewBoolQuery().MustNot(
-			elastic.NewTermQuery("isDeprecated", "true"),
-		),
+	return elastic.NewBoolQuery().MustNot(
+		elastic.NewTermQuery("isDeprecated", "true"),
 	)
 }
