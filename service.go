@@ -70,7 +70,7 @@ func (service *esConceptFinder) FindConcept(writer http.ResponseWriter, request 
 	// by default {include_deprecated in (nil, false)} the deprecated entities are excluded
 	if !isDeprecatedIncluded(request) {
 		deprecationFilter := elastic.NewBoolQuery().MustNot(
-			elastic.NewTermQuery("isDeprecated", "true"),
+			elastic.NewTermQuery("isDeprecated", true),
 		)
 		finalQuery = finalQuery.Filter(deprecationFilter)
 	}

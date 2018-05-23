@@ -277,6 +277,6 @@ func (s *esConceptSearchService) elasticClient() *elastic.Client {
 
 func excludeDeprecatedFilterQ() elastic.Query {
 	return elastic.NewBoolQuery().MustNot(
-		elastic.NewTermQuery("isDeprecated", "true"),
+		elastic.NewTermQuery("isDeprecated", true),
 	)
 }
