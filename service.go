@@ -67,7 +67,15 @@ func (service *esConceptFinder) FindConcept(writer http.ResponseWriter, request 
 
 	finalQuery := elastic.NewBoolQuery().Should(multiMatchQuery, termQueryForPreflabelExactMatches, termQueryForAliasesExactMatches)
 
-	searchResult, err := service.esClient().query(service.indexName, finalQuery, service.searchResultLimit)
+	// by default {include_deprecated in (nil, false)} the deprecated entities are excluded
+	if !isDeprecatedIncluded(request) {
+		deprecationFilter := elastic.NewBoolQuery().MustNot(
+			elastic.NewTermQuery("isDeprecated", "true"),
+		)
+		finalQuery = finalQuery.Filter(deprecationFilter)
+	}
+
+	searchResult, err := service.esClient().query(service.indexName, finalQuery, service.searchResultLimit, 0.0001) // just to force docs that are with score=0 not to be included in the final result set
 
 	if err != nil {
 		log.Errorf("There was an error executing the query on ES: %s", err.Error())
@@ -112,6 +120,18 @@ func getFoundConcepts(elasticResult *elastic.SearchResult, isScoreIncluded bool)
 		}
 	}
 	return searchResult{Results: foundConcepts}
+}
+
+func isDeprecatedIncluded(request *http.Request) bool {
+	queryParam := request.URL.Query().Get("include_deprecated")
+	if len(queryParam) == 0 {
+		return false
+	}
+	includeDeprecated, err := strconv.ParseBool(queryParam)
+	if err != nil {
+		return false
+	}
+	return includeDeprecated
 }
 
 func isScoreIncluded(request *http.Request) bool {

@@ -88,6 +88,11 @@ paths:
             uniqueItems: true
           collectionFormat: multi
           required: false
+        - name: include_deprecated
+          in: query
+          required: false
+          type: boolean
+          description: Include the deprecated concepts too.
       responses:
         200:
           description: Returns concepts based on the provided query parameters.
@@ -116,6 +121,11 @@ paths:
           required: false
           type: boolean
           description: Include the ES scores for each item in the response.
+        - name: include_deprecated
+          in: query
+          required: false
+          type: boolean
+          description: Include the deprecated concepts too.
         - name: body
           in: body
           required: true

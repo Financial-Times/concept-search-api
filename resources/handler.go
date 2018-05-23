@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/Financial-Times/concept-search-api/service"
 	"gopkg.in/olivere/elastic.v5"
@@ -39,8 +40,9 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	conceptTypes, foundConceptTypes := getMultipleValueQueryParameter(req, "type")
 	boostType, foundBoostType, boostTypeErr := getSingleValueQueryParameter(req, "boost") // we currently only accept authors, so ignoring the actual boost value
 	ids, foundIds := getMultipleValueQueryParameter(req, "ids")
+	includeDeprecated, _, includeDeprecatedErr := getBoolQueryParameter(req, "include_deprecated", false)
 
-	err = firstError(modeErr, qErr, boostTypeErr)
+	err = firstError(modeErr, qErr, boostTypeErr, includeDeprecatedErr)
 	if err != nil {
 		writeHTTPError(w, http.StatusBadRequest, err)
 		return
@@ -57,7 +59,7 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 				err = NewValidationError("invalid or missing parameters for concept search (require type)")
 			} else {
 				if mode == "search" {
-					concepts, err = h.searchConcepts(foundBoostType, boostType, foundQ, q, conceptTypes)
+					concepts, err = h.searchConcepts(foundBoostType, boostType, foundQ, q, conceptTypes, includeDeprecated)
 				}
 			}
 		} else {
@@ -66,7 +68,7 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 			} else if foundBoostType {
 				err = NewValidationError("invalid or missing parameters for concept search (boost but no mode)")
 			} else if foundConceptTypes {
-				concepts, err = h.findConceptsByType(conceptTypes)
+				concepts, err = h.findConceptsByType(conceptTypes, includeDeprecated)
 			} else {
 				err = NewValidationError("invalid or missing parameters for concept search")
 			}
@@ -96,18 +98,18 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func (h *Handler) searchConcepts(foundBoostType bool, boostType string, foundQ bool, q string, conceptTypes []string) ([]service.Concept, error) {
+func (h *Handler) searchConcepts(foundBoostType bool, boostType string, foundQ bool, q string, conceptTypes []string, includeDeprecated bool) ([]service.Concept, error) {
 	if !foundQ {
 		return nil, NewValidationError("invalid or missing parameters for concept search (require q)")
 	} else if foundBoostType {
-		return h.service.SearchConceptByTextAndTypesWithBoost(q, conceptTypes, boostType)
+		return h.service.SearchConceptByTextAndTypesWithBoost(q, conceptTypes, boostType, includeDeprecated)
 	}
-	return h.service.SearchConceptByTextAndTypes(q, conceptTypes)
+	return h.service.SearchConceptByTextAndTypes(q, conceptTypes, includeDeprecated)
 }
 
-func (h *Handler) findConceptsByType(conceptTypes []string) ([]service.Concept, error) {
+func (h *Handler) findConceptsByType(conceptTypes []string, includeDeprecated bool) ([]service.Concept, error) {
 	if len(conceptTypes) == 1 {
-		return h.service.FindAllConceptsByType(conceptTypes[0])
+		return h.service.FindAllConceptsByType(conceptTypes[0], includeDeprecated)
 	} else if len(conceptTypes) > 1 {
 		return nil, NewValidationError("only a single type is supported by this kind of request")
 	}
@@ -135,6 +137,20 @@ func getSingleValueQueryParameter(req *http.Request, param string, allowed ...st
 	}
 
 	return v, found, nil
+}
+
+func getBoolQueryParameter(req *http.Request, param string, defaultVal bool) (bool, bool, error) {
+	val, found, err := getSingleValueQueryParameter(req, param)
+	if !found {
+		return defaultVal, found, err
+	}
+
+	boolVal, err := strconv.ParseBool(val)
+	if err != nil {
+		return defaultVal, false, err
+	}
+
+	return boolVal, true, nil
 }
 
 func getMultipleValueQueryParameter(req *http.Request, param string) ([]string, bool) {

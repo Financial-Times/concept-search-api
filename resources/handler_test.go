@@ -24,8 +24,8 @@ type mockConceptSearchService struct {
 	mock.Mock
 }
 
-func (s *mockConceptSearchService) FindAllConceptsByType(conceptType string) ([]service.Concept, error) {
-	args := s.Called(conceptType)
+func (s *mockConceptSearchService) FindAllConceptsByType(conceptType string, includeDeprecated bool) ([]service.Concept, error) {
+	args := s.Called(conceptType, includeDeprecated)
 	return args.Get(0).([]service.Concept), args.Error(1)
 }
 
@@ -34,8 +34,8 @@ func (s *mockConceptSearchService) FindConceptsById(ids []string) ([]service.Con
 	return args.Get(0).([]service.Concept), args.Error(1)
 }
 
-func (s *mockConceptSearchService) SearchConceptByTextAndTypes(textQuery string, conceptTypes []string) ([]service.Concept, error) {
-	args := s.Called(textQuery, conceptTypes)
+func (s *mockConceptSearchService) SearchConceptByTextAndTypes(textQuery string, conceptTypes []string, includeDeprecated bool) ([]service.Concept, error) {
+	args := s.Called(textQuery, conceptTypes, includeDeprecated)
 	return args.Get(0).([]service.Concept), args.Error(1)
 }
 
@@ -43,8 +43,8 @@ func (s *mockConceptSearchService) SetElasticClient(client *elastic.Client) {
 	s.Called(client)
 }
 
-func (s *mockConceptSearchService) SearchConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string) ([]service.Concept, error) {
-	args := s.Called(textQuery, conceptTypes, boostType)
+func (s *mockConceptSearchService) SearchConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string, includeDeprecated bool) ([]service.Concept, error) {
+	args := s.Called(textQuery, conceptTypes, boostType, includeDeprecated)
 	return args.Get(0).([]service.Concept), args.Error(1)
 }
 
@@ -70,7 +70,7 @@ func TestAllConceptsByType(t *testing.T) {
 
 	concepts := dummyConcepts()
 	svc := &mockConceptSearchService{}
-	svc.On("FindAllConceptsByType", "http://www.ft.com/ontology/Genre").Return(concepts, nil)
+	svc.On("FindAllConceptsByType", "http://www.ft.com/ontology/Genre", mock.AnythingOfType("bool")).Return(concepts, nil)
 
 	actual := doHttpCall(svc, req)
 
@@ -86,7 +86,7 @@ func TestAllConceptsByType(t *testing.T) {
 func TestAllConceptsByTypeInputError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FFoo", nil)
 	svc := &mockConceptSearchService{}
-	svc.On("FindAllConceptsByType", mock.AnythingOfType("string")).Return([]service.Concept{}, expectedInputErr)
+	svc.On("FindAllConceptsByType", mock.AnythingOfType("string"), mock.AnythingOfType("bool")).Return([]service.Concept{}, expectedInputErr)
 
 	actual := doHttpCall(svc, req)
 
@@ -101,7 +101,7 @@ func TestAllConceptsByTypeInputError(t *testing.T) {
 func TestAllConceptByTypeNoElasticsearchError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FFoo", nil)
 	svc := &mockConceptSearchService{}
-	svc.On("FindAllConceptsByType", mock.AnythingOfType("string")).Return([]service.Concept{}, elastic.ErrNoClient)
+	svc.On("FindAllConceptsByType", mock.AnythingOfType("string"), mock.AnythingOfType("bool")).Return([]service.Concept{}, elastic.ErrNoClient)
 
 	actual := doHttpCall(svc, req)
 
@@ -116,7 +116,7 @@ func TestAllConceptByTypeNoElasticsearchError(t *testing.T) {
 func TestAllConceptByTypeNoElasticsearchClientError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FFoo", nil)
 	svc := &mockConceptSearchService{}
-	svc.On("FindAllConceptsByType", mock.AnythingOfType("string")).Return([]service.Concept{}, service.ErrNoElasticClient)
+	svc.On("FindAllConceptsByType", mock.AnythingOfType("string"), mock.AnythingOfType("bool")).Return([]service.Concept{}, service.ErrNoElasticClient)
 
 	actual := doHttpCall(svc, req)
 
@@ -133,7 +133,7 @@ func TestAllConceptByTypeServerError(t *testing.T) {
 
 	expectedError := errors.New("Test error")
 	svc := &mockConceptSearchService{}
-	svc.On("FindAllConceptsByType", mock.AnythingOfType("string")).Return([]service.Concept{}, expectedError)
+	svc.On("FindAllConceptsByType", mock.AnythingOfType("string"), mock.AnythingOfType("bool")).Return([]service.Concept{}, expectedError)
 
 	actual := doHttpCall(svc, req)
 
@@ -241,7 +241,7 @@ func TestConceptSearchForAuthors(t *testing.T) {
 	svc := &mockConceptSearchService{}
 
 	concepts := dummyConcepts()
-	svc.On("SearchConceptByTextAndTypesWithBoost", "pippo", []string{"http://www.ft.com/ontology/person/Person"}, "authors").Return(concepts, nil)
+	svc.On("SearchConceptByTextAndTypesWithBoost", "pippo", []string{"http://www.ft.com/ontology/person/Person"}, "authors", mock.AnythingOfType("bool")).Return(concepts, nil)
 
 	actual := doHttpCall(svc, req)
 
@@ -259,7 +259,7 @@ func TestConceptSearchInvalidBoost(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&q=pippo&mode=search&boost=somethingThatWeDontSupport", nil)
 
 	svc := &mockConceptSearchService{}
-	svc.On("SearchConceptByTextAndTypesWithBoost", "pippo", []string{"http://www.ft.com/ontology/person/Person"}, "somethingThatWeDontSupport").Return([]service.Concept{}, expectedInputErr)
+	svc.On("SearchConceptByTextAndTypesWithBoost", "pippo", []string{"http://www.ft.com/ontology/person/Person"}, "somethingThatWeDontSupport", mock.AnythingOfType("bool")).Return([]service.Concept{}, expectedInputErr)
 
 	actual := doHttpCall(svc, req)
 
@@ -292,7 +292,7 @@ func TestSearchMode(t *testing.T) {
 	svc := &mockConceptSearchService{}
 
 	concepts := dummyConcepts()
-	svc.On("SearchConceptByTextAndTypes", "pippo", []string{"http://www.ft.com/ontology/person/Person"}).Return(concepts, nil)
+	svc.On("SearchConceptByTextAndTypes", "pippo", []string{"http://www.ft.com/ontology/person/Person"}, mock.AnythingOfType("bool")).Return(concepts, nil)
 
 	actual := doHttpCall(svc, req)
 
@@ -415,6 +415,37 @@ func TestConceptsByIdServerError(t *testing.T) {
 	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, expectedError.Error(), respObject["message"], "error message")
+}
+
+func TestDeprecatedTypes(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&include_deprecated=true", nil)
+
+	concepts := dummyConcepts()
+	svc := &mockConceptSearchService{}
+	svc.On("FindAllConceptsByType", "http://www.ft.com/ontology/Genre", true).Return(concepts, nil)
+
+	actual := doHttpCall(svc, req)
+
+	assert.Equal(t, http.StatusOK, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := unmarshallResponse(t, actual)
+
+	assert.Len(t, respObject["concepts"], 2, "concepts")
+	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
+}
+
+func TestWrongDeprecatedFlagVal(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&include_deprecated=wrong", nil)
+
+	concepts := dummyConcepts()
+	svc := &mockConceptSearchService{}
+	svc.On("FindAllConceptsByType", "http://www.ft.com/ontology/Genre", mock.AnythingOfType("bool")).Return(concepts, nil)
+
+	actual := doHttpCall(svc, req)
+
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
 }
 
 func doHttpCall(svc *mockConceptSearchService, req *http.Request) *http.Response {

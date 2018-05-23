@@ -1,6 +1,7 @@
 *.iml
 *.exe
 .idea
+.vscode
 vendor/*/
 /concept-search-api
 coverage.html

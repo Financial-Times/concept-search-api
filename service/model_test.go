@@ -52,7 +52,7 @@ func TestConvertToSimpleConcept(t *testing.T) {
 	id := "http://www.ft.com/thing/id"
 	apiUrl := "http://www.example.com/1"
 	label := "Test Concept"
-	directType :="http://www.ft.com/ontology/GenreSubClass"
+	directType := "http://www.ft.com/ontology/GenreSubClass"
 
 	esConcept := EsConceptModel{
 		Id:         id,

@@ -11,7 +11,7 @@ import (
 )
 
 type esClient interface {
-	query(indexName string, query elastic.Query, resultLimit int) (*elastic.SearchResult, error)
+	query(indexName string, query elastic.Query, resultLimit int, minScore float64) (*elastic.SearchResult, error)
 	getClusterHealth() (*elastic.ClusterHealthResponse, error)
 }
 
@@ -58,8 +58,10 @@ func newElasticClient(accessKey string, secretKey string, endpoint *string, regi
 	return &esClientWrapper{elasticClient: elasticClient}, err
 }
 
-func (ec esClientWrapper) query(indexName string, query elastic.Query, resultLimit int) (*elastic.SearchResult, error) {
-	return ec.elasticClient.Search().Index(indexName).Query(query).Size(resultLimit).Do(context.Background())
+func (ec esClientWrapper) query(indexName string, query elastic.Query, resultLimit int, minScore float64) (*elastic.SearchResult, error) {
+	q := ec.elasticClient.Search().Index(indexName).Query(query)
+	q.MinScore(minScore)
+	return q.Size(resultLimit).Do(context.Background())
 }
 
 func (ec esClientWrapper) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
