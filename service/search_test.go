@@ -291,7 +291,6 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeDeprecatedFla
 	uuid := uuid.NewV4().String()
 	prefLabel := "Rick and Morty"
 
-	deprecatedFlag := "true"
 	err := writeTestConceptModel(s.ec, esPeopleType, EsConceptModel{
 		Id:           uuid,
 		ApiUrl:       fmt.Sprintf("%s/%s/%s", apiBaseURL, esPeopleType, uuid),
@@ -299,7 +298,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeDeprecatedFla
 		Types:        []string{ftPeopleType},
 		DirectType:   ftPeopleType,
 		Aliases:      []string{},
-		IsDeprecated: &deprecatedFlag,
+		IsDeprecated: true,
 	})
 	assert.NoError(s.T(), err, "no error expected during indexing a new person concept")
 	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
@@ -555,7 +554,6 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesDepreca
 	require.NoError(s.T(), err)
 
 	uuid2 := uuid.NewV4().String()
-	deprecatedFlag := "true"
 	err = writeTestConceptModel(s.ec, esLocationType, EsConceptModel{
 		Id:           uuid2,
 		ApiUrl:       fmt.Sprintf("%s/%s/%s", apiBaseURL, ftLocationType, uuid2),
@@ -563,7 +561,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesDepreca
 		Types:        []string{ftLocationType},
 		DirectType:   ftLocationType,
 		Aliases:      []string{},
-		IsDeprecated: &deprecatedFlag,
+		IsDeprecated: true,
 	})
 	require.NoError(s.T(), err)
 
@@ -685,7 +683,6 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 	require.NoError(s.T(), err)
 
 	uuid4 := uuid.NewV4().String()
-	deprecatedFlag := "true"
 	authorFlag := "true"
 	err = writeTestConceptModel(s.ec, esPeopleType, EsConceptModel{
 		Id:           uuid4,
@@ -695,7 +692,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 		DirectType:   ftPeopleType,
 		Aliases:      []string{},
 		IsFTAuthor:   &authorFlag,
-		IsDeprecated: &deprecatedFlag,
+		IsDeprecated: true,
 	})
 	require.NoError(s.T(), err)
 

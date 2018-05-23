@@ -15,7 +15,7 @@ type EsConceptModel struct {
 	DirectType   string   `json:"directType"`
 	Aliases      []string `json:"aliases,omitempty"`
 	IsFTAuthor   *string  `json:"isFTAuthor,omitempty"`
-	IsDeprecated *string  `json:"isDeprecated,omitempty"`
+	IsDeprecated bool     `json:"isDeprecated,omitempty"`
 }
 
 type Concept struct {
