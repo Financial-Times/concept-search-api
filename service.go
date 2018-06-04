@@ -69,13 +69,10 @@ func (service *esConceptFinder) FindConcept(writer http.ResponseWriter, request 
 
 	// by default {include_deprecated in (nil, false)} the deprecated entities are excluded
 	if !isDeprecatedIncluded(request) {
-		deprecationFilter := elastic.NewBoolQuery().MustNot(
-			elastic.NewTermQuery("isDeprecated", true),
-		)
-		finalQuery = finalQuery.Filter(deprecationFilter)
+		finalQuery = finalQuery.MustNot(elastic.NewTermQuery("isDeprecated", true))
 	}
 
-	searchResult, err := service.esClient().query(service.indexName, finalQuery, service.searchResultLimit, 0.0001) // just to force docs that are with score=0 not to be included in the final result set
+	searchResult, err := service.esClient().query(service.indexName, finalQuery, service.searchResultLimit)
 
 	if err != nil {
 		log.Errorf("There was an error executing the query on ES: %s", err.Error())

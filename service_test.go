@@ -207,7 +207,7 @@ func getElasticSearchTestURL(t *testing.T) string {
 
 type failClient struct{}
 
-func (tc failClient) query(indexName string, query elastic.Query, resultLimit int, minScore float64) (*elastic.SearchResult, error) {
+func (tc failClient) query(indexName string, query elastic.Query, resultLimit int) (*elastic.SearchResult, error) {
 	return &elastic.SearchResult{}, errors.New("Test ES failure")
 }
 
@@ -219,7 +219,7 @@ type mockClient struct {
 	queryResponse string
 }
 
-func (mc mockClient) query(indexName string, query elastic.Query, resultLimit int, minScore float64) (*elastic.SearchResult, error) {
+func (mc mockClient) query(indexName string, query elastic.Query, resultLimit int) (*elastic.SearchResult, error) {
 	var searchResult elastic.SearchResult
 	err := json.Unmarshal([]byte(mc.queryResponse), &searchResult)
 	if err != nil {
