@@ -13,6 +13,7 @@ type concept struct {
 	DirectType string   `json:"directType"`
 	Aliases    []string `json:"aliases,omitempty"`
 	Score      float64  `json:"score,omitempty"`
+	IsFTAuthor string   `json:"isFTAuthor,omitempty"`
 }
 
 type searchResult struct {

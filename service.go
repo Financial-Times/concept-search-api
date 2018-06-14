@@ -109,7 +109,7 @@ func (service *esConceptFinder) FindConcept(writer http.ResponseWriter, request 
 
 	if searchResult.Hits.TotalHits > 0 {
 		writer.Header().Add("Content-Type", "application/json")
-		foundConcepts := getFoundConcepts(searchResult, isScoreIncluded(request))
+		foundConcepts := getFoundConcepts(searchResult, isScoreIncluded(request), isFTAuthorIncluded(request))
 		encoder := json.NewEncoder(writer)
 		if err := encoder.Encode(&foundConcepts); err != nil {
 			log.Errorf("Cannot encode result: %s", err.Error())
@@ -120,7 +120,7 @@ func (service *esConceptFinder) FindConcept(writer http.ResponseWriter, request 
 	}
 }
 
-func getFoundConcepts(elasticResult *elastic.SearchResult, isScoreIncluded bool) searchResult {
+func getFoundConcepts(elasticResult *elastic.SearchResult, isScoreIncluded bool, isFTAuthorIncluded bool) searchResult {
 	var foundConcepts []concept
 	for _, hit := range elasticResult.Hits.Hits {
 		var foundConcept concept
@@ -131,6 +131,9 @@ func getFoundConcepts(elasticResult *elastic.SearchResult, isScoreIncluded bool)
 			if isScoreIncluded {
 				score := *hit.Score
 				foundConcept.Score = score
+			}
+			if !isFTAuthorIncluded {
+				foundConcept.IsFTAuthor = ""
 			}
 			foundConcepts = append(foundConcepts, foundConcept)
 		}
@@ -148,6 +151,15 @@ func isDeprecatedIncluded(request *http.Request) bool {
 		return false
 	}
 	return includeDeprecated
+}
+
+func isFTAuthorIncluded(request *http.Request) bool {
+	queryParam := request.URL.Query().Get("include_ft_author")
+	includeFtAuthor, err := strconv.ParseBool(queryParam)
+	if err != nil {
+		return false
+	}
+	return includeFtAuthor
 }
 
 func isScoreIncluded(request *http.Request) bool {
