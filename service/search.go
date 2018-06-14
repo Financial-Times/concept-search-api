@@ -3,41 +3,21 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/Financial-Times/concept-search-api/util"
 
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v5"
 )
 
-type InputError struct {
-	msg string
-}
-
-func NewInputError(msg string) InputError {
-	return InputError{msg}
-}
-
-func NewInputErrorf(format string, args ...interface{}) InputError {
-	return InputError{fmt.Sprintf(format, args...)}
-}
-
-func (e InputError) Error() string {
-	return e.msg
-}
-
 var (
-	ErrNoElasticClient                       = errors.New("no ElasticSearch client available")
-	errNoConceptTypeParameter                = NewInputError("no concept type specified")
-	errInvalidConceptTypeFormat              = "invalid concept type %v"
-	errEmptyTextParameter                    = NewInputError("empty text parameter")
-	errEmptyIdsParameter                     = NewInputError("empty Ids parameter")
-	errNotSupportedCombinationOfConceptTypes = NewInputError("the combination of concept types is not supported")
-	errInvalidBoostTypeParameter             = NewInputError("invalid boost type")
-	mentionTypes                             = []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/organisation/Organisation", "http://www.ft.com/ontology/Location", "http://www.ft.com/ontology/Topic"}
+	errEmptyTextParameter = util.NewInputError("empty text parameter")
+	errEmptyIdsParameter  = util.NewInputError("empty Ids parameter")
+
+	mentionTypes = []string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/organisation/Organisation", "http://www.ft.com/ontology/Location", "http://www.ft.com/ontology/Topic"}
 )
 
 type ConceptSearchService interface {
@@ -71,15 +51,15 @@ func NewEsConceptSearchService(index string, maxSearchResults int, maxAutoComple
 
 func (s *esConceptSearchService) checkElasticClient() error {
 	if s.elasticClient() == nil {
-		return ErrNoElasticClient
+		return util.ErrNoElasticClient
 	}
 	return nil
 }
 
 func (s *esConceptSearchService) FindAllConceptsByType(conceptType string, includeDeprecated bool) ([]Concept, error) {
-	t := esType(conceptType)
+	t := util.EsType(conceptType)
 	if t == "" {
-		return nil, NewInputErrorf(errInvalidConceptTypeFormat, conceptType)
+		return nil, util.NewInputErrorf(util.ErrInvalidConceptTypeFormat, conceptType)
 	}
 
 	if err := s.checkElasticClient(); err != nil {
@@ -147,7 +127,7 @@ func (s *esConceptSearchService) SearchConceptByTextAndTypes(textQuery string, c
 	}
 
 	if len(conceptTypes) == 0 {
-		return nil, errNoConceptTypeParameter
+		return nil, util.ErrNoConceptTypeParameter
 	}
 	if err := s.checkElasticClient(); err != nil {
 		return nil, err
@@ -156,14 +136,14 @@ func (s *esConceptSearchService) SearchConceptByTextAndTypes(textQuery string, c
 }
 
 func (s *esConceptSearchService) SearchConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string, includeDeprecated bool) ([]Concept, error) {
-	if err := validateForAuthorsSearch(conceptTypes, boostType); err != nil {
+	if err := util.ValidateForAuthorsSearch(conceptTypes, boostType); err != nil {
 		return nil, err
 	}
 	if textQuery == "" {
 		return nil, errEmptyTextParameter
 	}
 	if len(conceptTypes) == 0 {
-		return nil, errNoConceptTypeParameter
+		return nil, util.ErrNoConceptTypeParameter
 	}
 	if err := s.checkElasticClient(); err != nil {
 		return nil, err
@@ -172,7 +152,7 @@ func (s *esConceptSearchService) SearchConceptByTextAndTypesWithBoost(textQuery 
 }
 
 func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string, conceptTypes []string, boostType string, includeDeprecated bool) ([]Concept, error) {
-	esTypes, err := validateAndConvertToEsTypes(conceptTypes)
+	esTypes, err := util.ValidateAndConvertToEsTypes(conceptTypes)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +170,7 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 
 	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery).Boost(0.65) // Also boost if an alias matches exactly, but this should not precede exact matched prefLabels
 
-	typeFilter := elastic.NewTermsQuery("_type", toTerms(esTypes)...) // filter by type
+	typeFilter := elastic.NewTermsQuery("_type", util.ToTerms(esTypes)...) // filter by type
 
 	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, topicsBoost, locationBoost, peopleBoost}
 
@@ -215,42 +195,6 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	}
 	concepts := searchResultToConcepts(result)
 	return concepts, nil
-}
-
-func validateForAuthorsSearch(conceptTypes []string, boostType string) error {
-	if len(conceptTypes) == 0 {
-		return errNoConceptTypeParameter
-	}
-	if len(conceptTypes) > 1 {
-		return errNotSupportedCombinationOfConceptTypes
-	}
-	if esType(conceptTypes[0]) != "people" {
-		return NewInputErrorf(errInvalidConceptTypeFormat, conceptTypes[0])
-	}
-	if boostType != "authors" {
-		return errInvalidBoostTypeParameter
-	}
-	return nil
-}
-
-func validateAndConvertToEsTypes(conceptTypes []string) ([]string, error) {
-	esTypes := make([]string, len(conceptTypes))
-	for _, t := range conceptTypes {
-		esT := esType(t)
-		if esT == "" {
-			return esTypes, NewInputErrorf(errInvalidConceptTypeFormat, t)
-		}
-		esTypes = append(esTypes, esT)
-	}
-	return esTypes, nil
-}
-
-func toTerms(types []string) []interface{} {
-	i := make([]interface{}, 0)
-	for _, v := range types {
-		i = append(i, v)
-	}
-	return i
 }
 
 func containsOnlyEmptyValues(ids []string) bool {

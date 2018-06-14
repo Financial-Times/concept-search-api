@@ -38,16 +38,6 @@ func TestConceptsSortInterface(t *testing.T) {
 	assert.False(t, concepts.Less(0, 1), "concept ordering by prefLabel")
 }
 
-func TestEsType(t *testing.T) {
-	assert.Equal(t, "genres", esType("http://www.ft.com/ontology/Genre"), "known type conversion")
-	assert.Equal(t, "", esType("http://www.ft.com/ontology/Foo"), "unknown type conversion")
-}
-
-func TestFtType(t *testing.T) {
-	assert.Equal(t, "http://www.ft.com/ontology/Genre", ftType("genres"), "known type conversion")
-	assert.Equal(t, "", ftType("tardigrades"), "unknown type conversion")
-}
-
 func TestConvertToSimpleConcept(t *testing.T) {
 	id := "http://www.ft.com/thing/id"
 	apiUrl := "http://www.example.com/1"

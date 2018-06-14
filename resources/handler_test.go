@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/Financial-Times/concept-search-api/service"
+	"github.com/Financial-Times/concept-search-api/util"
 	"github.com/husobee/vestigo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -17,7 +18,7 @@ import (
 )
 
 var (
-	expectedInputErr = service.NewInputError("computer says no")
+	expectedInputErr = util.NewInputError("computer says no")
 )
 
 type mockConceptSearchService struct {
@@ -116,7 +117,7 @@ func TestAllConceptByTypeNoElasticsearchError(t *testing.T) {
 func TestAllConceptByTypeNoElasticsearchClientError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FFoo", nil)
 	svc := &mockConceptSearchService{}
-	svc.On("FindAllConceptsByType", mock.AnythingOfType("string"), mock.AnythingOfType("bool")).Return([]service.Concept{}, service.ErrNoElasticClient)
+	svc.On("FindAllConceptsByType", mock.AnythingOfType("string"), mock.AnythingOfType("bool")).Return([]service.Concept{}, util.ErrNoElasticClient)
 
 	actual := doHttpCall(svc, req)
 
@@ -125,7 +126,7 @@ func TestAllConceptByTypeNoElasticsearchClientError(t *testing.T) {
 
 	respObject := unmarshallResponseMessage(t, actual)
 
-	assert.Equal(t, service.ErrNoElasticClient.Error(), respObject["message"], "error message")
+	assert.Equal(t, util.ErrNoElasticClient.Error(), respObject["message"], "error message")
 }
 
 func TestAllConceptByTypeServerError(t *testing.T) {
@@ -389,7 +390,7 @@ func TestConceptsByIdNoElasticsearchError(t *testing.T) {
 func TestConceptsByIdNoElasticsearchClientError(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?ids=1&ids=2", nil)
 	svc := &mockConceptSearchService{}
-	svc.On("FindConceptsById", []string{"1", "2"}).Return([]service.Concept{}, service.ErrNoElasticClient)
+	svc.On("FindConceptsById", []string{"1", "2"}).Return([]service.Concept{}, util.ErrNoElasticClient)
 
 	actual := doHttpCall(svc, req)
 
@@ -398,7 +399,7 @@ func TestConceptsByIdNoElasticsearchClientError(t *testing.T) {
 
 	respObject := unmarshallResponseMessage(t, actual)
 
-	assert.Equal(t, service.ErrNoElasticClient.Error(), respObject["message"], "error message")
+	assert.Equal(t, util.ErrNoElasticClient.Error(), respObject["message"], "error message")
 }
 
 func TestConceptsByIdServerError(t *testing.T) {

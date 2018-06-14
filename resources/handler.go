@@ -2,9 +2,9 @@ package resources
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"strconv"
+
+	"github.com/Financial-Times/concept-search-api/util"
 
 	"github.com/Financial-Times/concept-search-api/service"
 	"gopkg.in/olivere/elastic.v5"
@@ -35,14 +35,14 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	var err error
 	var concepts []service.Concept
 
-	mode, foundMode, modeErr := getSingleValueQueryParameter(req, "mode", "search")
-	q, foundQ, qErr := getSingleValueQueryParameter(req, "q")
-	conceptTypes, foundConceptTypes := getMultipleValueQueryParameter(req, "type")
-	boostType, foundBoostType, boostTypeErr := getSingleValueQueryParameter(req, "boost") // we currently only accept authors, so ignoring the actual boost value
-	ids, foundIds := getMultipleValueQueryParameter(req, "ids")
-	includeDeprecated, _, includeDeprecatedErr := getBoolQueryParameter(req, "include_deprecated", false)
+	mode, foundMode, modeErr := util.GetSingleValueQueryParameter(req, "mode", "search")
+	q, foundQ, qErr := util.GetSingleValueQueryParameter(req, "q")
+	conceptTypes, foundConceptTypes := util.GetMultipleValueQueryParameter(req, "type")
+	boostType, foundBoostType, boostTypeErr := util.GetSingleValueQueryParameter(req, "boost") // we currently only accept authors, so ignoring the actual boost value
+	ids, foundIds := util.GetMultipleValueQueryParameter(req, "ids")
+	includeDeprecated, _, includeDeprecatedErr := util.GetBoolQueryParameter(req, "include_deprecated", false)
 
-	err = firstError(modeErr, qErr, boostTypeErr, includeDeprecatedErr)
+	err = util.FirstError(modeErr, qErr, boostTypeErr, includeDeprecatedErr)
 	if err != nil {
 		writeHTTPError(w, http.StatusBadRequest, err)
 		return
@@ -78,12 +78,12 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch err.(type) {
 
-		case validationError, service.InputError:
+		case validationError, util.InputError:
 
 			writeHTTPError(w, http.StatusBadRequest, err)
 
 		default:
-			if err == service.ErrNoElasticClient || err == elastic.ErrNoClient {
+			if err == util.ErrNoElasticClient || err == elastic.ErrNoClient {
 				writeHTTPError(w, http.StatusServiceUnavailable, err)
 			} else {
 
@@ -114,59 +114,6 @@ func (h *Handler) findConceptsByType(conceptTypes []string, includeDeprecated bo
 		return nil, NewValidationError("only a single type is supported by this kind of request")
 	}
 	return []service.Concept{}, nil
-}
-
-func getSingleValueQueryParameter(req *http.Request, param string, allowed ...string) (string, bool, error) {
-	values, found := getMultipleValueQueryParameter(req, param)
-	if len(values) > 1 {
-		return "", found, fmt.Errorf("specified multiple %v query parameters in the URL", param)
-	}
-	if len(values) < 1 {
-		return "", found, nil
-	}
-
-	v := values[0]
-	if len(allowed) > 0 {
-		for _, a := range allowed {
-			if v == a {
-				return v, found, nil
-			}
-		}
-
-		return "", found, fmt.Errorf("'%s' is not a valid value for parameter '%s'", v, param)
-	}
-
-	return v, found, nil
-}
-
-func getBoolQueryParameter(req *http.Request, param string, defaultVal bool) (bool, bool, error) {
-	val, found, err := getSingleValueQueryParameter(req, param)
-	if !found {
-		return defaultVal, found, err
-	}
-
-	boolVal, err := strconv.ParseBool(val)
-	if err != nil {
-		return defaultVal, false, err
-	}
-
-	return boolVal, true, nil
-}
-
-func getMultipleValueQueryParameter(req *http.Request, param string) ([]string, bool) {
-	query := req.URL.Query()
-	values, found := query[param]
-	return values, found
-}
-
-func firstError(errors ...error) error {
-	for _, err := range errors {
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func writeHTTPError(w http.ResponseWriter, status int, err error) {

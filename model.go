@@ -1,7 +1,8 @@
 package main
 
 type searchCriteria struct {
-	Term *string `json:"term"`
+	Term       *string  `json:"term"`
+	PrefLabels []string `json:"prefLabels"`
 }
 
 type concept struct {

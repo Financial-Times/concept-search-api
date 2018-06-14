@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -151,6 +152,99 @@ func TestConceptFinder(t *testing.T) {
 	}
 }
 
+func TestConceptFinderForPrefLabel(t *testing.T) {
+
+	testCases := []struct {
+		testName      string
+		client        esClient
+		returnCode    int
+		requestURL    string
+		requestBody   string
+		expectedUUIDs []string
+		expectedScore []float64
+	}{
+		{
+			testName:      "TooMuchDataInPayload",
+			client:        mockClient{},
+			returnCode:    http.StatusBadRequest,
+			requestURL:    defaultRequestURL,
+			requestBody:   `{"term":"Foobar", "prefLabels":["testPrefLabel"]}`,
+			expectedScore: nil,
+		},
+		{
+			testName:      "WrongBoost",
+			client:        mockClient{},
+			returnCode:    http.StatusBadRequest,
+			requestURL:    defaultRequestURL + "?boost=wrong_boost",
+			requestBody:   `{"prefLabels":["testPrefLabel"]}`,
+			expectedScore: nil,
+		},
+		{
+			testName:      "WrongBoostTypeCombination",
+			client:        mockClient{},
+			returnCode:    http.StatusBadRequest,
+			requestURL:    defaultRequestURL + "?boost=authors&type=http://www.ft.com/ontology/organisation/Organisation",
+			requestBody:   `{"prefLabels":["testPrefLabel"]}`,
+			expectedScore: nil,
+		},
+		{
+			testName:      "BoostWithoutType",
+			client:        mockClient{},
+			returnCode:    http.StatusBadRequest,
+			requestURL:    defaultRequestURL + "?boost=authors",
+			requestBody:   `{"prefLabels":["testPrefLabel"]}`,
+			expectedScore: nil,
+		},
+		{
+			testName: "OkPeopleType",
+			client: mockClient{
+				queryResponse: validResponseExactPrefLabel,
+			},
+			returnCode:    http.StatusOK,
+			requestURL:    defaultRequestURL + "?type=http://www.ft.com/ontology/person/Person",
+			requestBody:   `{"prefLabels":["Eric Platt","Michael Hunter","Adam Samson"]}`,
+			expectedUUIDs: []string{"f758ef56-c40a-3162-91aa-3e8a3aabc494", "64302452-e369-4ddb-88fa-9adc5124a38c", "9332270e-f959-3f55-9153-d30acd0d0a51", "40281396-8369-4699-ae48-1ccc0c931a72"},
+			expectedScore: []float64{28.629284, 28.060131, 25.467949, 15.63516},
+		},
+	}
+
+	for _, testCase := range testCases {
+		conceptFinder := &esConceptFinder{
+			indexName:         "concept",
+			searchResultLimit: 50,
+			lockClient:        &sync.RWMutex{},
+		}
+		conceptFinder.client = testCase.client
+
+		req, _ := http.NewRequest("POST", testCase.requestURL, strings.NewReader(testCase.requestBody))
+		w := httptest.NewRecorder()
+
+		conceptFinder.FindConcept(w, req)
+
+		assert.Equal(t, testCase.returnCode, w.Code, "%s -> Expected return code %d but got %d", testCase.testName, testCase.returnCode, w.Code)
+		if testCase.returnCode != http.StatusOK {
+			continue
+		}
+
+		var searchResults searchResult
+		err := json.Unmarshal(w.Body.Bytes(), &searchResults)
+		assert.Equal(t, nil, err, "%s -> expected no error", testCase.testName)
+		assert.Equal(t, len(testCase.expectedUUIDs), len(searchResults.Results), "%s -> different no. of results", testCase.testName)
+
+		for i, uuid := range testCase.expectedUUIDs {
+			assert.True(t, strings.Contains(searchResults.Results[i].ID, uuid), "%s -> uuid expectation", testCase.testName)
+		}
+
+		if testCase.requestURL == requestURLWithScore ||
+			testCase.requestURL == requestURLWithScoreAndDeprecated {
+			for i, score := range testCase.expectedScore {
+				assert.Equal(t, score, searchResults.Results[i].Score, "%s -> score expectation", testCase.testName)
+			}
+		}
+
+	}
+}
+
 // during concept deprecation story an issue was encountered during calling FindConcept.
 // The filtering was applied in a way that the data was returned even when the query did not match the doc.
 func TestEsQueryScore(t *testing.T) {
@@ -176,7 +270,7 @@ func TestEsQueryScore(t *testing.T) {
 	}
 	ec.Refresh(filterScoreTestingIndexName).Do(context.TODO())
 
-	// prepare request and triger this
+	// prepare request and trigger this
 	req, _ := http.NewRequest("POST", "http://dummy_host/concepts?include_score=true", strings.NewReader(`{"term": "Anna"}`))
 	w := httptest.NewRecorder()
 	conceptFinder := newConceptFinder(filterScoreTestingIndexName, 10)
@@ -192,6 +286,61 @@ func TestEsQueryScore(t *testing.T) {
 	assert.Equal(t, "Anna Whitwham", searchResults.Results[0].PrefLabel)
 }
 
+func TestEsExactMatchImpl(t *testing.T) {
+	// create ES client
+	ec, err := elastic.NewClient(
+		elastic.SetURL(getElasticSearchTestURL(t)),
+		elastic.SetSniff(false),
+	)
+	assert.NoError(t, err, "expected no error for ES client")
+
+	// cleanup for accuracy
+	ec.DeleteIndex(exactMatchIndexName).Do(context.Background())
+	err = createIndex(ec, "service/test/mapping.json", exactMatchIndexName)
+
+	// store testing data
+	for uuid, conceptBody := range exactMatchTestingData {
+		_, e := ec.Index().
+			Index(exactMatchIndexName).
+			Type("people").
+			BodyString(conceptBody).
+			Id(uuid).
+			Do(context.Background())
+		assert.NoError(t, e, "expected no error for ES client")
+	}
+	ec.Refresh(exactMatchIndexName).Do(context.TODO())
+
+	// prepare request and trigger this
+	req, _ := http.NewRequest("POST", "http://dummy_host/concepts?type=http://www.ft.com/ontology/person/Person", strings.NewReader(`
+		{
+			"prefLabels":[
+				"Platt Eric",
+				"Michael Hunter",
+				"Samson Adam"
+			]
+		}`))
+	w := httptest.NewRecorder()
+	conceptFinder := newConceptFinder(exactMatchIndexName, 10)
+	conceptFinder.SetElasticClient(ec)
+	conceptFinder.FindConcept(w, req)
+
+	// check
+	assert.Equal(t, http.StatusOK, w.Code)
+	var searchResults searchResult
+	err = json.Unmarshal(w.Body.Bytes(), &searchResults)
+	assert.Equal(t, nil, err)
+	assert.Len(t, searchResults.Results, 3)
+	counter := 0
+	for _, res := range searchResults.Results {
+		if res.PrefLabel == "Eric Platt" ||
+			res.PrefLabel == "Michael Hunter" ||
+			res.PrefLabel == "Adam Samson" {
+			counter++
+		}
+	}
+	assert.Equal(t, 3, counter)
+}
+
 func getElasticSearchTestURL(t *testing.T) string {
 	if testing.Short() {
 		t.Skip("ElasticSearch integration for long tests only.")
@@ -203,6 +352,18 @@ func getElasticSearchTestURL(t *testing.T) string {
 	}
 
 	return esURL
+}
+
+func createIndex(ec *elastic.Client, mappingFile string, indexName string) error {
+	mapping, err := ioutil.ReadFile(mappingFile)
+	if err != nil {
+		return err
+	}
+	_, err = ec.CreateIndex(indexName).Body(string(mapping)).Do(context.Background())
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type failClient struct{}
@@ -430,3 +591,227 @@ var filterScoreTestingData = map[string]string{
 	"isFTAuthor": "false"
 }`,
 }
+
+var exactMatchIndexName = "exact_match_index"
+var exactMatchTestingData = map[string]string{
+	"f758ef56-c40a-3162-91aa-3e8a3aabc494": `{
+		"id": "http://api.ft.com/things/f758ef56-c40a-3162-91aa-3e8a3aabc494",
+		"apiUrl": "http://api.ft.com/people/f758ef56-c40a-3162-91aa-3e8a3aabc494",
+		"prefLabel": "Adam Samson",
+		"types": [
+			"http://www.ft.com/ontology/core/Thing",
+			"http://www.ft.com/ontology/concept/Concept",
+			"http://www.ft.com/ontology/person/Person"
+		],
+		"authorities": [
+			"TME"
+		],
+		"directType": "http://www.ft.com/ontology/person/Person",
+		"aliases": [
+			"Adam Samson"
+		],
+		"lastModified": "2018-06-08T14:34:22Z",
+		"publishReference": "job_dNZnTv32iM",
+		"isFTAuthor": "true"}`,
+
+	"64302452-e369-4ddb-88fa-9adc5124a38c": `{
+		"id": "http://api.ft.com/things/64302452-e369-4ddb-88fa-9adc5124a38c",
+		"apiUrl": "http://api.ft.com/people/64302452-e369-4ddb-88fa-9adc5124a38c",
+		"prefLabel": "Eric Platt",
+		"types": [
+			"http://www.ft.com/ontology/core/Thing",
+			"http://www.ft.com/ontology/concept/Concept",
+			"http://www.ft.com/ontology/person/Person"
+		],
+		"authorities": [
+			"TME",
+			"Smartlogic"
+		],
+		"directType": "http://www.ft.com/ontology/person/Person",
+		"aliases": [
+			"Eric Platt"
+		],
+		"lastModified": "2018-06-08T14:34:29Z",
+		"publishReference": "tid_fQ3qCMiEvC",
+		"isFTAuthor": "true"}`,
+
+	"9332270e-f959-3f55-9153-d30acd0d0a51": `{
+		"id": "http://api.ft.com/things/9332270e-f959-3f55-9153-d30acd0d0a51",
+		"apiUrl": "http://api.ft.com/people/9332270e-f959-3f55-9153-d30acd0d0a51",
+		"prefLabel": "Michael Hunter",
+		"types": [
+			"http://www.ft.com/ontology/core/Thing",
+			"http://www.ft.com/ontology/concept/Concept",
+			"http://www.ft.com/ontology/person/Person"
+		],
+		"authorities": [
+			"TME"
+		],
+		"directType": "http://www.ft.com/ontology/person/Person",
+		"aliases": [
+			"Michael Hunter"
+		],
+		"lastModified": "2018-06-08T14:34:27Z",
+		"publishReference": "job_dNZnTv32iM",
+		"isFTAuthor": "true"}`,
+
+	"40281396-8369-4699-ae48-1ccc0c931a72": `{
+		"id": "http://api.ft.com/things/40281396-8369-4699-ae48-1ccc0c931a72",
+		"apiUrl": "http://api.ft.com/people/40281396-8369-4699-ae48-1ccc0c931a72",
+		"prefLabel": "Eric Platt",
+		"types": [
+			"http://www.ft.com/ontology/core/Thing",
+			"http://www.ft.com/ontology/concept/Concept",
+			"http://www.ft.com/ontology/person/Person"
+		],
+		"authorities": [
+			"TME",
+			"Smartlogic"
+		],
+		"directType": "http://www.ft.com/ontology/person/Person",
+		"aliases": [
+			"Eric Platt"
+		],
+		"isFTAuthor": "false",
+		"isDeprecated": true
+	}`,
+
+	"40281396-8369-4699-ae48-1ccc0c931b50": `{
+		"id": "http://api.ft.com/things/40281396-8369-4699-ae48-1ccc0c931b50",
+		"apiUrl": "http://api.ft.com/people/40281396-8369-4699-ae48-1ccc0c931b50",
+		"prefLabel": "Eric Andrew",
+		"types": [
+			"http://www.ft.com/ontology/core/Thing",
+			"http://www.ft.com/ontology/concept/Concept",
+			"http://www.ft.com/ontology/person/Person"
+		],
+		"authorities": [
+			"TME",
+			"Smartlogic"
+		],
+		"directType": "http://www.ft.com/ontology/person/Person",
+		"aliases": [
+			"Eric Andrew"
+		],
+		"isFTAuthor": "false"}`,
+}
+var validResponseExactPrefLabel = `{
+    "took": 20,
+    "timed_out": false,
+    "_shards": {
+        "total": 5,
+        "successful": 5,
+        "failed": 0
+    },
+    "hits": {
+        "total": 4,
+        "max_score": 28.629284,
+        "hits": [
+            {
+                "_index": "concepts-0.2.2",
+                "_type": "people",
+                "_id": "f758ef56-c40a-3162-91aa-3e8a3aabc494",
+                "_score": 28.629284,
+                "_source": {
+                    "id": "http://api.ft.com/things/f758ef56-c40a-3162-91aa-3e8a3aabc494",
+                    "apiUrl": "http://api.ft.com/people/f758ef56-c40a-3162-91aa-3e8a3aabc494",
+                    "prefLabel": "Adam Samson",
+                    "types": [
+                        "http://www.ft.com/ontology/core/Thing",
+                        "http://www.ft.com/ontology/concept/Concept",
+                        "http://www.ft.com/ontology/person/Person"
+                    ],
+                    "authorities": [
+                        "TME"
+                    ],
+                    "directType": "http://www.ft.com/ontology/person/Person",
+                    "aliases": [
+                        "Adam Samson"
+                    ],
+                    "lastModified": "2018-06-08T14:34:22Z",
+                    "publishReference": "job_dNZnTv32iM",
+                    "isFTAuthor": "true"
+                }
+            },
+            {
+                "_index": "concepts-0.2.2",
+                "_type": "people",
+                "_id": "64302452-e369-4ddb-88fa-9adc5124a38c",
+                "_score": 28.060131,
+                "_source": {
+                    "id": "http://api.ft.com/things/64302452-e369-4ddb-88fa-9adc5124a38c",
+                    "apiUrl": "http://api.ft.com/people/64302452-e369-4ddb-88fa-9adc5124a38c",
+                    "prefLabel": "Eric Platt",
+                    "types": [
+                        "http://www.ft.com/ontology/core/Thing",
+                        "http://www.ft.com/ontology/concept/Concept",
+                        "http://www.ft.com/ontology/person/Person"
+                    ],
+                    "authorities": [
+                        "TME",
+                        "Smartlogic"
+                    ],
+                    "directType": "http://www.ft.com/ontology/person/Person",
+                    "aliases": [
+                        "Eric Platt"
+                    ],
+                    "lastModified": "2018-06-08T14:34:29Z",
+                    "publishReference": "tid_fQ3qCMiEvC",
+                    "isFTAuthor": "true"
+                }
+            },
+            {
+                "_index": "concepts-0.2.2",
+                "_type": "people",
+                "_id": "9332270e-f959-3f55-9153-d30acd0d0a51",
+                "_score": 25.467949,
+                "_source": {
+                    "id": "http://api.ft.com/things/9332270e-f959-3f55-9153-d30acd0d0a51",
+                    "apiUrl": "http://api.ft.com/people/9332270e-f959-3f55-9153-d30acd0d0a51",
+                    "prefLabel": "Michael Hunter",
+                    "types": [
+                        "http://www.ft.com/ontology/core/Thing",
+                        "http://www.ft.com/ontology/concept/Concept",
+                        "http://www.ft.com/ontology/person/Person"
+                    ],
+                    "authorities": [
+                        "TME"
+                    ],
+                    "directType": "http://www.ft.com/ontology/person/Person",
+                    "aliases": [
+                        "Michael Hunter"
+                    ],
+                    "lastModified": "2018-06-08T14:34:27Z",
+                    "publishReference": "job_dNZnTv32iM",
+                    "isFTAuthor": "true"
+                }
+            },
+            {
+                "_index": "concepts-0.2.2",
+                "_type": "people",
+                "_id": "40281396-8369-4699-ae48-1ccc0c931a72",
+                "_score": 15.63516,
+                "_source": {
+                    "id": "http://api.ft.com/things/40281396-8369-4699-ae48-1ccc0c931a72",
+                    "apiUrl": "http://api.ft.com/people/40281396-8369-4699-ae48-1ccc0c931a72",
+                    "prefLabel": "Eric Platt",
+                    "types": [
+                        "http://www.ft.com/ontology/core/Thing",
+                        "http://www.ft.com/ontology/concept/Concept",
+                        "http://www.ft.com/ontology/person/Person"
+                    ],
+                    "authorities": [
+                        "TME",
+                        "Smartlogic"
+                    ],
+                    "directType": "http://www.ft.com/ontology/person/Person",
+                    "aliases": [
+                        "Eric Platt"
+                    ],
+					"isFTAuthor": "false",
+					"isDeprecated": true
+                }
+            }
+        ]
+    }
+}`

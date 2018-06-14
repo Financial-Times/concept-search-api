@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 
+	"github.com/Financial-Times/concept-search-api/util"
 	"github.com/Financial-Times/transactionid-utils-go"
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v5"
@@ -49,23 +51,40 @@ func (service *esConceptFinder) FindConcept(writer http.ResponseWriter, request 
 		return
 	}
 
-	if criteria.Term == nil {
-		log.Error("The search criteria was not provided. Check that the JSON contains the 'term' field that is used to provide " +
-			"the search criteria")
+	if criteria.Term == nil && len(criteria.PrefLabels) == 0 {
+		log.Error("The required data not provided. Check that the JSON contains the 'term' field that is used to provide " +
+			"the search criteria, or the 'prefLabels' value(s) for providing exact match results")
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if criteria.Term != nil && len(criteria.PrefLabels) > 0 {
+		log.Error("Both, 'term' and 'prefLabels' provided. Just one of them should be provided")
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	defer request.Body.Close()
 
+	finalQuery := elastic.NewBoolQuery()
 	transactionID := transactionidutils.GetTransactionIDFromRequest(request)
-	log.Infof("Performing concept search for term=%v, transaction_id=%v", *criteria.Term, transactionID)
 
-	multiMatchQuery := elastic.NewMultiMatchQuery(criteria.Term, "prefLabel", "aliases").Type("most_fields")
-	termQueryForPreflabelExactMatches := elastic.NewTermQuery("prefLabel.raw", criteria.Term).Boost(2)
-	termQueryForAliasesExactMatches := elastic.NewTermQuery("aliases.raw", criteria.Term).Boost(2)
+	if criteria.Term != nil {
+		log.Infof("Performing concept search for term=%v, transaction_id=%v", *criteria.Term, transactionID)
 
-	finalQuery := elastic.NewBoolQuery().Should(multiMatchQuery, termQueryForPreflabelExactMatches, termQueryForAliasesExactMatches)
+		multiMatchQuery := elastic.NewMultiMatchQuery(criteria.Term, "prefLabel", "aliases").Type("most_fields")
+		termQueryForPreflabelExactMatches := elastic.NewTermQuery("prefLabel.raw", criteria.Term).Boost(2)
+		termQueryForAliasesExactMatches := elastic.NewTermQuery("aliases.raw", criteria.Term).Boost(2)
+
+		finalQuery = finalQuery.Should(multiMatchQuery, termQueryForPreflabelExactMatches, termQueryForAliasesExactMatches)
+	} else if len(criteria.PrefLabels) > 0 {
+		q, statusCode, err := createQueryForExactPrefLabel(request, &criteria, transactionID)
+		if err != nil {
+			log.WithError(err).Error("Error during creating query for prefLabel exact match")
+			writer.WriteHeader(statusCode)
+			return
+		}
+		finalQuery = q
+	}
 
 	// by default {include_deprecated in (nil, false)} the deprecated entities are excluded
 	if !isDeprecatedIncluded(request) {
@@ -150,4 +169,61 @@ func (service *esConceptFinder) esClient() esClient {
 	service.lockClient.RLock()
 	defer service.lockClient.RUnlock()
 	return service.client
+}
+
+func createQueryForExactPrefLabel(request *http.Request, criteria *searchCriteria, transactionID string) (*elastic.BoolQuery, int, error) {
+	log.Infof("Performing concept search for prefLabels=%v, transaction_id=%v", strings.Join(criteria.PrefLabels, ", "), transactionID)
+
+	finalQuery := elastic.NewBoolQuery()
+
+	conceptTypes, conceptTypesFound := util.GetMultipleValueQueryParameter(request, "type")
+	boostType, boostTypeFound, boostTypeErr := util.GetSingleValueQueryParameter(request, "boost", "authors")
+	if boostTypeErr != nil {
+		return nil, http.StatusBadRequest, boostTypeErr
+	}
+
+	// prepare prefLabels exact match query
+	prefLabelsQ := []elastic.Query{}
+	for _, prefLabel := range criteria.PrefLabels {
+		currentPrefLabelQueries := []elastic.Query{}
+		for _, prefLabelTerm := range strings.Fields(prefLabel) {
+			currentPrefLabelQueries = append(currentPrefLabelQueries, elastic.NewMatchQuery("prefLabel.edge_ngram", prefLabelTerm))
+		}
+		prefLabelsQ = append(prefLabelsQ, elastic.NewBoolQuery().Must(currentPrefLabelQueries...))
+	}
+	finalQuery = finalQuery.Must(elastic.NewBoolQuery().Should(prefLabelsQ...))
+
+	// add boost if it is requested
+	if boostTypeFound {
+		boostQ, err := getBoostQuery(boostType, conceptTypes)
+		if err != nil {
+			return nil, http.StatusBadRequest, err
+		}
+		finalQuery = finalQuery.Should(boostQ)
+	}
+
+	// filter for given concept types
+	if conceptTypesFound {
+		esTypes, err := util.ValidateAndConvertToEsTypes(conceptTypes)
+		if err != nil {
+			return nil, http.StatusBadRequest, err
+		}
+		typeFilter := elastic.NewTermsQuery("_type", util.ToTerms(esTypes)...) // filter by type
+		finalQuery = finalQuery.Filter(typeFilter)
+	}
+
+	return finalQuery, http.StatusOK, nil
+}
+
+func getBoostQuery(boostType string, conceptTypes []string) (elastic.Query, error) {
+	switch boostType {
+	case "authors":
+		err := util.ValidateForAuthorsSearch(conceptTypes, boostType)
+		if err != nil {
+			return nil, err
+		}
+		return elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8), nil
+	default:
+		return nil, util.ErrInvalidBoostTypeParameter
+	}
 }
