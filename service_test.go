@@ -152,7 +152,7 @@ func TestConceptFinder(t *testing.T) {
 	}
 }
 
-func TestConceptFinderForPrefLabel(t *testing.T) {
+func TestConceptFinderForExactMatch(t *testing.T) {
 
 	testCases := []struct {
 		testName      string
@@ -168,7 +168,7 @@ func TestConceptFinderForPrefLabel(t *testing.T) {
 			client:        mockClient{},
 			returnCode:    http.StatusBadRequest,
 			requestURL:    defaultRequestURL,
-			requestBody:   `{"term":"Foobar", "prefLabels":["testPrefLabel"]}`,
+			requestBody:   `{"term":"Foobar", "exactMatchTerms":["testTerm"]}`,
 			expectedScore: nil,
 		},
 		{
@@ -176,7 +176,7 @@ func TestConceptFinderForPrefLabel(t *testing.T) {
 			client:        mockClient{},
 			returnCode:    http.StatusBadRequest,
 			requestURL:    defaultRequestURL + "?boost=wrong_boost",
-			requestBody:   `{"prefLabels":["testPrefLabel"]}`,
+			requestBody:   `{"exactMatchTerms":["testTerm"]}`,
 			expectedScore: nil,
 		},
 		{
@@ -184,7 +184,7 @@ func TestConceptFinderForPrefLabel(t *testing.T) {
 			client:        mockClient{},
 			returnCode:    http.StatusBadRequest,
 			requestURL:    defaultRequestURL + "?boost=authors&type=http://www.ft.com/ontology/organisation/Organisation",
-			requestBody:   `{"prefLabels":["testPrefLabel"]}`,
+			requestBody:   `{"exactMatchTerms":["testTerm"]}`,
 			expectedScore: nil,
 		},
 		{
@@ -192,17 +192,17 @@ func TestConceptFinderForPrefLabel(t *testing.T) {
 			client:        mockClient{},
 			returnCode:    http.StatusBadRequest,
 			requestURL:    defaultRequestURL + "?boost=authors",
-			requestBody:   `{"prefLabels":["testPrefLabel"]}`,
+			requestBody:   `{"exactMatchTerms":["testTerm"]}`,
 			expectedScore: nil,
 		},
 		{
 			testName: "OkPeopleType",
 			client: mockClient{
-				queryResponse: validResponseExactPrefLabel,
+				queryResponse: validResponseExactMatch,
 			},
 			returnCode:    http.StatusOK,
 			requestURL:    defaultRequestURL + "?type=http://www.ft.com/ontology/person/Person",
-			requestBody:   `{"prefLabels":["Eric Platt","Michael Hunter","Adam Samson"]}`,
+			requestBody:   `{"exactMatchTerms":["Eric Platt","Michael Hunter","Adam Samson"]}`,
 			expectedUUIDs: []string{"f758ef56-c40a-3162-91aa-3e8a3aabc494", "64302452-e369-4ddb-88fa-9adc5124a38c", "9332270e-f959-3f55-9153-d30acd0d0a51", "40281396-8369-4699-ae48-1ccc0c931a72"},
 			expectedScore: []float64{28.629284, 28.060131, 25.467949, 15.63516},
 		},
@@ -313,7 +313,7 @@ func TestEsExactMatchImpl(t *testing.T) {
 	// prepare request and trigger this
 	req, _ := http.NewRequest("POST", "http://dummy_host/concepts?type=http://www.ft.com/ontology/person/Person", strings.NewReader(`
 		{
-			"prefLabels":[
+			"exactMatchTerms":[
 				"Platt Eric",
 				"Michael Hunter",
 				"Samson Adam"
@@ -695,7 +695,7 @@ var exactMatchTestingData = map[string]string{
 		],
 		"isFTAuthor": "false"}`,
 }
-var validResponseExactPrefLabel = `{
+var validResponseExactMatch = `{
     "took": 20,
     "timed_out": false,
     "_shards": {

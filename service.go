@@ -51,14 +51,14 @@ func (service *esConceptFinder) FindConcept(writer http.ResponseWriter, request 
 		return
 	}
 
-	if criteria.Term == nil && len(criteria.PrefLabels) == 0 {
+	if criteria.Term == nil && len(criteria.ExactMatchTerms) == 0 {
 		log.Error("The required data not provided. Check that the JSON contains the 'term' field that is used to provide " +
-			"the search criteria, or the 'prefLabels' value(s) for providing exact match results")
+			"the search criteria, or the 'exactMatchTerms' value(s) for providing exact match results")
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if criteria.Term != nil && len(criteria.PrefLabels) > 0 {
-		log.Error("Both, 'term' and 'prefLabels' provided. Just one of them should be provided")
+	if criteria.Term != nil && len(criteria.ExactMatchTerms) > 0 {
+		log.Error("Both, 'term' and 'exactMatchTerms' provided. Just one of them should be provided")
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -76,10 +76,10 @@ func (service *esConceptFinder) FindConcept(writer http.ResponseWriter, request 
 		termQueryForAliasesExactMatches := elastic.NewTermQuery("aliases.raw", criteria.Term).Boost(2)
 
 		finalQuery = finalQuery.Should(multiMatchQuery, termQueryForPreflabelExactMatches, termQueryForAliasesExactMatches)
-	} else if len(criteria.PrefLabels) > 0 {
-		q, statusCode, err := createQueryForExactPrefLabel(request, &criteria, transactionID)
+	} else if len(criteria.ExactMatchTerms) > 0 {
+		q, statusCode, err := createQueryForExactMatch(request, &criteria, transactionID)
 		if err != nil {
-			log.WithError(err).Error("Error during creating query for prefLabel exact match")
+			log.WithError(err).Error("Error during creating query for exact matching")
 			writer.WriteHeader(statusCode)
 			return
 		}
@@ -171,8 +171,8 @@ func (service *esConceptFinder) esClient() esClient {
 	return service.client
 }
 
-func createQueryForExactPrefLabel(request *http.Request, criteria *searchCriteria, transactionID string) (*elastic.BoolQuery, int, error) {
-	log.Infof("Performing concept search for prefLabels=%v, transaction_id=%v", strings.Join(criteria.PrefLabels, ", "), transactionID)
+func createQueryForExactMatch(request *http.Request, criteria *searchCriteria, transactionID string) (*elastic.BoolQuery, int, error) {
+	log.Infof("Performing concept search for aliases=%v, transaction_id=%v", strings.Join(criteria.ExactMatchTerms, ", "), transactionID)
 
 	finalQuery := elastic.NewBoolQuery()
 
@@ -182,16 +182,16 @@ func createQueryForExactPrefLabel(request *http.Request, criteria *searchCriteri
 		return nil, http.StatusBadRequest, boostTypeErr
 	}
 
-	// prepare prefLabels exact match query
-	prefLabelsQ := []elastic.Query{}
-	for _, prefLabel := range criteria.PrefLabels {
-		currentPrefLabelQueries := []elastic.Query{}
-		for _, prefLabelTerm := range strings.Fields(prefLabel) {
-			currentPrefLabelQueries = append(currentPrefLabelQueries, elastic.NewMatchQuery("aliases", prefLabelTerm))
+	// prepare exact match query
+	exactMatchQ := []elastic.Query{}
+	for _, termFields := range criteria.ExactMatchTerms {
+		currentTermFieldsQueries := []elastic.Query{}
+		for _, term := range strings.Fields(termFields) {
+			currentTermFieldsQueries = append(currentTermFieldsQueries, elastic.NewMatchQuery("aliases", term))
 		}
-		prefLabelsQ = append(prefLabelsQ, elastic.NewBoolQuery().Must(currentPrefLabelQueries...))
+		exactMatchQ = append(exactMatchQ, elastic.NewBoolQuery().Must(currentTermFieldsQueries...))
 	}
-	finalQuery = finalQuery.Must(elastic.NewBoolQuery().Should(prefLabelsQ...))
+	finalQuery = finalQuery.Must(elastic.NewBoolQuery().Should(exactMatchQ...))
 
 	// add boost if it is requested
 	if boostTypeFound {
