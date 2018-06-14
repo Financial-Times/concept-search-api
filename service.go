@@ -187,7 +187,7 @@ func createQueryForExactPrefLabel(request *http.Request, criteria *searchCriteri
 	for _, prefLabel := range criteria.PrefLabels {
 		currentPrefLabelQueries := []elastic.Query{}
 		for _, prefLabelTerm := range strings.Fields(prefLabel) {
-			currentPrefLabelQueries = append(currentPrefLabelQueries, elastic.NewMatchQuery("prefLabel.edge_ngram", prefLabelTerm))
+			currentPrefLabelQueries = append(currentPrefLabelQueries, elastic.NewMatchQuery("aliases", prefLabelTerm))
 		}
 		prefLabelsQ = append(prefLabelsQ, elastic.NewBoolQuery().Must(currentPrefLabelQueries...))
 	}
