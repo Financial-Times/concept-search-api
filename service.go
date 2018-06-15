@@ -190,8 +190,9 @@ func createQueryForExactMatch(request *http.Request, criteria *searchCriteria, t
 
 	conceptTypes, conceptTypesFound := util.GetMultipleValueQueryParameter(request, "type")
 	boostType, boostTypeFound, boostTypeErr := util.GetSingleValueQueryParameter(request, "boost", "authors")
-	if boostTypeErr != nil {
-		return nil, http.StatusBadRequest, boostTypeErr
+	extraFilterType, extraFilterTypeFound, extraFilterTypeErr := util.GetSingleValueQueryParameter(request, "filter", "authors")
+	if err := util.FirstError(boostTypeErr, extraFilterTypeErr); err != nil {
+		return nil, http.StatusBadRequest, err
 	}
 
 	// prepare exact match query
@@ -212,6 +213,15 @@ func createQueryForExactMatch(request *http.Request, criteria *searchCriteria, t
 			return nil, http.StatusBadRequest, err
 		}
 		finalQuery = finalQuery.Should(boostQ)
+	}
+
+	// add extra filter if it is requested
+	if extraFilterTypeFound {
+		extraFilterQ, err := getExtraFilterQuery(extraFilterType, conceptTypes)
+		if err != nil {
+			return nil, http.StatusBadRequest, err
+		}
+		finalQuery = finalQuery.Must(extraFilterQ)
 	}
 
 	// filter for given concept types
@@ -235,6 +245,19 @@ func getBoostQuery(boostType string, conceptTypes []string) (elastic.Query, erro
 			return nil, err
 		}
 		return elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8), nil
+	default:
+		return nil, util.ErrInvalidBoostTypeParameter
+	}
+}
+
+func getExtraFilterQuery(extraFilterType string, conceptTypes []string) (elastic.Query, error) {
+	switch extraFilterType {
+	case "authors":
+		err := util.ValidateForAuthorsSearch(conceptTypes, extraFilterType)
+		if err != nil {
+			return nil, err
+		}
+		return elastic.NewTermQuery("isFTAuthor", "true"), nil
 	default:
 		return nil, util.ErrInvalidBoostTypeParameter
 	}
