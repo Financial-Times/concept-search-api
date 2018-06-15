@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -155,13 +156,14 @@ func TestConceptFinder(t *testing.T) {
 func TestConceptFinderForExactMatch(t *testing.T) {
 
 	testCases := []struct {
-		testName      string
-		client        esClient
-		returnCode    int
-		requestURL    string
-		requestBody   string
-		expectedUUIDs []string
-		expectedScore []float64
+		testName            string
+		client              esClient
+		returnCode          int
+		requestURL          string
+		requestBody         string
+		expectedUUIDs       []string
+		expectedScore       []float64
+		extraAssertionLogic func(t *testing.T, searchResults searchResult)
 	}{
 		{
 			testName:      "TooMuchDataInPayload",
@@ -169,6 +171,14 @@ func TestConceptFinderForExactMatch(t *testing.T) {
 			returnCode:    http.StatusBadRequest,
 			requestURL:    defaultRequestURL,
 			requestBody:   `{"term":"Foobar", "exactMatchTerms":["testTerm"]}`,
+			expectedScore: nil,
+		},
+		{
+			testName:      "WrongType",
+			client:        mockClient{},
+			returnCode:    http.StatusBadRequest,
+			requestURL:    defaultRequestURL + "?type=http://www.ft.com/ontology/organisation/NotExisting",
+			requestBody:   `{"exactMatchTerms":["testTerm"]}`,
 			expectedScore: nil,
 		},
 		{
@@ -184,6 +194,14 @@ func TestConceptFinderForExactMatch(t *testing.T) {
 			client:        mockClient{},
 			returnCode:    http.StatusBadRequest,
 			requestURL:    defaultRequestURL + "?boost=authors&type=http://www.ft.com/ontology/organisation/Organisation",
+			requestBody:   `{"exactMatchTerms":["testTerm"]}`,
+			expectedScore: nil,
+		},
+		{
+			testName:      "WrongFilterTypeCombination",
+			client:        mockClient{},
+			returnCode:    http.StatusBadRequest,
+			requestURL:    defaultRequestURL + "?filter=authors&type=http://www.ft.com/ontology/organisation/Organisation",
 			requestBody:   `{"exactMatchTerms":["testTerm"]}`,
 			expectedScore: nil,
 		},
@@ -205,6 +223,38 @@ func TestConceptFinderForExactMatch(t *testing.T) {
 			requestBody:   `{"exactMatchTerms":["Eric Platt","Michael Hunter","Adam Samson"]}`,
 			expectedUUIDs: []string{"f758ef56-c40a-3162-91aa-3e8a3aabc494", "64302452-e369-4ddb-88fa-9adc5124a38c", "9332270e-f959-3f55-9153-d30acd0d0a51", "40281396-8369-4699-ae48-1ccc0c931a72"},
 			expectedScore: []float64{28.629284, 28.060131, 25.467949, 15.63516},
+			extraAssertionLogic: func(t *testing.T, searchResults searchResult) {
+				for _, res := range searchResults.Results {
+					_, err := strconv.ParseBool(res.IsFTAuthor)
+					assert.Error(t, err, "isFtAuthor shouldn't be included")
+				}
+			},
+		},
+		{
+			testName: "IncludeFtAuthorQueryParam",
+			client: mockClient{
+				queryResponse: validResponseExactMatch,
+			},
+			returnCode:    http.StatusOK,
+			requestURL:    defaultRequestURL + "?type=http://www.ft.com/ontology/person/Person&include_ft_author=true",
+			requestBody:   `{"exactMatchTerms":["Eric Platt","Michael Hunter","Adam Samson"]}`,
+			expectedUUIDs: []string{"f758ef56-c40a-3162-91aa-3e8a3aabc494", "64302452-e369-4ddb-88fa-9adc5124a38c", "9332270e-f959-3f55-9153-d30acd0d0a51", "40281396-8369-4699-ae48-1ccc0c931a72"},
+			expectedScore: []float64{28.629284, 28.060131, 25.467949, 15.63516},
+			extraAssertionLogic: func(t *testing.T, searchResults searchResult) {
+				notAuthorCounter := 0
+				authorCounter := 0
+				for _, res := range searchResults.Results {
+					isFtAuthor, err := strconv.ParseBool(res.IsFTAuthor)
+					assert.NoError(t, err)
+					if isFtAuthor {
+						authorCounter++
+					} else {
+						notAuthorCounter++
+					}
+				}
+				assert.Equal(t, 1, notAuthorCounter)
+				assert.Equal(t, 3, authorCounter)
+			},
 		},
 	}
 
@@ -240,6 +290,10 @@ func TestConceptFinderForExactMatch(t *testing.T) {
 			for i, score := range testCase.expectedScore {
 				assert.Equal(t, score, searchResults.Results[i].Score, "%s -> score expectation", testCase.testName)
 			}
+		}
+
+		if testCase.extraAssertionLogic != nil {
+			testCase.extraAssertionLogic(t, searchResults)
 		}
 
 	}
@@ -331,6 +385,60 @@ func TestEsExactMatchImpl(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Len(t, searchResults.Results, 3)
 	counter := 0
+	for _, res := range searchResults.Results {
+		if res.PrefLabel == "Eric Platt" ||
+			res.PrefLabel == "Michael Hunter" ||
+			res.PrefLabel == "Adam Samson" {
+			counter++
+		}
+	}
+	assert.Equal(t, 3, counter)
+
+	// check for `boost` queryParam
+	req, _ = http.NewRequest("POST", "http://dummy_host/concepts?type=http://www.ft.com/ontology/person/Person&include_deprecated=true&boost=authors", strings.NewReader(`
+		{
+			"exactMatchTerms":[
+				"Platt Eric",
+				"Michael Hunter",
+				"Samson Adam"
+			]
+		}`))
+	w = httptest.NewRecorder()
+	conceptFinder.FindConcept(w, req)
+
+	// check
+	assert.Equal(t, http.StatusOK, w.Code)
+	err = json.Unmarshal(w.Body.Bytes(), &searchResults)
+	assert.Equal(t, nil, err)
+	assert.Len(t, searchResults.Results, 4)
+	counter = 0
+	for _, res := range searchResults.Results {
+		if res.PrefLabel == "Eric Platt" ||
+			res.PrefLabel == "Michael Hunter" ||
+			res.PrefLabel == "Adam Samson" {
+			counter++
+		}
+	}
+	assert.Equal(t, 4, counter) // two "Eric Platt" concepts - one with ftAuthor=false and one with ftAuthor=true
+
+	// check for `boost` queryParam
+	req, _ = http.NewRequest("POST", "http://dummy_host/concepts?type=http://www.ft.com/ontology/person/Person&include_deprecated=true&filter=authors", strings.NewReader(`
+		{
+			"exactMatchTerms":[
+				"Platt Eric",
+				"Michael Hunter",
+				"Samson Adam"
+			]
+		}`))
+	w = httptest.NewRecorder()
+	conceptFinder.FindConcept(w, req)
+
+	// check
+	assert.Equal(t, http.StatusOK, w.Code)
+	err = json.Unmarshal(w.Body.Bytes(), &searchResults)
+	assert.Equal(t, nil, err)
+	assert.Len(t, searchResults.Results, 3)
+	counter = 0
 	for _, res := range searchResults.Results {
 		if res.PrefLabel == "Eric Platt" ||
 			res.PrefLabel == "Michael Hunter" ||
