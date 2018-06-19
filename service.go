@@ -154,12 +154,16 @@ func isDeprecatedIncluded(request *http.Request) bool {
 }
 
 func isFTAuthorIncluded(request *http.Request) bool {
-	queryParam := request.URL.Query().Get("include_ft_author")
-	includeFtAuthor, err := strconv.ParseBool(queryParam)
-	if err != nil {
-		return false
+	return isFieldIncluded(request, "authors")
+}
+
+func isFieldIncluded(request *http.Request, fieldValue string) bool {
+	for _, field := range request.URL.Query()["include_field"] {
+		if field == fieldValue {
+			return true
+		}
 	}
-	return includeFtAuthor
+	return false
 }
 
 func isScoreIncluded(request *http.Request) bool {

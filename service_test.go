@@ -236,7 +236,7 @@ func TestConceptFinderForExactMatch(t *testing.T) {
 				queryResponse: validResponseExactMatch,
 			},
 			returnCode:    http.StatusOK,
-			requestURL:    defaultRequestURL + "?type=http://www.ft.com/ontology/person/Person&include_ft_author=true",
+			requestURL:    defaultRequestURL + "?type=http://www.ft.com/ontology/person/Person&include_field=authors",
 			requestBody:   `{"exactMatchTerms":["Eric Platt","Michael Hunter","Adam Samson"]}`,
 			expectedUUIDs: []string{"f758ef56-c40a-3162-91aa-3e8a3aabc494", "64302452-e369-4ddb-88fa-9adc5124a38c", "9332270e-f959-3f55-9153-d30acd0d0a51", "40281396-8369-4699-ae48-1ccc0c931a72"},
 			expectedScore: []float64{28.629284, 28.060131, 25.467949, 15.63516},
