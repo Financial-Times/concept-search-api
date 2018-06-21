@@ -153,7 +153,7 @@ func TestConceptFinder(t *testing.T) {
 	}
 }
 
-func TestConceptFinderForExactMatch(t *testing.T) {
+func TestConceptFinderForBestMatch(t *testing.T) {
 
 	testCases := []struct {
 		testName            string
@@ -161,99 +161,169 @@ func TestConceptFinderForExactMatch(t *testing.T) {
 		returnCode          int
 		requestURL          string
 		requestBody         string
-		expectedUUIDs       []string
-		expectedScore       []float64
-		extraAssertionLogic func(t *testing.T, searchResults searchResult)
+		expectedUUIDs       map[string][]string
+		extraAssertionLogic func(t *testing.T, searchResults map[string][]concept)
 	}{
 		{
-			testName:      "TooMuchDataInPayload",
-			client:        mockClient{},
-			returnCode:    http.StatusBadRequest,
-			requestURL:    defaultRequestURL,
-			requestBody:   `{"term":"Foobar", "exactMatchTerms":["testTerm"]}`,
-			expectedScore: nil,
+			testName:    "TooMuchDataInPayload",
+			client:      mockClient{},
+			returnCode:  http.StatusBadRequest,
+			requestURL:  defaultRequestURL,
+			requestBody: `{"term":"Foobar", "bestMatchTerms":["testTerm"]}`,
 		},
 		{
-			testName:      "WrongType",
-			client:        mockClient{},
-			returnCode:    http.StatusBadRequest,
-			requestURL:    defaultRequestURL + "?type=http://www.ft.com/ontology/organisation/NotExisting",
-			requestBody:   `{"exactMatchTerms":["testTerm"]}`,
-			expectedScore: nil,
+			testName:    "WrongType",
+			client:      mockClient{},
+			returnCode:  http.StatusBadRequest,
+			requestURL:  defaultRequestURL,
+			requestBody: `{"bestMatchTerms":["testTerm"], "conceptTypes": ["http://www.ft.com/ontology/organisation/NotExisting"]}`,
 		},
 		{
-			testName:      "WrongBoost",
-			client:        mockClient{},
-			returnCode:    http.StatusBadRequest,
-			requestURL:    defaultRequestURL + "?boost=wrong_boost",
-			requestBody:   `{"exactMatchTerms":["testTerm"]}`,
-			expectedScore: nil,
+			testName:    "WrongBoost",
+			client:      mockClient{},
+			returnCode:  http.StatusBadRequest,
+			requestURL:  defaultRequestURL,
+			requestBody: `{"bestMatchTerms":["testTerm"], "boost":"wrong_boost"}`,
 		},
 		{
-			testName:      "WrongBoostTypeCombination",
-			client:        mockClient{},
-			returnCode:    http.StatusBadRequest,
-			requestURL:    defaultRequestURL + "?boost=authors&type=http://www.ft.com/ontology/organisation/Organisation",
-			requestBody:   `{"exactMatchTerms":["testTerm"]}`,
-			expectedScore: nil,
+			testName:    "WrongBoostTypeCombination",
+			client:      mockClient{},
+			returnCode:  http.StatusBadRequest,
+			requestURL:  defaultRequestURL,
+			requestBody: `{"bestMatchTerms":["testTerm"], "boost":"wrong_boost","conceptTypes": ["http://www.ft.com/ontology/organisation/Organisation"]}`,
 		},
 		{
-			testName:      "WrongFilterTypeCombination",
-			client:        mockClient{},
-			returnCode:    http.StatusBadRequest,
-			requestURL:    defaultRequestURL + "?filter=authors&type=http://www.ft.com/ontology/organisation/Organisation",
-			requestBody:   `{"exactMatchTerms":["testTerm"]}`,
-			expectedScore: nil,
+			testName:    "WrongFilterTypeCombination",
+			client:      mockClient{},
+			returnCode:  http.StatusBadRequest,
+			requestURL:  defaultRequestURL,
+			requestBody: `{"bestMatchTerms":["testTerm"], "filter": "authors", "conceptTypes": ["http://www.ft.com/ontology/organisation/Organisation"]}`,
 		},
 		{
-			testName:      "BoostWithoutType",
-			client:        mockClient{},
-			returnCode:    http.StatusBadRequest,
-			requestURL:    defaultRequestURL + "?boost=authors",
-			requestBody:   `{"exactMatchTerms":["testTerm"]}`,
-			expectedScore: nil,
+			testName:    "BoostWithoutType",
+			client:      mockClient{},
+			returnCode:  http.StatusBadRequest,
+			requestURL:  defaultRequestURL,
+			requestBody: `{"bestMatchTerms":["testTerm"], "boost": "authors"}`,
+		},
+		{
+			testName:    "ErrorFromES",
+			client:      failClient{},
+			returnCode:  http.StatusInternalServerError,
+			requestURL:  defaultRequestURL,
+			requestBody: `{"bestMatchTerms":["testTerm"]}`,
 		},
 		{
 			testName: "OkPeopleType",
 			client: mockClient{
-				queryResponse: validResponseExactMatch,
+				queryResponse: validResponseBestMatch,
 			},
-			returnCode:    http.StatusOK,
-			requestURL:    defaultRequestURL + "?type=http://www.ft.com/ontology/person/Person",
-			requestBody:   `{"exactMatchTerms":["Eric Platt","Michael Hunter","Adam Samson"]}`,
-			expectedUUIDs: []string{"f758ef56-c40a-3162-91aa-3e8a3aabc494", "64302452-e369-4ddb-88fa-9adc5124a38c", "9332270e-f959-3f55-9153-d30acd0d0a51", "40281396-8369-4699-ae48-1ccc0c931a72"},
-			expectedScore: []float64{28.629284, 28.060131, 25.467949, 15.63516},
-			extraAssertionLogic: func(t *testing.T, searchResults searchResult) {
-				for _, res := range searchResults.Results {
-					_, err := strconv.ParseBool(res.IsFTAuthor)
-					assert.Error(t, err, "isFtAuthor shouldn't be included")
+			returnCode:  http.StatusOK,
+			requestURL:  defaultRequestURL,
+			requestBody: `{"bestMatchTerms":["Adam Samson", "Eric Platt", "Michael Hunter"], "conceptTypes": ["http://www.ft.com/ontology/person/Person"]}`,
+			expectedUUIDs: map[string][]string{
+				"Adam Samson": []string{
+					"f758ef56-c40a-3162-91aa-3e8a3aabc494",
+				},
+				"Eric Platt": []string{
+					"40281396-8369-4699-ae48-1ccc0c931a72",
+				},
+				"Michael Hunter": []string{
+					"9332270e-f959-3f55-9153-d30acd0d0a51",
+				},
+			},
+			extraAssertionLogic: func(t *testing.T, searchResults map[string][]concept) {
+				for _, concepts := range searchResults {
+					for _, res := range concepts {
+						_, err := strconv.ParseBool(res.IsFTAuthor)
+						assert.Error(t, err, "isFtAuthor shouldn't be included")
+					}
+				}
+			},
+		},
+		{
+			testName: "OkPeopleTypePartialResults",
+			client: mockClient{
+				queryResponse: validResponseBestMatchPartialResults,
+			},
+			returnCode:  http.StatusOK,
+			requestURL:  defaultRequestURL,
+			requestBody: `{"bestMatchTerms":["Adam Samson", "Eric Platt", "Michael Hunter"], "conceptTypes": ["http://www.ft.com/ontology/person/Person"]}`,
+			expectedUUIDs: map[string][]string{
+				"Adam Samson": []string{
+					"f758ef56-c40a-3162-91aa-3e8a3aabc494",
+				},
+				"Eric Platt": []string{},
+				"Michael Hunter": []string{
+					"9332270e-f959-3f55-9153-d30acd0d0a51",
+				},
+			},
+			extraAssertionLogic: func(t *testing.T, searchResults map[string][]concept) {
+				for _, concepts := range searchResults {
+					for _, res := range concepts {
+						_, err := strconv.ParseBool(res.IsFTAuthor)
+						assert.Error(t, err, "isFtAuthor shouldn't be included")
+					}
+				}
+			},
+		},
+		{
+			testName: "OkPeopleTypeNoResults",
+			client: mockClient{
+				queryResponse: validResponseBestMatchNoResults,
+			},
+			returnCode:  http.StatusNotFound,
+			requestURL:  defaultRequestURL,
+			requestBody: `{"bestMatchTerms":["Adam Samson", "Eric Platt", "Michael Hunter"], "conceptTypes": ["http://www.ft.com/ontology/person/Person"]}`,
+			expectedUUIDs: map[string][]string{
+				"Adam Samson":    []string{},
+				"Eric Platt":     []string{},
+				"Michael Hunter": []string{},
+			},
+			extraAssertionLogic: func(t *testing.T, searchResults map[string][]concept) {
+				for _, concepts := range searchResults {
+					for _, res := range concepts {
+						_, err := strconv.ParseBool(res.IsFTAuthor)
+						assert.Error(t, err, "isFtAuthor shouldn't be included")
+					}
 				}
 			},
 		},
 		{
 			testName: "IncludeFtAuthorQueryParam",
 			client: mockClient{
-				queryResponse: validResponseExactMatch,
+				queryResponse: validResponseBestMatch,
 			},
-			returnCode:    http.StatusOK,
-			requestURL:    defaultRequestURL + "?type=http://www.ft.com/ontology/person/Person&include_field=authors",
-			requestBody:   `{"exactMatchTerms":["Eric Platt","Michael Hunter","Adam Samson"]}`,
-			expectedUUIDs: []string{"f758ef56-c40a-3162-91aa-3e8a3aabc494", "64302452-e369-4ddb-88fa-9adc5124a38c", "9332270e-f959-3f55-9153-d30acd0d0a51", "40281396-8369-4699-ae48-1ccc0c931a72"},
-			expectedScore: []float64{28.629284, 28.060131, 25.467949, 15.63516},
-			extraAssertionLogic: func(t *testing.T, searchResults searchResult) {
+			returnCode:  http.StatusOK,
+			requestURL:  defaultRequestURL + "?include_field=authors",
+			requestBody: `{"bestMatchTerms":["Adam Samson", "Eric Platt", "Michael Hunter"], "conceptTypes": ["http://www.ft.com/ontology/person/Person"]}`,
+			expectedUUIDs: map[string][]string{
+				"Adam Samson": []string{
+					"f758ef56-c40a-3162-91aa-3e8a3aabc494",
+				},
+				"Eric Platt": []string{
+					"40281396-8369-4699-ae48-1ccc0c931a72",
+				},
+				"Michael Hunter": []string{
+					"9332270e-f959-3f55-9153-d30acd0d0a51",
+				},
+			},
+			extraAssertionLogic: func(t *testing.T, searchResults map[string][]concept) {
 				notAuthorCounter := 0
 				authorCounter := 0
-				for _, res := range searchResults.Results {
-					isFtAuthor, err := strconv.ParseBool(res.IsFTAuthor)
-					assert.NoError(t, err)
-					if isFtAuthor {
-						authorCounter++
-					} else {
-						notAuthorCounter++
+				for _, concepts := range searchResults {
+					for _, res := range concepts {
+						isFtAuthor, err := strconv.ParseBool(res.IsFTAuthor)
+						assert.NoError(t, err)
+						if isFtAuthor {
+							authorCounter++
+						} else {
+							notAuthorCounter++
+						}
 					}
 				}
 				assert.Equal(t, 1, notAuthorCounter)
-				assert.Equal(t, 3, authorCounter)
+				assert.Equal(t, 2, authorCounter)
 			},
 		},
 	}
@@ -276,19 +346,15 @@ func TestConceptFinderForExactMatch(t *testing.T) {
 			continue
 		}
 
-		var searchResults searchResult
+		var searchResults map[string][]concept
 		err := json.Unmarshal(w.Body.Bytes(), &searchResults)
 		assert.Equal(t, nil, err, "%s -> expected no error", testCase.testName)
-		assert.Equal(t, len(testCase.expectedUUIDs), len(searchResults.Results), "%s -> different no. of results", testCase.testName)
-
-		for i, uuid := range testCase.expectedUUIDs {
-			assert.True(t, strings.Contains(searchResults.Results[i].ID, uuid), "%s -> uuid expectation", testCase.testName)
-		}
-
-		if testCase.requestURL == requestURLWithScore ||
-			testCase.requestURL == requestURLWithScoreAndDeprecated {
-			for i, score := range testCase.expectedScore {
-				assert.Equal(t, score, searchResults.Results[i].Score, "%s -> score expectation", testCase.testName)
+		assert.Equal(t, len(testCase.expectedUUIDs), len(searchResults), "%s -> different no. of results", testCase.testName)
+		for searchTerm, searchTermExpectedUUIDs := range testCase.expectedUUIDs {
+			actualTermUUIDs, ok := searchResults[searchTerm]
+			assert.True(t, ok, "%s -> expected values for %s", testCase.testName, searchTerm)
+			for i, uuid := range searchTermExpectedUUIDs {
+				assert.Contains(t, actualTermUUIDs[i].ID, uuid, "%s -> uuid expectation", testCase.testName)
 			}
 		}
 
@@ -340,7 +406,7 @@ func TestEsQueryScore(t *testing.T) {
 	assert.Equal(t, "Anna Whitwham", searchResults.Results[0].PrefLabel)
 }
 
-func TestEsExactMatchImpl(t *testing.T) {
+func TestEsBestMatchImpl(t *testing.T) {
 	// create ES client
 	ec, err := elastic.NewClient(
 		elastic.SetURL(getElasticSearchTestURL(t)),
@@ -349,59 +415,69 @@ func TestEsExactMatchImpl(t *testing.T) {
 	assert.NoError(t, err, "expected no error for ES client")
 
 	// cleanup for accuracy
-	ec.DeleteIndex(exactMatchIndexName).Do(context.Background())
-	err = createIndex(ec, "service/test/mapping.json", exactMatchIndexName)
+	ec.DeleteIndex(bestMatchIndexName).Do(context.Background())
+	err = createIndex(ec, "service/test/mapping.json", bestMatchIndexName)
 
 	// store testing data
-	for uuid, conceptBody := range exactMatchTestingData {
+	for uuid, conceptBody := range bestMatchTestingData {
 		_, e := ec.Index().
-			Index(exactMatchIndexName).
+			Index(bestMatchIndexName).
 			Type("people").
 			BodyString(conceptBody).
 			Id(uuid).
 			Do(context.Background())
 		assert.NoError(t, e, "expected no error for ES client")
 	}
-	ec.Refresh(exactMatchIndexName).Do(context.TODO())
+	ec.Refresh(bestMatchIndexName).Do(context.TODO())
 
 	// prepare request and trigger this
-	req, _ := http.NewRequest("POST", "http://dummy_host/concepts?type=http://www.ft.com/ontology/person/Person", strings.NewReader(`
+	req, _ := http.NewRequest("POST", "http://dummy_host/concepts?include_deprecated=true", strings.NewReader(`
 		{
-			"exactMatchTerms":[
+			"bestMatchTerms":[
 				"Platt Eric",
 				"Michael Hunter",
 				"Samson Adam"
-			]
+			],
+			"conceptTypes": ["http://www.ft.com/ontology/person/Person"]
 		}`))
 	w := httptest.NewRecorder()
-	conceptFinder := newConceptFinder(exactMatchIndexName, 10)
+	conceptFinder := newConceptFinder(bestMatchIndexName, 10)
 	conceptFinder.SetElasticClient(ec)
 	conceptFinder.FindConcept(w, req)
 
 	// check
 	assert.Equal(t, http.StatusOK, w.Code)
-	var searchResults searchResult
+	var searchResults map[string][]concept
 	err = json.Unmarshal(w.Body.Bytes(), &searchResults)
 	assert.Equal(t, nil, err)
-	assert.Len(t, searchResults.Results, 3)
-	counter := 0
-	for _, res := range searchResults.Results {
-		if res.PrefLabel == "Eric Platt" ||
-			res.PrefLabel == "Michael Hunter" ||
-			res.PrefLabel == "Adam Samson" {
-			counter++
-		}
-	}
-	assert.Equal(t, 3, counter)
+	assert.Len(t, searchResults, 3)
 
-	// check for `boost` queryParam
-	req, _ = http.NewRequest("POST", "http://dummy_host/concepts?type=http://www.ft.com/ontology/person/Person&include_deprecated=true&boost=authors", strings.NewReader(`
+	// assert for uuids
+	ericPlattConcepts, ok := searchResults["Platt Eric"]
+	assert.True(t, ok, "expected results for Platt Eric")
+	assert.Len(t, ericPlattConcepts, 1, "expected 1 concept for Platt Eric")
+	assert.Equal(t, "http://api.ft.com/things/64302452-e369-4ddb-88fa-9adc5124a38c", ericPlattConcepts[0].ID)
+
+	adamSamsonConcepts, ok := searchResults["Samson Adam"]
+	assert.True(t, ok, "expected results for Adam Samson")
+	assert.Len(t, adamSamsonConcepts, 1, "expected 1 concept for Adam Samson")
+	assert.Equal(t, "http://api.ft.com/things/f758ef56-c40a-3162-91aa-3e8a3aabc494", adamSamsonConcepts[0].ID)
+
+	michaelHunterConcepts, ok := searchResults["Michael Hunter"]
+	assert.True(t, ok, "expected results for Michael Hunter")
+	assert.Len(t, michaelHunterConcepts, 1, "expected 1 concept for Michael Hunter")
+	assert.Equal(t, "http://api.ft.com/things/9332270e-f959-3f55-9153-d30acd0d0a51", michaelHunterConcepts[0].ID)
+
+	// check for `boost`
+	req, _ = http.NewRequest("POST", "http://dummy_host/concepts", strings.NewReader(`
 		{
-			"exactMatchTerms":[
+			"bestMatchTerms":[
 				"Platt Eric",
 				"Michael Hunter",
 				"Samson Adam"
-			]
+			],
+			"conceptTypes": ["http://www.ft.com/ontology/person/Person"],
+			"boost": "authors"
 		}`))
 	w = httptest.NewRecorder()
 	conceptFinder.FindConcept(w, req)
@@ -410,25 +486,33 @@ func TestEsExactMatchImpl(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	err = json.Unmarshal(w.Body.Bytes(), &searchResults)
 	assert.Equal(t, nil, err)
-	assert.Len(t, searchResults.Results, 4)
-	counter = 0
-	for _, res := range searchResults.Results {
-		if res.PrefLabel == "Eric Platt" ||
-			res.PrefLabel == "Michael Hunter" ||
-			res.PrefLabel == "Adam Samson" {
-			counter++
-		}
-	}
-	assert.Equal(t, 4, counter) // two "Eric Platt" concepts - one with ftAuthor=false and one with ftAuthor=true
+	assert.Len(t, searchResults, 3)
 
-	// check for `boost` queryParam
-	req, _ = http.NewRequest("POST", "http://dummy_host/concepts?type=http://www.ft.com/ontology/person/Person&include_deprecated=true&filter=authors", strings.NewReader(`
+	ericPlattConcepts, ok = searchResults["Platt Eric"]
+	assert.True(t, ok, "expected results for Platt Eric")
+	assert.Len(t, ericPlattConcepts, 1, "expected 1 concept for Platt Eric")
+	assert.Equal(t, "http://api.ft.com/things/64302452-e369-4ddb-88fa-9adc5124a38c", ericPlattConcepts[0].ID)
+
+	adamSamsonConcepts, ok = searchResults["Samson Adam"]
+	assert.True(t, ok, "expected results for Adam Samson")
+	assert.Len(t, adamSamsonConcepts, 1, "expected 1 concept for Adam Samson")
+	assert.Equal(t, "http://api.ft.com/things/f758ef56-c40a-3162-91aa-3e8a3aabc494", adamSamsonConcepts[0].ID)
+
+	michaelHunterConcepts, ok = searchResults["Michael Hunter"]
+	assert.True(t, ok, "expected results for Michael Hunter")
+	assert.Len(t, michaelHunterConcepts, 1, "expected 1 concept for Michael Hunter")
+	assert.Equal(t, "http://api.ft.com/things/9332270e-f959-3f55-9153-d30acd0d0a51", michaelHunterConcepts[0].ID)
+
+	// check for `filter`
+	req, _ = http.NewRequest("POST", "http://dummy_host/concepts", strings.NewReader(`
 		{
-			"exactMatchTerms":[
+			"bestMatchTerms":[
 				"Platt Eric",
 				"Michael Hunter",
 				"Samson Adam"
-			]
+			],
+			"conceptTypes": ["http://www.ft.com/ontology/person/Person"],
+			"filter": "authors"
 		}`))
 	w = httptest.NewRecorder()
 	conceptFinder.FindConcept(w, req)
@@ -437,16 +521,22 @@ func TestEsExactMatchImpl(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	err = json.Unmarshal(w.Body.Bytes(), &searchResults)
 	assert.Equal(t, nil, err)
-	assert.Len(t, searchResults.Results, 3)
-	counter = 0
-	for _, res := range searchResults.Results {
-		if res.PrefLabel == "Eric Platt" ||
-			res.PrefLabel == "Michael Hunter" ||
-			res.PrefLabel == "Adam Samson" {
-			counter++
-		}
-	}
-	assert.Equal(t, 3, counter)
+	assert.Len(t, searchResults, 3)
+
+	ericPlattConcepts, ok = searchResults["Platt Eric"]
+	assert.True(t, ok, "expected results for Platt Eric")
+	assert.Len(t, ericPlattConcepts, 1, "expected 1 concept for Platt Eric")
+	assert.Equal(t, "http://api.ft.com/things/64302452-e369-4ddb-88fa-9adc5124a38c", ericPlattConcepts[0].ID)
+
+	adamSamsonConcepts, ok = searchResults["Samson Adam"]
+	assert.True(t, ok, "expected results for Adam Samson")
+	assert.Len(t, adamSamsonConcepts, 1, "expected 1 concept for Adam Samson")
+	assert.Equal(t, "http://api.ft.com/things/f758ef56-c40a-3162-91aa-3e8a3aabc494", adamSamsonConcepts[0].ID)
+
+	michaelHunterConcepts, ok = searchResults["Michael Hunter"]
+	assert.True(t, ok, "expected results for Michael Hunter")
+	assert.Len(t, michaelHunterConcepts, 1, "expected 1 concept for Michael Hunter")
+	assert.Equal(t, "http://api.ft.com/things/9332270e-f959-3f55-9153-d30acd0d0a51", michaelHunterConcepts[0].ID)
 }
 
 func getElasticSearchTestURL(t *testing.T) string {
@@ -480,6 +570,10 @@ func (tc failClient) query(indexName string, query elastic.Query, resultLimit in
 	return &elastic.SearchResult{}, errors.New("Test ES failure")
 }
 
+func (tc failClient) multiSearchQuery(indexName string, searchRequests ...*elastic.SearchRequest) (*elastic.MultiSearchResult, error) {
+	return &elastic.MultiSearchResult{}, errors.New("Test ES failure")
+}
+
 func (tc failClient) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
 	return &elastic.ClusterHealthResponse{}, errors.New("Test ES failure")
 }
@@ -490,6 +584,15 @@ type mockClient struct {
 
 func (mc mockClient) query(indexName string, query elastic.Query, resultLimit int) (*elastic.SearchResult, error) {
 	var searchResult elastic.SearchResult
+	err := json.Unmarshal([]byte(mc.queryResponse), &searchResult)
+	if err != nil {
+		log.Printf("%v \n", err.Error())
+	}
+	return &searchResult, nil
+}
+
+func (mc mockClient) multiSearchQuery(indexName string, searchRequests ...*elastic.SearchRequest) (*elastic.MultiSearchResult, error) {
+	var searchResult elastic.MultiSearchResult
 	err := json.Unmarshal([]byte(mc.queryResponse), &searchResult)
 	if err != nil {
 		log.Printf("%v \n", err.Error())
@@ -700,8 +803,8 @@ var filterScoreTestingData = map[string]string{
 }`,
 }
 
-var exactMatchIndexName = "exact_match_index"
-var exactMatchTestingData = map[string]string{
+var bestMatchIndexName = "exact_match_index"
+var bestMatchTestingData = map[string]string{
 	"f758ef56-c40a-3162-91aa-3e8a3aabc494": `{
 		"id": "http://api.ft.com/things/f758ef56-c40a-3162-91aa-3e8a3aabc494",
 		"apiUrl": "http://api.ft.com/people/f758ef56-c40a-3162-91aa-3e8a3aabc494",
@@ -803,123 +906,312 @@ var exactMatchTestingData = map[string]string{
 		],
 		"isFTAuthor": "false"}`,
 }
-var validResponseExactMatch = `{
-    "took": 20,
-    "timed_out": false,
-    "_shards": {
-        "total": 5,
-        "successful": 5,
-        "failed": 0
-    },
-    "hits": {
-        "total": 4,
-        "max_score": 28.629284,
-        "hits": [
-            {
-                "_index": "concepts-0.2.2",
-                "_type": "people",
-                "_id": "f758ef56-c40a-3162-91aa-3e8a3aabc494",
-                "_score": 28.629284,
-                "_source": {
-                    "id": "http://api.ft.com/things/f758ef56-c40a-3162-91aa-3e8a3aabc494",
-                    "apiUrl": "http://api.ft.com/people/f758ef56-c40a-3162-91aa-3e8a3aabc494",
-                    "prefLabel": "Adam Samson",
-                    "types": [
-                        "http://www.ft.com/ontology/core/Thing",
-                        "http://www.ft.com/ontology/concept/Concept",
-                        "http://www.ft.com/ontology/person/Person"
-                    ],
-                    "authorities": [
-                        "TME"
-                    ],
-                    "directType": "http://www.ft.com/ontology/person/Person",
-                    "aliases": [
-                        "Adam Samson"
-                    ],
-                    "lastModified": "2018-06-08T14:34:22Z",
-                    "publishReference": "job_dNZnTv32iM",
-                    "isFTAuthor": "true"
-                }
+var validResponseBestMatch = `{
+    "responses": [
+        {
+            "took": 46,
+            "timed_out": false,
+            "_shards": {
+                "total": 5,
+                "successful": 5,
+                "failed": 0
             },
-            {
-                "_index": "concepts-0.2.2",
-                "_type": "people",
-                "_id": "64302452-e369-4ddb-88fa-9adc5124a38c",
-                "_score": 28.060131,
-                "_source": {
-                    "id": "http://api.ft.com/things/64302452-e369-4ddb-88fa-9adc5124a38c",
-                    "apiUrl": "http://api.ft.com/people/64302452-e369-4ddb-88fa-9adc5124a38c",
-                    "prefLabel": "Eric Platt",
-                    "types": [
-                        "http://www.ft.com/ontology/core/Thing",
-                        "http://www.ft.com/ontology/concept/Concept",
-                        "http://www.ft.com/ontology/person/Person"
-                    ],
-                    "authorities": [
-                        "TME",
-                        "Smartlogic"
-                    ],
-                    "directType": "http://www.ft.com/ontology/person/Person",
-                    "aliases": [
-                        "Eric Platt"
-                    ],
-                    "lastModified": "2018-06-08T14:34:29Z",
-                    "publishReference": "tid_fQ3qCMiEvC",
-                    "isFTAuthor": "true"
-                }
+            "hits": {
+                "total": 1,
+                "max_score": 16.835419,
+                "hits": [
+                    {
+                        "_index": "concepts-0.2.2",
+                        "_type": "people",
+                        "_id": "f758ef56-c40a-3162-91aa-3e8a3aabc494",
+                        "_score": 16.835419,
+                        "_source": {
+                            "id": "http://api.ft.com/things/f758ef56-c40a-3162-91aa-3e8a3aabc494",
+                            "apiUrl": "http://api.ft.com/people/f758ef56-c40a-3162-91aa-3e8a3aabc494",
+                            "prefLabel": "Adam Samson",
+                            "types": [
+                                "http://www.ft.com/ontology/core/Thing",
+                                "http://www.ft.com/ontology/concept/Concept",
+                                "http://www.ft.com/ontology/person/Person"
+                            ],
+                            "authorities": [
+                                "TME"
+                            ],
+                            "directType": "http://www.ft.com/ontology/person/Person",
+                            "aliases": [
+                                "Adam Samson"
+                            ],
+                            "lastModified": "2018-06-08T14:34:22Z",
+                            "publishReference": "job_dNZnTv32iM",
+                            "isFTAuthor": "true"
+                        }
+                    }
+                ]
             },
-            {
-                "_index": "concepts-0.2.2",
-                "_type": "people",
-                "_id": "9332270e-f959-3f55-9153-d30acd0d0a51",
-                "_score": 25.467949,
-                "_source": {
-                    "id": "http://api.ft.com/things/9332270e-f959-3f55-9153-d30acd0d0a51",
-                    "apiUrl": "http://api.ft.com/people/9332270e-f959-3f55-9153-d30acd0d0a51",
-                    "prefLabel": "Michael Hunter",
-                    "types": [
-                        "http://www.ft.com/ontology/core/Thing",
-                        "http://www.ft.com/ontology/concept/Concept",
-                        "http://www.ft.com/ontology/person/Person"
-                    ],
-                    "authorities": [
-                        "TME"
-                    ],
-                    "directType": "http://www.ft.com/ontology/person/Person",
-                    "aliases": [
-                        "Michael Hunter"
-                    ],
-                    "lastModified": "2018-06-08T14:34:27Z",
-                    "publishReference": "job_dNZnTv32iM",
-                    "isFTAuthor": "true"
-                }
+            "status": 200
+        },
+        {
+            "took": 41,
+            "timed_out": false,
+            "_shards": {
+                "total": 5,
+                "successful": 5,
+                "failed": 0
             },
-            {
-                "_index": "concepts-0.2.2",
-                "_type": "people",
-                "_id": "40281396-8369-4699-ae48-1ccc0c931a72",
-                "_score": 15.63516,
-                "_source": {
-                    "id": "http://api.ft.com/things/40281396-8369-4699-ae48-1ccc0c931a72",
-                    "apiUrl": "http://api.ft.com/people/40281396-8369-4699-ae48-1ccc0c931a72",
-                    "prefLabel": "Eric Platt",
-                    "types": [
-                        "http://www.ft.com/ontology/core/Thing",
-                        "http://www.ft.com/ontology/concept/Concept",
-                        "http://www.ft.com/ontology/person/Person"
-                    ],
-                    "authorities": [
-                        "TME",
-                        "Smartlogic"
-                    ],
-                    "directType": "http://www.ft.com/ontology/person/Person",
-                    "aliases": [
-                        "Eric Platt"
-                    ],
-					"isFTAuthor": "false",
-					"isDeprecated": true
-                }
-            }
-        ]
-    }
+            "hits": {
+                "total": 2,
+                "max_score": 16.62907,
+                "hits": [
+                    {
+                        "_index": "concepts-0.2.2",
+                        "_type": "people",
+                        "_id": "40281396-8369-4699-ae48-1ccc0c931a72",
+                        "_score": 16.62907,
+                        "_source": {
+                            "id": "http://api.ft.com/things/40281396-8369-4699-ae48-1ccc0c931a72",
+                            "apiUrl": "http://api.ft.com/people/40281396-8369-4699-ae48-1ccc0c931a72",
+                            "prefLabel": "Eric Platt",
+                            "types": [
+                                "http://www.ft.com/ontology/core/Thing",
+                                "http://www.ft.com/ontology/concept/Concept",
+                                "http://www.ft.com/ontology/person/Person"
+                            ],
+                            "authorities": [
+                                "TME",
+                                "Smartlogic"
+                            ],
+                            "directType": "http://www.ft.com/ontology/person/Person",
+                            "aliases": [
+                                "Eric Platt"
+                            ],
+                            "isFTAuthor": "false"
+                        }
+                    },
+                    {
+                        "_index": "concepts-0.2.2",
+                        "_type": "people",
+                        "_id": "64302452-e369-4ddb-88fa-9adc5124a38c",
+                        "_score": 16.264492,
+                        "_source": {
+                            "id": "http://api.ft.com/things/64302452-e369-4ddb-88fa-9adc5124a38c",
+                            "apiUrl": "http://api.ft.com/people/64302452-e369-4ddb-88fa-9adc5124a38c",
+                            "prefLabel": "Eric Platt",
+                            "types": [
+                                "http://www.ft.com/ontology/core/Thing",
+                                "http://www.ft.com/ontology/concept/Concept",
+                                "http://www.ft.com/ontology/person/Person"
+                            ],
+                            "authorities": [
+                                "TME",
+                                "Smartlogic"
+                            ],
+                            "directType": "http://www.ft.com/ontology/person/Person",
+                            "aliases": [
+                                "Eric Platt"
+                            ],
+                            "lastModified": "2018-06-08T14:34:29Z",
+                            "publishReference": "tid_fQ3qCMiEvC",
+                            "isFTAuthor": "true"
+                        }
+                    }
+                ]
+            },
+            "status": 200
+        },
+        {
+            "took": 8,
+            "timed_out": false,
+            "_shards": {
+                "total": 5,
+                "successful": 5,
+                "failed": 0
+            },
+            "hits": {
+                "total": 1,
+                "max_score": 12.8185625,
+                "hits": [
+                    {
+                        "_index": "concepts-0.2.2",
+                        "_type": "people",
+                        "_id": "9332270e-f959-3f55-9153-d30acd0d0a51",
+                        "_score": 12.8185625,
+                        "_source": {
+                            "id": "http://api.ft.com/things/9332270e-f959-3f55-9153-d30acd0d0a51",
+                            "apiUrl": "http://api.ft.com/people/9332270e-f959-3f55-9153-d30acd0d0a51",
+                            "prefLabel": "Michael Hunter",
+                            "types": [
+                                "http://www.ft.com/ontology/core/Thing",
+                                "http://www.ft.com/ontology/concept/Concept",
+                                "http://www.ft.com/ontology/person/Person"
+                            ],
+                            "authorities": [
+                                "TME"
+                            ],
+                            "directType": "http://www.ft.com/ontology/person/Person",
+                            "aliases": [
+                                "Michael Hunter"
+                            ],
+                            "lastModified": "2018-06-08T14:34:27Z",
+                            "publishReference": "job_dNZnTv32iM",
+                            "isFTAuthor": "true"
+                        }
+                    }
+                ]
+            },
+            "status": 200
+        }
+    ]
+}`
+
+var validResponseBestMatchPartialResults = `{
+    "responses": [
+        {
+            "took": 46,
+            "timed_out": false,
+            "_shards": {
+                "total": 5,
+                "successful": 5,
+                "failed": 0
+            },
+            "hits": {
+                "total": 1,
+                "max_score": 16.835419,
+                "hits": [
+                    {
+                        "_index": "concepts-0.2.2",
+                        "_type": "people",
+                        "_id": "f758ef56-c40a-3162-91aa-3e8a3aabc494",
+                        "_score": 16.835419,
+                        "_source": {
+                            "id": "http://api.ft.com/things/f758ef56-c40a-3162-91aa-3e8a3aabc494",
+                            "apiUrl": "http://api.ft.com/people/f758ef56-c40a-3162-91aa-3e8a3aabc494",
+                            "prefLabel": "Adam Samson",
+                            "types": [
+                                "http://www.ft.com/ontology/core/Thing",
+                                "http://www.ft.com/ontology/concept/Concept",
+                                "http://www.ft.com/ontology/person/Person"
+                            ],
+                            "authorities": [
+                                "TME"
+                            ],
+                            "directType": "http://www.ft.com/ontology/person/Person",
+                            "aliases": [
+                                "Adam Samson"
+                            ],
+                            "lastModified": "2018-06-08T14:34:22Z",
+                            "publishReference": "job_dNZnTv32iM",
+                            "isFTAuthor": "true"
+                        }
+                    }
+                ]
+            },
+            "status": 200
+        },
+        {
+            "took": 41,
+            "timed_out": false,
+            "_shards": {
+                "total": 5,
+                "successful": 5,
+                "failed": 0
+            },
+            "hits": {
+                "total": 0,
+                "max_score": null,
+                "hits": []
+            },
+            "status": 200
+        },
+        {
+            "took": 8,
+            "timed_out": false,
+            "_shards": {
+                "total": 5,
+                "successful": 5,
+                "failed": 0
+            },
+            "hits": {
+                "total": 1,
+                "max_score": 12.8185625,
+                "hits": [
+                    {
+                        "_index": "concepts-0.2.2",
+                        "_type": "people",
+                        "_id": "9332270e-f959-3f55-9153-d30acd0d0a51",
+                        "_score": 12.8185625,
+                        "_source": {
+                            "id": "http://api.ft.com/things/9332270e-f959-3f55-9153-d30acd0d0a51",
+                            "apiUrl": "http://api.ft.com/people/9332270e-f959-3f55-9153-d30acd0d0a51",
+                            "prefLabel": "Michael Hunter",
+                            "types": [
+                                "http://www.ft.com/ontology/core/Thing",
+                                "http://www.ft.com/ontology/concept/Concept",
+                                "http://www.ft.com/ontology/person/Person"
+                            ],
+                            "authorities": [
+                                "TME"
+                            ],
+                            "directType": "http://www.ft.com/ontology/person/Person",
+                            "aliases": [
+                                "Michael Hunter"
+                            ],
+                            "lastModified": "2018-06-08T14:34:27Z",
+                            "publishReference": "job_dNZnTv32iM",
+                            "isFTAuthor": "true"
+                        }
+                    }
+                ]
+            },
+            "status": 200
+        }
+    ]
+}`
+var validResponseBestMatchNoResults = `{
+    "responses": [
+        {
+            "took": 46,
+            "timed_out": false,
+            "_shards": {
+                "total": 5,
+                "successful": 5,
+                "failed": 0
+            },
+            "hits": {
+                "total": 0,
+                "max_score": null,
+                "hits": []
+            },
+            "status": 200
+        },
+        {
+            "took": 41,
+            "timed_out": false,
+            "_shards": {
+                "total": 5,
+                "successful": 5,
+                "failed": 0
+            },
+            "hits": {
+                "total": 0,
+                "max_score": null,
+                "hits": []
+            },
+            "status": 200
+        },
+        {
+            "took": 8,
+            "timed_out": false,
+            "_shards": {
+                "total": 5,
+                "successful": 5,
+                "failed": 0
+            },
+            "hits": {
+                "total": 0,
+                "max_score": null,
+                "hits": []
+            },
+            "status": 200
+        }
+    ]
 }`

@@ -51,40 +51,37 @@ func (service *esConceptFinder) FindConcept(writer http.ResponseWriter, request 
 		return
 	}
 
-	if criteria.Term == nil && len(criteria.ExactMatchTerms) == 0 {
+	if criteria.Term == nil && len(criteria.BestMatchTerms) == 0 {
 		log.Error("The required data not provided. Check that the JSON contains the 'term' field that is used to provide " +
-			"the search criteria, or the 'exactMatchTerms' value(s) for providing exact match results")
+			"the search criteria, or the 'bestMatchTerms' value(s) for providing best match results")
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if criteria.Term != nil && len(criteria.ExactMatchTerms) > 0 {
-		log.Error("Both, 'term' and 'exactMatchTerms' provided. Just one of them should be provided")
+	if criteria.Term != nil && len(criteria.BestMatchTerms) > 0 {
+		log.Error("Both, 'term' and 'bestMatchTerms' provided. Just one of them should be provided")
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	defer request.Body.Close()
 
-	finalQuery := elastic.NewBoolQuery()
 	transactionID := transactionidutils.GetTransactionIDFromRequest(request)
 
 	if criteria.Term != nil {
-		log.Infof("Performing concept search for term=%v, transaction_id=%v", *criteria.Term, transactionID)
-
-		multiMatchQuery := elastic.NewMultiMatchQuery(criteria.Term, "prefLabel", "aliases").Type("most_fields")
-		termQueryForPreflabelExactMatches := elastic.NewTermQuery("prefLabel.raw", criteria.Term).Boost(2)
-		termQueryForAliasesExactMatches := elastic.NewTermQuery("aliases.raw", criteria.Term).Boost(2)
-
-		finalQuery = finalQuery.Should(multiMatchQuery, termQueryForPreflabelExactMatches, termQueryForAliasesExactMatches)
-	} else if len(criteria.ExactMatchTerms) > 0 {
-		q, statusCode, err := createQueryForExactMatch(request, &criteria, transactionID)
-		if err != nil {
-			log.WithError(err).Error("Error during creating query for exact matching")
-			writer.WriteHeader(statusCode)
-			return
-		}
-		finalQuery = q
+		service.findConceptsWithTerm(writer, request, &criteria, transactionID)
+	} else if len(criteria.BestMatchTerms) > 0 {
+		service.findConceptsWithBestMatch(writer, request, &criteria, transactionID)
 	}
+}
+
+func (service *esConceptFinder) findConceptsWithTerm(writer http.ResponseWriter, request *http.Request, criteria *searchCriteria, transactionID string) {
+	log.Infof("Performing concept search for term=%v, transaction_id=%v", *criteria.Term, transactionID)
+
+	multiMatchQuery := elastic.NewMultiMatchQuery(criteria.Term, "prefLabel", "aliases").Type("most_fields")
+	termQueryForPreflabelExactMatches := elastic.NewTermQuery("prefLabel.raw", criteria.Term).Boost(2)
+	termQueryForAliasesExactMatches := elastic.NewTermQuery("aliases.raw", criteria.Term).Boost(2)
+
+	finalQuery := elastic.NewBoolQuery().Should(multiMatchQuery, termQueryForPreflabelExactMatches, termQueryForAliasesExactMatches)
 
 	// by default {include_deprecated in (nil, false)} the deprecated entities are excluded
 	if !isDeprecatedIncluded(request) {
@@ -117,6 +114,53 @@ func (service *esConceptFinder) FindConcept(writer http.ResponseWriter, request 
 		}
 	} else {
 		writer.WriteHeader(http.StatusNotFound)
+	}
+}
+
+func (service *esConceptFinder) findConceptsWithBestMatch(writer http.ResponseWriter, request *http.Request, criteria *searchCriteria, transactionID string) {
+	searchWrappers, statusCode, err := createSearchRequestsForBestMatch(request, criteria, transactionID, service.searchResultLimit)
+	if err != nil {
+		log.WithError(err).Error("Error during query for best matching")
+		writer.WriteHeader(statusCode)
+		return
+	}
+
+	searchRequests := []*elastic.SearchRequest{}
+	for _, searchWrapper := range searchWrappers {
+		searchRequests = append(searchRequests, searchWrapper.searchRequest)
+	}
+
+	res, err := service.esClient().multiSearchQuery(service.indexName, searchRequests...)
+	if err != nil {
+		log.Errorf("There was an error executing the query on ES: %s", err.Error())
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	noResultsCounter := 0
+	currentRespIdx := 0
+	finalResults := make(map[string][]concept)
+	for _, searchRequestRes := range res.Responses {
+		if searchRequestRes.Hits.TotalHits > 0 {
+			foundConcepts := getFoundConcepts(searchRequestRes, isScoreIncluded(request), isFTAuthorIncluded(request))
+			finalResults[searchWrappers[currentRespIdx].term] = foundConcepts.Results[:1]
+		} else {
+			finalResults[searchWrappers[currentRespIdx].term] = []concept{}
+			noResultsCounter++
+		}
+		currentRespIdx++
+	}
+
+	if noResultsCounter == len(searchWrappers) {
+		writer.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	writer.Header().Add("Content-Type", "application/json")
+	encoder := json.NewEncoder(writer)
+	if err := encoder.Encode(finalResults); err != nil {
+		log.Errorf("Cannot encode result: %s", err.Error())
+		writer.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
@@ -187,58 +231,55 @@ func (service *esConceptFinder) esClient() esClient {
 	return service.client
 }
 
-func createQueryForExactMatch(request *http.Request, criteria *searchCriteria, transactionID string) (*elastic.BoolQuery, int, error) {
-	log.Infof("Performing concept search for aliases=%v, transaction_id=%v", strings.Join(criteria.ExactMatchTerms, ", "), transactionID)
+func createSearchRequestsForBestMatch(request *http.Request, criteria *searchCriteria, transactionID string, size int) ([]*multiSearchWrapper, int, error) {
+	log.Infof("Performing concept search for bestMatchTerms=%v, transaction_id=%v", strings.Join(criteria.BestMatchTerms, ", "), transactionID)
 
-	finalQuery := elastic.NewBoolQuery()
+	requests := []*multiSearchWrapper{}
+	for _, searchingTerm := range criteria.BestMatchTerms {
+		finalQuery := elastic.NewBoolQuery()
 
-	conceptTypes, conceptTypesFound := util.GetMultipleValueQueryParameter(request, "type")
-	boostType, boostTypeFound, boostTypeErr := util.GetSingleValueQueryParameter(request, "boost", "authors")
-	extraFilterType, extraFilterTypeFound, extraFilterTypeErr := util.GetSingleValueQueryParameter(request, "filter", "authors")
-	if err := util.FirstError(boostTypeErr, extraFilterTypeErr); err != nil {
-		return nil, http.StatusBadRequest, err
-	}
+		// prepare best match query
+		bestMatchQ := elastic.NewMatchQuery("aliases", searchingTerm).Operator("and")
+		finalQuery = finalQuery.Must(bestMatchQ)
 
-	// prepare exact match query
-	exactMatchQ := []elastic.Query{}
-	for _, termFields := range criteria.ExactMatchTerms {
-		currentTermFieldsQueries := []elastic.Query{}
-		for _, term := range strings.Fields(termFields) {
-			currentTermFieldsQueries = append(currentTermFieldsQueries, elastic.NewMatchQuery("aliases", term))
+		// add boost if it is requested
+		if len(criteria.BoostType) > 0 {
+			boostQ, err := getBoostQuery(criteria.BoostType, criteria.ConceptTypes)
+			if err != nil {
+				return nil, http.StatusBadRequest, err
+			}
+			finalQuery = finalQuery.Should(boostQ)
 		}
-		exactMatchQ = append(exactMatchQ, elastic.NewBoolQuery().Must(currentTermFieldsQueries...))
-	}
-	finalQuery = finalQuery.Must(elastic.NewBoolQuery().Should(exactMatchQ...))
 
-	// add boost if it is requested
-	if boostTypeFound {
-		boostQ, err := getBoostQuery(boostType, conceptTypes)
-		if err != nil {
-			return nil, http.StatusBadRequest, err
+		// add extra filter if it is requested
+		if len(criteria.FilterType) > 0 {
+			extraFilterQ, err := getExtraFilterQuery(criteria.FilterType, criteria.ConceptTypes)
+			if err != nil {
+				return nil, http.StatusBadRequest, err
+			}
+			finalQuery = finalQuery.Filter(extraFilterQ)
 		}
-		finalQuery = finalQuery.Should(boostQ)
-	}
 
-	// add extra filter if it is requested
-	if extraFilterTypeFound {
-		extraFilterQ, err := getExtraFilterQuery(extraFilterType, conceptTypes)
-		if err != nil {
-			return nil, http.StatusBadRequest, err
+		// filter for given concept types
+		if len(criteria.ConceptTypes) > 0 {
+			esTypes, err := util.ValidateAndConvertToEsTypes(criteria.ConceptTypes)
+			if err != nil {
+				return nil, http.StatusBadRequest, err
+			}
+			typeFilter := elastic.NewTermsQuery("_type", util.ToTerms(esTypes)...) // filter by type
+			finalQuery = finalQuery.Filter(typeFilter)
 		}
-		finalQuery = finalQuery.Must(extraFilterQ)
+
+		// requests
+		ss := elastic.NewSearchSource().Size(size).Query(finalQuery)
+		sq := elastic.NewSearchRequest().Source(ss)
+		requests = append(requests, &multiSearchWrapper{
+			term:          searchingTerm,
+			searchRequest: sq,
+		})
 	}
 
-	// filter for given concept types
-	if conceptTypesFound {
-		esTypes, err := util.ValidateAndConvertToEsTypes(conceptTypes)
-		if err != nil {
-			return nil, http.StatusBadRequest, err
-		}
-		typeFilter := elastic.NewTermsQuery("_type", util.ToTerms(esTypes)...) // filter by type
-		finalQuery = finalQuery.Filter(typeFilter)
-	}
-
-	return finalQuery, http.StatusOK, nil
+	return requests, http.StatusOK, nil
 }
 
 func getBoostQuery(boostType string, conceptTypes []string) (elastic.Query, error) {

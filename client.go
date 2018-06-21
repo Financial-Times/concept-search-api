@@ -12,6 +12,7 @@ import (
 
 type esClient interface {
 	query(indexName string, query elastic.Query, resultLimit int) (*elastic.SearchResult, error)
+	multiSearchQuery(indexName string, searchRequests ...*elastic.SearchRequest) (*elastic.MultiSearchResult, error)
 	getClusterHealth() (*elastic.ClusterHealthResponse, error)
 }
 
@@ -64,4 +65,8 @@ func (ec esClientWrapper) query(indexName string, query elastic.Query, resultLim
 
 func (ec esClientWrapper) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
 	return ec.elasticClient.ClusterHealth().Do(context.Background())
+}
+
+func (ec esClientWrapper) multiSearchQuery(indexName string, searchRequests ...*elastic.SearchRequest) (*elastic.MultiSearchResult, error) {
+	return ec.elasticClient.MultiSearch().Index(indexName).Add(searchRequests...).Do(context.Background())
 }

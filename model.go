@@ -1,8 +1,15 @@
 package main
 
+import (
+	"gopkg.in/olivere/elastic.v5"
+)
+
 type searchCriteria struct {
-	Term            *string  `json:"term"`
-	ExactMatchTerms []string `json:"exactMatchTerms"`
+	Term           *string  `json:"term"`
+	BestMatchTerms []string `json:"bestMatchTerms"`
+	ConceptTypes   []string `json:"conceptTypes"`
+	BoostType      string   `json:"boost"`
+	FilterType     string   `json:"filter"`
 }
 
 type concept struct {
@@ -18,4 +25,10 @@ type concept struct {
 
 type searchResult struct {
 	Results []concept `json:"results"`
+}
+
+type multiSearchWrapper struct {
+	term          string
+	searchRequest *elastic.SearchRequest
+	results       []concept
 }
