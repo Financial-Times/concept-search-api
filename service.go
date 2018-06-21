@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -99,7 +98,7 @@ func (service *esConceptFinder) findConceptsWithTerm(writer http.ResponseWriter,
 	defer func() {
 		// searchResult.Hits.TotalHits call panics if the result from ES is not a valid JSON, this handles it
 		if r := recover(); r != nil {
-			fmt.Println("Recovered in findConcept", r)
+			log.WithField("Recover", r).Error("Recovered in findConcept")
 			writer.WriteHeader(http.StatusInternalServerError)
 		}
 	}()
