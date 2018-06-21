@@ -30,5 +30,4 @@ type searchResult struct {
 type multiSearchWrapper struct {
 	term          string
 	searchRequest *elastic.SearchRequest
-	results       []concept
 }
