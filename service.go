@@ -288,6 +288,7 @@ func getBoostQuery(boostType string, conceptTypes []string) (elastic.Query, erro
 		if err != nil {
 			return nil, err
 		}
+		// got from search.go#searchConceptsForMultipleTypes - not random 1.8 value. It was tunned in there
 		return elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8), nil
 	default:
 		return nil, util.ErrInvalidBoostTypeParameter
