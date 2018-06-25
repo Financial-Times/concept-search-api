@@ -9,7 +9,7 @@ import (
 
 	"github.com/Financial-Times/concept-search-api/util"
 	"github.com/Financial-Times/transactionid-utils-go"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v5"
 )
 
