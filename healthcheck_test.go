@@ -262,6 +262,10 @@ func (c hcClient) query(indexName string, query elastic.Query, resultLimit int) 
 	return &elastic.SearchResult{}, nil
 }
 
+func (c hcClient) multiSearchQuery(indexName string, searchRequests ...*elastic.SearchRequest) (*elastic.MultiSearchResult, error) {
+	return &elastic.MultiSearchResult{}, nil
+}
+
 func (c hcClient) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
 	if c.returnError != nil {
 		return nil, c.returnError
