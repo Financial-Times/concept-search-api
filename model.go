@@ -21,6 +21,7 @@ type concept struct {
 	Aliases    []string `json:"aliases,omitempty"`
 	Score      float64  `json:"score,omitempty"`
 	IsFTAuthor string   `json:"isFTAuthor,omitempty"`
+	ScopeNote  string   `json:"scopeNote,omitempty"`
 }
 
 type searchResult struct {
