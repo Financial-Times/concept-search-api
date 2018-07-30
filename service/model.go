@@ -16,6 +16,7 @@ type EsConceptModel struct {
 	Aliases      []string `json:"aliases,omitempty"`
 	IsFTAuthor   *string  `json:"isFTAuthor,omitempty"`
 	IsDeprecated bool     `json:"isDeprecated,omitempty"`
+	ScopeNote    string   `json:"scopeNote,omitempty"`
 }
 
 type Concept struct {
@@ -24,6 +25,7 @@ type Concept struct {
 	PrefLabel   string `json:"prefLabel"`
 	ConceptType string `json:"type"`
 	IsFTAuthor  *bool  `json:"isFTAuthor,omitempty"`
+	ScopeNote   string `json:"scopeNote,omitempty"`
 }
 
 type Concepts []Concept
@@ -38,6 +40,7 @@ func ConvertToSimpleConcept(esConcept EsConceptModel) Concept {
 	c.ApiUrl = esConcept.ApiUrl
 	c.ConceptType = esConcept.DirectType
 	c.PrefLabel = esConcept.PrefLabel
+	c.ScopeNote = esConcept.ScopeNote
 	if esConcept.IsFTAuthor != nil {
 		ftAuthor, err := strconv.ParseBool(*esConcept.IsFTAuthor)
 		if err != nil {
