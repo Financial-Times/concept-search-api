@@ -513,7 +513,7 @@ func TestEsBestMatchImpl(t *testing.T) {
 
 	rickAndMortyConcepts, ok = searchResults["Rick And Morty"]
 	assert.True(t, ok, "expected results for Rick And Morty")
-	assert.Len(t, rickAndMortyConcepts, 0, "expected 1 concept for Rick And Morty")
+	assert.Len(t, rickAndMortyConcepts, 0, "expected 0 concept for Rick And Morty")
 
 	// check for `filter`
 	req, _ = http.NewRequest("POST", "http://dummy_host/concepts", strings.NewReader(`
