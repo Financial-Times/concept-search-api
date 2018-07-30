@@ -436,7 +436,8 @@ func TestEsBestMatchImpl(t *testing.T) {
 			"bestMatchTerms":[
 				"Platt Eric",
 				"Michael Hunter",
-				"Samson Adam"
+				"Samson Adam",
+				"Rick And Morty"
 			],
 			"conceptTypes": ["http://www.ft.com/ontology/person/Person"]
 		}`))
@@ -450,7 +451,7 @@ func TestEsBestMatchImpl(t *testing.T) {
 	var searchResults map[string][]concept
 	err = json.Unmarshal(w.Body.Bytes(), &searchResults)
 	assert.Equal(t, nil, err)
-	assert.Len(t, searchResults, 3)
+	assert.Len(t, searchResults, 4)
 
 	// assert for uuids
 	ericPlattConcepts, ok := searchResults["Platt Eric"]
@@ -468,13 +469,19 @@ func TestEsBestMatchImpl(t *testing.T) {
 	assert.Len(t, michaelHunterConcepts, 1, "expected 1 concept for Michael Hunter")
 	assert.Equal(t, "http://api.ft.com/things/9332270e-f959-3f55-9153-d30acd0d0a51", michaelHunterConcepts[0].ID)
 
+	rickAndMortyConcepts, ok := searchResults["Rick And Morty"]
+	assert.True(t, ok, "expected results for Rick And Morty")
+	assert.Len(t, rickAndMortyConcepts, 1, "expected 1 concept for Rick And Morty")
+	assert.Equal(t, "http://api.ft.com/things/40281396-8369-4699-ae48-1ccc0c931b55", rickAndMortyConcepts[0].ID)
+
 	// check for `boost`
 	req, _ = http.NewRequest("POST", "http://dummy_host/concepts", strings.NewReader(`
 		{
 			"bestMatchTerms":[
 				"Platt Eric",
 				"Michael Hunter",
-				"Samson Adam"
+				"Samson Adam",
+				"Rick And Morty"
 			],
 			"conceptTypes": ["http://www.ft.com/ontology/person/Person"],
 			"boost": "authors"
@@ -484,9 +491,10 @@ func TestEsBestMatchImpl(t *testing.T) {
 
 	// check
 	assert.Equal(t, http.StatusOK, w.Code)
+	searchResults = make(map[string][]concept)
 	err = json.Unmarshal(w.Body.Bytes(), &searchResults)
 	assert.Equal(t, nil, err)
-	assert.Len(t, searchResults, 3)
+	assert.Len(t, searchResults, 4)
 
 	ericPlattConcepts, ok = searchResults["Platt Eric"]
 	assert.True(t, ok, "expected results for Platt Eric")
@@ -502,6 +510,10 @@ func TestEsBestMatchImpl(t *testing.T) {
 	assert.True(t, ok, "expected results for Michael Hunter")
 	assert.Len(t, michaelHunterConcepts, 1, "expected 1 concept for Michael Hunter")
 	assert.Equal(t, "http://api.ft.com/things/9332270e-f959-3f55-9153-d30acd0d0a51", michaelHunterConcepts[0].ID)
+
+	rickAndMortyConcepts, ok = searchResults["Rick And Morty"]
+	assert.True(t, ok, "expected results for Rick And Morty")
+	assert.Len(t, rickAndMortyConcepts, 0, "expected 0 concept for Rick And Morty")
 
 	// check for `filter`
 	req, _ = http.NewRequest("POST", "http://dummy_host/concepts", strings.NewReader(`
@@ -519,6 +531,7 @@ func TestEsBestMatchImpl(t *testing.T) {
 
 	// check
 	assert.Equal(t, http.StatusOK, w.Code)
+	searchResults = make(map[string][]concept)
 	err = json.Unmarshal(w.Body.Bytes(), &searchResults)
 	assert.Equal(t, nil, err)
 	assert.Len(t, searchResults, 3)
@@ -905,6 +918,26 @@ var bestMatchTestingData = map[string]string{
 			"Eric Andrew"
 		],
 		"isFTAuthor": "false"}`,
+
+	"40281396-8369-4699-ae48-1ccc0c931b55": `{
+		"id": "http://api.ft.com/things/40281396-8369-4699-ae48-1ccc0c931b55",
+		"apiUrl": "http://api.ft.com/people/40281396-8369-4699-ae48-1ccc0c931b55",
+		"prefLabel": "Rick And Morty",
+		"types": [
+			"http://www.ft.com/ontology/core/Thing",
+			"http://www.ft.com/ontology/concept/Concept",
+			"http://www.ft.com/ontology/person/Person"
+		],
+		"authorities": [
+			"TME",
+			"Smartlogic"
+		],
+		"directType": "http://www.ft.com/ontology/person/Person",
+		"aliases": [
+			"Rick And Morty"
+		],
+		"isFTAuthor": "true",
+		"isDeprecated": true}`,
 }
 var validResponseBestMatch = `{
     "responses": [
