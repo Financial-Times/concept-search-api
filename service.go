@@ -269,6 +269,11 @@ func createSearchRequestsForBestMatch(request *http.Request, criteria *searchCri
 			finalQuery = finalQuery.Filter(typeFilter)
 		}
 
+		// filter the deprecated concepts out
+		if !isDeprecatedIncluded(request) {
+			finalQuery = finalQuery.MustNot(elastic.NewTermQuery("isDeprecated", true))
+		}
+
 		// requests
 		ss := elastic.NewSearchSource().Size(size).Query(finalQuery)
 		sq := elastic.NewSearchRequest().Source(ss)
