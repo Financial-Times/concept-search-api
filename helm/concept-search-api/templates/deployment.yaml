@@ -39,6 +39,8 @@ spec:
           value: concepts
         - name: RESULT_LIMIT
           value: "50"
+        - name: AUTOCOMPLETE_LIMIT
+          value: "20"
         - name: ELASTICSEARCH_ENDPOINT
           valueFrom:
             configMapKeyRef:
