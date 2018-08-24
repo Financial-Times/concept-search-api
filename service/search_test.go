@@ -225,6 +225,32 @@ func writeTestConcept(ec *elastic.Client, uuid string, esConceptType string, ftC
 	return nil
 }
 
+func writeTestConceptWithScopeNote(ec *elastic.Client, uuid string, esConceptType string,
+	ftConceptType string, prefLabel string, aliases []string, scopeNote string) error {
+
+	payload := EsConceptModel{
+		Id:         uuid,
+		ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseURL, esConceptType, uuid),
+		PrefLabel:  prefLabel,
+		Types:      []string{ftConceptType},
+		DirectType: ftConceptType,
+		Aliases:    aliases,
+		ScopeNote:  scopeNote,
+	}
+
+	_, err := ec.Index().
+		Index(testIndexName).
+		Type(esConceptType).
+		Id(uuid).
+		BodyJson(payload).
+		Do(context.Background())
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func writeTestConceptModel(ec *elastic.Client, esConceptType string, model EsConceptModel) error {
 	_, err := ec.Index().
 		Index(testIndexName).
@@ -540,6 +566,33 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMa
 
 	nyc := concepts[0]
 	magistrates := concepts[1]
+
+	assert.Equal(s.T(), "New York", nyc.PrefLabel, "Failure could indicate that the wrong concept had the higher boost")
+	assert.Equal(s.T(), "New York City Magistrates (New York, New York)", magistrates.PrefLabel, "Failure could indicate that the wrong concept had the higher boost")
+	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMatchBoostedWithScopeNotePresent() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	uuid1 := uuid.NewV4().String()
+	err := writeTestConcept(s.ec, uuid1, esLocationType, ftLocationType, "New York", []string{})
+	require.NoError(s.T(), err)
+
+	uuid2 := uuid.NewV4().String()
+	err = writeTestConceptWithScopeNote(s.ec, uuid2, esLocationType, ftLocationType, "New York City Magistrates (New York, New York)", []string{}, "New York City Magistrates scopeNote")
+	require.NoError(s.T(), err)
+
+	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	require.NoError(s.T(), err)
+
+	concepts, err := service.SearchConceptByTextAndTypes("new yor", []string{ftLocationType}, true)
+	assert.NoError(s.T(), err)
+	assert.Len(s.T(), concepts, 2)
+
+	magistrates := concepts[0]
+	nyc := concepts[1]
 
 	assert.Equal(s.T(), "New York", nyc.PrefLabel, "Failure could indicate that the wrong concept had the higher boost")
 	assert.Equal(s.T(), "New York City Magistrates (New York, New York)", magistrates.PrefLabel, "Failure could indicate that the wrong concept had the higher boost")

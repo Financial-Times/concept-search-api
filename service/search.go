@@ -168,11 +168,15 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	locationBoost := elastic.NewTermQuery("_type", "locations").Boost(0.25)
 	peopleBoost := elastic.NewTermQuery("_type", "people").Boost(0.1)
 
+	// ES library does not support building an exists query like; {"exists": {"field":"scopeNote", "boost":1.7}}
+	// Another option to provide the same functionality/boosting is via a bool query.
+	scopeNoteExistBoost := elastic.NewBoolQuery().Must(elastic.NewExistsQuery("scopeNote")).Boost(1.7)
+
 	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery).Boost(0.65) // Also boost if an alias matches exactly, but this should not precede exact matched prefLabels
 
 	typeFilter := elastic.NewTermsQuery("_type", util.ToTerms(esTypes)...) // filter by type
 
-	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, topicsBoost, locationBoost, peopleBoost}
+	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, topicsBoost, locationBoost, peopleBoost, scopeNoteExistBoost}
 
 	if boostType != "" {
 		shouldMatch = append(shouldMatch, elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8))
