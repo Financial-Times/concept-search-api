@@ -5,16 +5,16 @@ import (
 	"os"
 	"time"
 
-	api "github.com/Financial-Times/api-endpoint"
+	"github.com/Financial-Times/api-endpoint"
 	"github.com/Financial-Times/concept-search-api/resources"
 	"github.com/Financial-Times/concept-search-api/service"
 	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
 	"github.com/Financial-Times/http-handlers-go/httphandlers"
 	status "github.com/Financial-Times/service-status-go/httphandlers"
-	log "github.com/sirupsen/logrus"
 	"github.com/husobee/vestigo"
 	"github.com/jawher/mow.cli"
 	"github.com/rcrowley/go-metrics"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -123,7 +123,7 @@ func logStartupConfig(port, esEndpoint, esAuth, esIndex *string, searchResultLim
 func routeRequest(port *string, apiYml *string, conceptFinder conceptFinder, handler *resources.Handler, healthService *esHealthService) {
 	servicesRouter := vestigo.NewRouter()
 	servicesRouter.Post("/concept/search", conceptFinder.FindConcept)
-	servicesRouter.Get("/concepts", handler.ConceptSearch, &resources.AcceptInterceptor{})
+	servicesRouter.Get("/concepts", handler.ConceptSearch, resources.AcceptInterceptor)
 
 	if apiYml != nil {
 		apiEndpoint, err := api.NewAPIEndpointForFile(*apiYml)

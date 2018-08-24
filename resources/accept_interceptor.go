@@ -5,24 +5,13 @@ import (
 	"strings"
 )
 
-type AcceptInterceptor struct {
-}
-
-func (i *AcceptInterceptor) Before() bool {
-	return true
-}
-
-func (i *AcceptInterceptor) After() bool {
-	return false
-}
-
-func (i *AcceptInterceptor) Intercept(w http.ResponseWriter, r *http.Request) bool {
-	accept := r.Header.Get("Accept")
-
-	if accept == "" || strings.Contains(accept, "application/json") || strings.Contains(accept, "*/*") {
-		return true
+func AcceptInterceptor(f http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		accept := r.Header.Get("Accept")
+		if accept == "" || strings.Contains(accept, "application/json") || strings.Contains(accept, "*/*") {
+			f(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusNotAcceptable)
 	}
-
-	w.WriteHeader(http.StatusNotAcceptable)
-	return false
 }

@@ -2,7 +2,7 @@
 *.exe
 .idea
 .vscode
-vendor/*/
+vendor/*
 /concept-search-api
 coverage.html
 coverage.json
