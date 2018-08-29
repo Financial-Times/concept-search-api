@@ -3,99 +3,122 @@ package resources
 import (
 	"net/http"
 	"net/http/httptest"
-
 	"testing"
 
+	"github.com/husobee/vestigo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-func TestInterceptorLifecycle(t *testing.T) {
-	i := AcceptInterceptor{}
-	assert.True(t, i.Before(), "interceptor should run before request is handled")
-	assert.False(t, i.After(), "interceptor should not run after request is handled")
-}
-
 func TestAcceptNoAcceptHeader(t *testing.T) {
-	i := AcceptInterceptor{}
-
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=fast", nil)
 	w := httptest.NewRecorder()
 
-	actual := i.Intercept(w, req)
+	h := new(mockHttpHandler)
+	h.On("ServeHTTP", w, req).Return()
+	r := vestigo.NewRouter()
+	r.Get("/concepts", h.ServeHTTP, AcceptInterceptor)
 
-	assert.True(t, actual, "request should be permitted")
+	r.ServeHTTP(w, req)
+
+	h.AssertExpectations(t)
 }
 
 func TestAcceptApplicationJson(t *testing.T) {
-	i := AcceptInterceptor{}
-
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=fast", nil)
 	req.Header.Add("Accept", "application/json")
 	w := httptest.NewRecorder()
 
-	actual := i.Intercept(w, req)
+	h := new(mockHttpHandler)
+	h.On("ServeHTTP", w, req).Return()
+	r := vestigo.NewRouter()
+	r.Get("/concepts", h.ServeHTTP, AcceptInterceptor)
 
-	assert.True(t, actual, "request should be permitted")
+	r.ServeHTTP(w, req)
+
+	h.AssertExpectations(t)
 }
 
-func TestAcceptWilcard(t *testing.T) {
-	i := AcceptInterceptor{}
-
+func TestAcceptWildcard(t *testing.T) {
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=fast", nil)
 	req.Header.Add("Accept", "*/*")
 	w := httptest.NewRecorder()
 
-	actual := i.Intercept(w, req)
+	h := new(mockHttpHandler)
+	h.On("ServeHTTP", w, req).Return()
+	r := vestigo.NewRouter()
+	r.Get("/concepts", h.ServeHTTP, AcceptInterceptor)
 
-	assert.True(t, actual, "request should be permitted")
+	r.ServeHTTP(w, req)
+
+	h.AssertExpectations(t)
 }
 
 func TestDoNotAcceptApplicationXml(t *testing.T) {
-	i := AcceptInterceptor{}
-
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=fast", nil)
 	req.Header.Add("Accept", "application/xml")
 	w := httptest.NewRecorder()
 
-	actual := i.Intercept(w, req)
+	h := new(mockHttpHandler)
+	r := vestigo.NewRouter()
+	r.Get("/concepts", h.ServeHTTP, AcceptInterceptor)
 
-	assert.False(t, actual, "request should not be permitted")
+	r.ServeHTTP(w, req)
+
+	h.AssertNotCalled(t, "ServeHTTP")
 	assert.Equal(t, http.StatusNotAcceptable, w.Code, "http status")
 }
 
 func TestAcceptMultipleTypesContainingApplicationJson(t *testing.T) {
-	i := AcceptInterceptor{}
-
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=fast", nil)
 	req.Header.Add("Accept", "application/xml, application/json")
 	w := httptest.NewRecorder()
 
-	actual := i.Intercept(w, req)
+	h := new(mockHttpHandler)
+	h.On("ServeHTTP", w, req).Return()
+	r := vestigo.NewRouter()
+	r.Get("/concepts", h.ServeHTTP, AcceptInterceptor)
 
-	assert.True(t, actual, "request should be permitted")
+	r.ServeHTTP(w, req)
+
+	h.AssertExpectations(t)
 }
 
 func TestDoNotAcceptMultipleTypesNotContainingApplicationJson(t *testing.T) {
-	i := AcceptInterceptor{}
-
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=fast", nil)
 	req.Header.Add("Accept", "application/xml, text/xml")
 	w := httptest.NewRecorder()
 
-	actual := i.Intercept(w, req)
+	h := new(mockHttpHandler)
+	r := vestigo.NewRouter()
+	r.Get("/concepts", h.ServeHTTP, AcceptInterceptor)
 
-	assert.False(t, actual, "request should not be permitted")
+	r.ServeHTTP(w, req)
+
+	h.AssertNotCalled(t, "ServeHTTP")
 	assert.Equal(t, http.StatusNotAcceptable, w.Code, "http status")
 }
 
 func TestAcceptMultipleTypesContainingWildcard(t *testing.T) {
-	i := AcceptInterceptor{}
-
 	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2FGenre&q=fast", nil)
 	req.Header.Add("Accept", "application/xml, */*")
 	w := httptest.NewRecorder()
 
-	actual := i.Intercept(w, req)
+	h := new(mockHttpHandler)
+	h.On("ServeHTTP", w, req).Return()
+	r := vestigo.NewRouter()
+	r.Get("/concepts", h.ServeHTTP, AcceptInterceptor)
 
-	assert.True(t, actual, "request should be permitted")
+	h.On("ServeHTTP", w, req).Return()
+	r.ServeHTTP(w, req)
+
+	h.AssertExpectations(t)
+}
+
+type mockHttpHandler struct {
+	mock.Mock
+}
+
+func (m *mockHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	m.Called(w, r)
 }
