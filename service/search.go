@@ -172,7 +172,7 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	// Another option to provide the same functionality/boosting is via a bool query.
 	scopeNoteExistBoost := elastic.NewBoolQuery().Must(elastic.NewExistsQuery("scopeNote")).Boost(1.7)
 
-	popularityBoost := elastic.NewFunctionScoreQuery().AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln2p").Missing(0)).Boost(3.6) // smooth the annotations count, and multiply the result by 3.6
+	popularityBoost := elastic.NewFunctionScoreQuery().AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).Boost(4.5) // smooth the annotations count, and multiply the result by 3.6
 
 	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery).Boost(0.65) // Also boost if an alias matches exactly, but this should not precede exact matched prefLabels
 
