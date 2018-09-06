@@ -14,11 +14,13 @@ hooks.beforeAll(function(t, done) {
    }
 
    writeMapping();
-   writeDonaldTrump();
 
    setTimeout(()=>{
+      writeDonaldTrump();
       updateIndexSettings();
-      done();
+      setTimeout(()=>{
+        done();
+      }, 2000)
    }, 8000);
 });
 
