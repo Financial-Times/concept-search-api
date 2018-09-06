@@ -172,8 +172,8 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	// Another option to provide the same functionality/boosting is via a bool query.
 	scopeNoteExistBoost := elastic.NewBoolQuery().Must(elastic.NewExistsQuery("scopeNote")).Boost(1.7)
 
-	prefixMatchQuery := elastic.NewBoolQuery().Must(elastic.NewPrefixQuery("prefLabel.exact_match", textQuery)).Should(elastic.NewFunctionScoreQuery().AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).Boost(3))
-	popularityBoost := elastic.NewFunctionScoreQuery().AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).Boost(1) // smooth the annotations count
+	prefixMatchQuery := elastic.NewBoolQuery().Must(elastic.NewPrefixQuery("prefLabel.exact_match", textQuery)).Should(elastic.NewFunctionScoreQuery().AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).Boost(4.5))
+	popularityBoost := elastic.NewFunctionScoreQuery().AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).Boost(1.5) // smooth the annotations count
 
 	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery).Boost(0.65) // Also boost if an alias matches exactly, but this should not precede exact matched prefLabels
 
