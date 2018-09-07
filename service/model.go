@@ -8,15 +8,20 @@ import (
 )
 
 type EsConceptModel struct {
-	Id           string   `json:"id"`
-	ApiUrl       string   `json:"apiUrl"`
-	PrefLabel    string   `json:"prefLabel"`
-	Types        []string `json:"types"`
-	DirectType   string   `json:"directType"`
-	Aliases      []string `json:"aliases,omitempty"`
-	IsFTAuthor   *string  `json:"isFTAuthor,omitempty"`
-	IsDeprecated bool     `json:"isDeprecated,omitempty"`
-	ScopeNote    string   `json:"scopeNote,omitempty"`
+	Id           string          `json:"id"`
+	ApiUrl       string          `json:"apiUrl"`
+	PrefLabel    string          `json:"prefLabel"`
+	Types        []string        `json:"types"`
+	DirectType   string          `json:"directType"`
+	Aliases      []string        `json:"aliases,omitempty"`
+	IsFTAuthor   *string         `json:"isFTAuthor,omitempty"`
+	IsDeprecated bool            `json:"isDeprecated,omitempty"`
+	ScopeNote    string          `json:"scopeNote,omitempty"`
+	Metrics      *ConceptMetrics `json:"metrics,omitempty"`
+}
+
+type ConceptMetrics struct {
+	AnnotationsCount int `json:"annotationsCount"`
 }
 
 type Concept struct {
