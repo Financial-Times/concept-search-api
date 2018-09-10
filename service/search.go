@@ -162,7 +162,7 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	mustQuery := elastic.NewBoolQuery().Should(textMatch, aliasesExactMatchMustQuery).MinimumNumberShouldMatch(1) // All searches must either match loosely on `prefLabel`, or exactly on `aliases`
 
 	termMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)               // Additional boost added if whole terms match, i.e. Donald Trump =returns=> Donald J Trump higher than Donald Trumpy
-	exactMatchQuery := elastic.NewMatchQuery("prefLabel.exact_match", textQuery).Boost(0.75) // Further boost if the prefLabel matches exactly (barring special characters)
+	exactMatchQuery := elastic.NewMatchQuery("prefLabel.exact_match", textQuery).Boost(0.95) // Further boost if the prefLabel matches exactly (barring special characters)
 
 	topicsBoost := elastic.NewTermQuery("_type", "topics").Boost(1.5)
 	locationBoost := elastic.NewTermQuery("_type", "locations").Boost(0.25)
@@ -173,14 +173,14 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	scopeNoteExistBoost := elastic.NewBoolQuery().Must(elastic.NewExistsQuery("scopeNote")).Boost(1.7)
 
 	// Phrase match to ensure that documents that contain all the typed terms (in order) are given the full popularity boost
-	phraseMatchQuery := elastic.NewBoolQuery().Must(elastic.NewMatchPhraseQuery("prefLabel.edge_ngram", textQuery)).Should(elastic.NewFunctionScoreQuery().AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).Boost(4.5))
+	phraseMatchQuery := elastic.NewFunctionScoreQuery().Query(elastic.NewMatchPhraseQuery("prefLabel.edge_ngram", textQuery)).AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).BoostMode("replace").Boost(4.5)
 	popularityBoost := elastic.NewFunctionScoreQuery().AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).Boost(1.5) // smooth the annotations count
 
-	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery).Boost(0.65) // Also boost if an alias matches exactly, but this should not precede exact matched prefLabels
+	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery).Boost(0.85) // Also boost if an alias matches exactly, but this should not precede exact matched prefLabels
 
 	typeFilter := elastic.NewTermsQuery("_type", util.ToTerms(esTypes)...) // filter by type
 
-	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, phraseMatchQuery, topicsBoost, locationBoost, peopleBoost, scopeNoteExistBoost, popularityBoost}
+	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, topicsBoost, locationBoost, peopleBoost, scopeNoteExistBoost, phraseMatchQuery, popularityBoost}
 
 	if boostType != "" {
 		shouldMatch = append(shouldMatch, elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8))
