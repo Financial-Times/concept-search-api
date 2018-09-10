@@ -46,64 +46,58 @@
     "organisations": {
       "properties": {
         "id": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "apiUrl": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "directType": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "types": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "authorities": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "lastModified": {
           "type": "date"
         },
         "publishReference": {
-          "type": "keyword"
+          "type": "keyword",
+          "norms": false
         },
         "scopeNote": {
           "type": "text",
-          "store": true,
-          "index": "no"
+          "index": false,
+          "norms": false
         },
         "prefLabel": {
-          "type": "string",
-          "analyzer": "standard",
+          "type": "text",
+          "analyzer": "folding",
           "index_options": "docs",
-          "norms": {
-            "enabled": false
-          },
+          "norms": false,
           "fields": {
             "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+              "type": "keyword"
             },
             "edge_ngram": {
-              "type": "string",
+              "type": "text",
               "analyzer": "edge_ngram",
-              "search_analyzer": "standard",
-              "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "search_analyzer": "folding",
+              "index_options": "positions",
+              "norms": false
             },
             "exact_match": {
-              "type": "string",
+              "type": "text",
               "analyzer": "exact_match",
               "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "norms": false
             }
           }
         },
@@ -111,20 +105,17 @@
           "type": "boolean"
         },
         "aliases": {
-          "type": "string",
-          "analyzer": "standard",
+          "type": "text",
+          "analyzer": "folding",
           "fields": {
             "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+              "type": "keyword"
             },
             "exact_match": {
-              "type": "string",
+              "type": "text",
               "analyzer": "exact_match",
               "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "norms": false
             }
           }
         },
@@ -140,89 +131,79 @@
     "people": {
       "properties": {
         "id": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "apiUrl": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "directType": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "types": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "authorities": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "lastModified": {
           "type": "date"
         },
         "publishReference": {
-          "type": "keyword"
+          "type": "keyword",
+          "norms": false
         },
         "scopeNote": {
           "type": "text",
-          "store": true,
-          "index": "no"
+          "index": false,
+          "norms": false
         },
         "prefLabel": {
-          "type": "string",
-          "analyzer": "standard",
+          "type": "text",
+          "analyzer": "folding",
           "index_options": "docs",
-          "norms": {
-            "enabled": false
-          },
+          "norms": false,
           "fields": {
             "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+              "type": "keyword"
             },
             "edge_ngram": {
-              "type": "string",
+              "type": "text",
               "analyzer": "edge_ngram",
-              "search_analyzer": "standard",
-              "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "search_analyzer": "folding",
+              "index_options": "positions",
+              "norms": false
             },
             "exact_match": {
-              "type": "string",
+              "type": "text",
               "analyzer": "exact_match",
               "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "norms": false
             }
           }
         },
         "isFTAuthor": {
-          "type": "text",
-          "index": true
+          "type": "boolean"
         },
         "isDeprecated": {
           "type": "boolean"
         },
         "aliases": {
-          "type": "string",
-          "analyzer": "standard",
+          "type": "text",
+          "analyzer": "folding",
           "fields": {
             "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+              "type": "keyword"
             },
             "exact_match": {
-              "type": "string",
+              "type": "text",
               "analyzer": "exact_match",
               "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "norms": false
             }
           }
         },
@@ -238,64 +219,58 @@
     "locations": {
       "properties": {
         "id": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "apiUrl": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "directType": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "types": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "authorities": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "lastModified": {
           "type": "date"
         },
         "publishReference": {
-          "type": "keyword"
+          "type": "keyword",
+          "norms": false
         },
         "scopeNote": {
           "type": "text",
-          "store": true,
-          "index": "no"
+          "index": false,
+          "norms": false
         },
         "prefLabel": {
-          "type": "string",
-          "analyzer": "standard",
+          "type": "text",
+          "analyzer": "folding",
           "index_options": "docs",
-          "norms": {
-            "enabled": false
-          },
+          "norms": false,
           "fields": {
             "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+              "type": "keyword"
             },
             "edge_ngram": {
-              "type": "string",
+              "type": "text",
               "analyzer": "edge_ngram",
-              "search_analyzer": "standard",
-              "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "search_analyzer": "folding",
+              "index_options": "positions",
+              "norms": false
             },
             "exact_match": {
-              "type": "string",
+              "type": "text",
               "analyzer": "exact_match",
               "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "norms": false
             }
           }
         },
@@ -303,20 +278,18 @@
           "type": "boolean"
         },
         "aliases": {
-          "type": "string",
-          "analyzer": "standard",
+          "type": "text",
+          "analyzer": "folding",
+          "index_options": "docs",
           "fields": {
             "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+              "type": "keyword"
             },
             "exact_match": {
-              "type": "string",
+              "type": "text",
               "analyzer": "exact_match",
               "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "norms": false
             }
           }
         },
@@ -332,64 +305,58 @@
     "sections": {
       "properties": {
         "id": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "apiUrl": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "directType": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "types": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "authorities": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "lastModified": {
           "type": "date"
         },
         "publishReference": {
-          "type": "keyword"
+          "type": "keyword",
+          "norms": false
         },
         "scopeNote": {
           "type": "text",
-          "store": true,
-          "index": "no"
+          "index": false,
+          "norms": false
         },
         "prefLabel": {
-          "type": "string",
-          "analyzer": "standard",
+          "type": "text",
+          "analyzer": "folding",
           "index_options": "docs",
-          "norms": {
-            "enabled": false
-          },
+          "norms": false,
           "fields": {
             "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+              "type": "keyword"
             },
             "edge_ngram": {
-              "type": "string",
+              "type": "text",
               "analyzer": "edge_ngram",
-              "search_analyzer": "standard",
-              "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "search_analyzer": "folding",
+              "index_options": "positions",
+              "norms": false
             },
             "exact_match": {
-              "type": "string",
+              "type": "text",
               "analyzer": "exact_match",
               "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "norms": false
             }
           }
         },
@@ -397,20 +364,18 @@
           "type": "boolean"
         },
         "aliases": {
-          "type": "string",
-          "analyzer": "standard",
+          "type": "text",
+          "analyzer": "folding",
+          "index_options": "docs",
           "fields": {
             "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+              "type": "keyword"
             },
             "exact_match": {
-              "type": "string",
+              "type": "text",
               "analyzer": "exact_match",
               "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "norms": false
             }
           }
         },
@@ -426,64 +391,58 @@
     "subjects": {
       "properties": {
         "id": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "apiUrl": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "directType": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "types": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "authorities": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "lastModified": {
           "type": "date"
         },
         "publishReference": {
-          "type": "keyword"
+          "type": "keyword",
+          "norms": false
         },
         "scopeNote": {
           "type": "text",
-          "store": true,
-          "index": "no"
+          "index": false,
+          "norms": false
         },
         "prefLabel": {
-          "type": "string",
-          "analyzer": "standard",
+          "type": "text",
+          "analyzer": "folding",
           "index_options": "docs",
-          "norms": {
-            "enabled": false
-          },
+          "norms": false,
           "fields": {
             "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+              "type": "keyword"
             },
             "edge_ngram": {
-              "type": "string",
+              "type": "text",
               "analyzer": "edge_ngram",
-              "search_analyzer": "standard",
-              "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "search_analyzer": "folding",
+              "index_options": "positions",
+              "norms": false
             },
             "exact_match": {
-              "type": "string",
+              "type": "text",
               "analyzer": "exact_match",
               "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "norms": false
             }
           }
         },
@@ -491,20 +450,18 @@
           "type": "boolean"
         },
         "aliases": {
-          "type": "string",
-          "analyzer": "standard",
+          "type": "text",
+          "analyzer": "folding",
+          "index_options": "docs",
           "fields": {
             "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+              "type": "keyword"
             },
             "exact_match": {
-              "type": "string",
+              "type": "text",
               "analyzer": "exact_match",
               "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "norms": false
             }
           }
         },
@@ -520,64 +477,58 @@
     "brands": {
       "properties": {
         "id": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "apiUrl": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "directType": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "types": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "authorities": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "lastModified": {
           "type": "date"
         },
         "publishReference": {
-          "type": "keyword"
+          "type": "keyword",
+          "norms": false
         },
         "scopeNote": {
           "type": "text",
-          "store": true,
-          "index": "no"
+          "index": false,
+          "norms": false
         },
         "prefLabel": {
-          "type": "string",
-          "analyzer": "standard",
+          "type": "text",
+          "analyzer": "folding",
           "index_options": "docs",
-          "norms": {
-            "enabled": false
-          },
+          "norms": false,
           "fields": {
             "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+              "type": "keyword"
             },
             "edge_ngram": {
-              "type": "string",
+              "type": "text",
               "analyzer": "edge_ngram",
-              "search_analyzer": "standard",
-              "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "search_analyzer": "folding",
+              "index_options": "positions",
+              "norms": false
             },
             "exact_match": {
-              "type": "string",
+              "type": "text",
               "analyzer": "exact_match",
               "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "norms": false
             }
           }
         },
@@ -585,20 +536,18 @@
           "type": "boolean"
         },
         "aliases": {
-          "type": "string",
-          "analyzer": "standard",
+          "type": "text",
+          "analyzer": "folding",
+          "index_options": "docs",
           "fields": {
             "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+              "type": "keyword"
             },
             "exact_match": {
-              "type": "string",
+              "type": "text",
               "analyzer": "exact_match",
               "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "norms": false
             }
           }
         },
@@ -614,64 +563,58 @@
     "genres": {
       "properties": {
         "id": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "apiUrl": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "directType": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "types": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "authorities": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "lastModified": {
           "type": "date"
         },
         "publishReference": {
-          "type": "keyword"
+          "type": "keyword",
+          "norms": false
         },
         "scopeNote": {
           "type": "text",
-          "store": true,
-          "index": "no"
+          "index": false,
+          "norms": false
         },
         "prefLabel": {
-          "type": "string",
-          "analyzer": "standard",
+          "type": "text",
+          "analyzer": "folding",
           "index_options": "docs",
-          "norms": {
-            "enabled": false
-          },
+          "norms": false,
           "fields": {
             "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+              "type": "keyword"
             },
             "edge_ngram": {
-              "type": "string",
+              "type": "text",
               "analyzer": "edge_ngram",
-              "search_analyzer": "standard",
-              "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "search_analyzer": "folding",
+              "index_options": "positions",
+              "norms": false
             },
             "exact_match": {
-              "type": "string",
+              "type": "text",
               "analyzer": "exact_match",
               "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "norms": false
             }
           }
         },
@@ -679,20 +622,18 @@
           "type": "boolean"
         },
         "aliases": {
-          "type": "string",
-          "analyzer": "standard",
+          "type": "text",
+          "analyzer": "folding",
+          "index_options": "docs",
           "fields": {
             "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+              "type": "keyword"
             },
             "exact_match": {
-              "type": "string",
+              "type": "text",
               "analyzer": "exact_match",
               "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "norms": false
             }
           }
         },
@@ -708,64 +649,58 @@
     "topics": {
       "properties": {
         "id": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "apiUrl": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "directType": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "types": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "authorities": {
-          "type": "string",
-          "index": "not_analyzed"
+          "type": "keyword",
+          "norms": false
         },
         "lastModified": {
           "type": "date"
         },
         "publishReference": {
-          "type": "keyword"
+          "type": "keyword",
+          "norms": false
         },
         "scopeNote": {
           "type": "text",
-          "store": true,
-          "index": "no"
+          "index": false,
+          "norms": false
         },
         "prefLabel": {
-          "type": "string",
-          "analyzer": "standard",
+          "type": "text",
+          "analyzer": "folding",
           "index_options": "docs",
-          "norms": {
-            "enabled": false
-          },
+          "norms": false,
           "fields": {
             "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+              "type": "keyword"
             },
             "edge_ngram": {
-              "type": "string",
+              "type": "text",
               "analyzer": "edge_ngram",
-              "search_analyzer": "standard",
-              "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "search_analyzer": "folding",
+              "index_options": "positions",
+              "norms": false
             },
             "exact_match": {
-              "type": "string",
+              "type": "text",
               "analyzer": "exact_match",
               "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "norms": false
             }
           }
         },
@@ -773,20 +708,18 @@
           "type": "boolean"
         },
         "aliases": {
-          "type": "string",
-          "analyzer": "standard",
+          "type": "text",
+          "analyzer": "folding",
+          "index_options": "docs",
           "fields": {
             "raw": {
-              "type": "string",
-              "index": "not_analyzed"
+              "type": "keyword"
             },
             "exact_match": {
-              "type": "string",
+              "type": "text",
               "analyzer": "exact_match",
               "index_options": "docs",
-              "norms": {
-                "enabled": false
-              }
+              "norms": false
             }
           }
         },
