@@ -173,7 +173,13 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	scopeNoteExistBoost := elastic.NewBoolQuery().Must(elastic.NewExistsQuery("scopeNote")).Boost(1.7)
 
 	// Phrase match to ensure that documents that contain all the typed terms (in order) are given the full popularity boost
-	phraseMatchQuery := elastic.NewFunctionScoreQuery().Query(elastic.NewMatchPhraseQuery("prefLabel.edge_ngram", textQuery)).AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).BoostMode("replace").Boost(4.5)
+	phraseMatchQuery := elastic.NewFunctionScoreQuery().
+		Query(elastic.NewMatchPhraseQuery("prefLabel.edge_ngram", textQuery)).
+		AddScoreFunc(elastic.NewWeightFactorFunction(4.5)).
+		AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).
+		ScoreMode("multiply").
+		BoostMode("replace")
+
 	popularityBoost := elastic.NewFunctionScoreQuery().AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).Boost(1.5) // smooth the annotations count
 
 	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery).Boost(0.85) // Also boost if an alias matches exactly, but this should not precede exact matched prefLabels
