@@ -13,6 +13,8 @@ var (
 		"http://www.ft.com/ontology/organisation/Organisation": "organisations",
 		"http://www.ft.com/ontology/Location":                  "locations",
 		"http://www.ft.com/ontology/Topic":                     "topics",
+		"http://www.ft.com/ontology/AlphavilleSeries":          "alphavilleseries",
+
 	}
 
 	ErrInvalidConceptTypeFormat              = "invalid concept type %v"

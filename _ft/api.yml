@@ -48,6 +48,7 @@ paths:
               - http://www.ft.com/ontology/organisation/Organisation
               - http://www.ft.com/ontology/Location
               - http://www.ft.com/ontology/Topic
+              - http://www.ft.com/ontology/AlphavilleSeries
           collectionFormat: multi
           required: true
           x-example:
