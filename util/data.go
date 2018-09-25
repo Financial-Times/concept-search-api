@@ -13,7 +13,7 @@ var (
 		"http://www.ft.com/ontology/organisation/Organisation": "organisations",
 		"http://www.ft.com/ontology/Location":                  "locations",
 		"http://www.ft.com/ontology/Topic":                     "topics",
-		"http://www.ft.com/ontology/AlphavilleSeries":          "alphavilleseries",
+		"http://www.ft.com/ontology/AlphavilleSeries":          "alphaville-series",
 
 	}
 

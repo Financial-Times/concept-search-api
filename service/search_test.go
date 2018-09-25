@@ -25,12 +25,14 @@ const (
 	esOrganisationType = "organisations"
 	esLocationType     = "locations"
 	esTopicType        = "topics"
+	esAlphavilleSeriesType = "alphaville-series"
 	ftGenreType        = "http://www.ft.com/ontology/Genre"
 	ftBrandType        = "http://www.ft.com/ontology/product/Brand"
 	ftPeopleType       = "http://www.ft.com/ontology/person/Person"
 	ftOrganisationType = "http://www.ft.com/ontology/organisation/Organisation"
 	ftLocationType     = "http://www.ft.com/ontology/Location"
 	ftTopicType        = "http://www.ft.com/ontology/Topic"
+	ftAlphavilleSeriesType ="http://www.ft.com/ontology/AlphavilleSeries"
 	testMappingFile    = "test/mapping.json"
 )
 
@@ -81,6 +83,8 @@ func (s *EsConceptSearchServiceTestSuite) SetupSuite() {
 	err = writeTestConcepts(s.ec, esLocationType, ftLocationType, 2)
 	require.NoError(s.T(), err, "expected no error in adding locations")
 	err = writeTestConcepts(s.ec, esTopicType, ftTopicType, 2)
+	require.NoError(s.T(), err, "expected no error in adding topics")
+	err = writeTestConcepts(s.ec, esAlphavilleSeriesType, ftAlphavilleSeriesType, 1)
 	require.NoError(s.T(), err, "expected no error in adding topics")
 }
 
@@ -370,12 +374,12 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesMultipl
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
-	concepts, err := service.SearchConceptByTextAndTypes("test", []string{ftBrandType, ftGenreType}, true)
+	concepts, err := service.SearchConceptByTextAndTypes("test", []string{ftBrandType, ftAlphavilleSeriesType}, true)
 	assert.NoError(s.T(), err)
-	assert.Len(s.T(), concepts, 8)
+	assert.Len(s.T(), concepts, 5)
 
 	for _, concept := range concepts {
-		assert.True(s.T(), concept.ConceptType == ftBrandType || concept.ConceptType == ftGenreType, "expect concept to be either brand or genre")
+		assert.True(s.T(), concept.ConceptType == ftBrandType || concept.ConceptType == ftAlphavilleSeriesType, "expect concept to be either brand or alphaville-series")
 	}
 }
 
