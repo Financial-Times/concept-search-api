@@ -25,12 +25,13 @@ type ConceptMetrics struct {
 }
 
 type Concept struct {
-	Id          string `json:"id"`
-	ApiUrl      string `json:"apiUrl"`
-	PrefLabel   string `json:"prefLabel"`
-	ConceptType string `json:"type"`
-	IsFTAuthor  *bool  `json:"isFTAuthor,omitempty"`
-	ScopeNote   string `json:"scopeNote,omitempty"`
+	Id           string `json:"id"`
+	ApiUrl       string `json:"apiUrl"`
+	PrefLabel    string `json:"prefLabel"`
+	ConceptType  string `json:"type"`
+	IsFTAuthor   *bool  `json:"isFTAuthor,omitempty"`
+	IsDeprecated bool   `json:"isDeprecated,omitempty"`
+	ScopeNote    string `json:"scopeNote,omitempty"`
 }
 
 type Concepts []Concept
@@ -54,7 +55,7 @@ func ConvertToSimpleConcept(esConcept EsConceptModel) Concept {
 			c.IsFTAuthor = &ftAuthor
 		}
 	}
-
+	c.IsDeprecated = esConcept.IsDeprecated
 	return c
 }
 
