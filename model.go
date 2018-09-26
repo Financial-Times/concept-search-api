@@ -13,15 +13,16 @@ type searchCriteria struct {
 }
 
 type concept struct {
-	ID         string   `json:"id"`
-	APIUrl     string   `json:"apiUrl"`
-	PrefLabel  string   `json:"prefLabel"`
-	Types      []string `json:"types"`
-	DirectType string   `json:"directType"`
-	Aliases    []string `json:"aliases,omitempty"`
-	Score      float64  `json:"score,omitempty"`
-	IsFTAuthor string   `json:"isFTAuthor,omitempty"`
-	ScopeNote  string   `json:"scopeNote,omitempty"`
+	ID           string   `json:"id"`
+	APIUrl       string   `json:"apiUrl"`
+	PrefLabel    string   `json:"prefLabel"`
+	Types        []string `json:"types"`
+	DirectType   string   `json:"directType"`
+	Aliases      []string `json:"aliases,omitempty"`
+	Score        float64  `json:"score,omitempty"`
+	IsFTAuthor   string   `json:"isFTAuthor,omitempty"`
+	ScopeNote    string   `json:"scopeNote,omitempty"`
+	IsDeprecated bool     `json:"isDeprecated,omitempty"`
 }
 
 type searchResult struct {
