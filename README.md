@@ -73,7 +73,7 @@ By default the endpoint returns only *non-deprecated* concepts. In order to get 
 curl -XPOST {concept-search-api-url}/concept/search?include_deprecated=true -d '{"term":"FOO"}'
 ```
 
-Exact matches are preferred over partial ones and an example of search results with scoring would look like this:
+Exact matches are preferred over partial ones and an example of search results with scoring and include deprecated would look like this:
 ```
 [
   {
@@ -90,7 +90,8 @@ Exact matches are preferred over partial ones and an example of search results w
       "FOO LLC",
       "FOO"
     ],
-    "score": 10.117536
+    "score": 10.117536,
+    "isDeprecated": true
   },
   {
     "id": "http://api.ft.com/things/87c69c2c-ad53-3888-9958-835098db4dae",
