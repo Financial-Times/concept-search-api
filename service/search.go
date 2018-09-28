@@ -158,7 +158,7 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	}
 
 	textMatch := elastic.NewMatchQuery("prefLabel.edge_ngram", textQuery)
-	aliasesExactMatchMustQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery)
+	aliasesExactMatchMustQuery := elastic.NewMatchQuery("aliases.edge_ngram", textQuery).Boost(0.8)
 	mustQuery := elastic.NewBoolQuery().Should(textMatch, aliasesExactMatchMustQuery).MinimumNumberShouldMatch(1) // All searches must either match loosely on `prefLabel`, or exactly on `aliases`
 
 	termMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)               // Additional boost added if whole terms match, i.e. Donald Trump =returns=> Donald J Trump higher than Donald Trumpy
