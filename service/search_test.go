@@ -902,6 +902,33 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularity() {
 	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
 }
 
+func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularityAliasMatch() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	uuid1 := uuid.NewV4().String()
+	err := writeTestConcept(s.ec, uuid1, esLocationType, ftLocationType, "Luca Panziera", []string{"Dr Git"}, &ConceptMetrics{AnnotationsCount: 15000})
+	require.NoError(s.T(), err)
+
+	uuid2 := uuid.NewV4().String()
+	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "Luca Panziera", []string{"Dr Git"}, &ConceptMetrics{AnnotationsCount: 4})
+	require.NoError(s.T(), err)
+
+	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	require.NoError(s.T(), err)
+
+	concepts, err := service.SearchConceptByTextAndTypes("Dr G", []string{ftLocationType}, true)
+	require.NoError(s.T(), err)
+	require.Len(s.T(), concepts, 2)
+
+	theDoctor := concepts[0]
+	theFraud := concepts[1]
+
+	assert.Equal(s.T(), "Luca Panziera", theDoctor.PrefLabel)
+	assert.Equal(s.T(), "Luca Panziera", theFraud.PrefLabel)
+	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
+}
+
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByAliasPartialMatch() {
 	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
 	service.SetElasticClient(s.ec)

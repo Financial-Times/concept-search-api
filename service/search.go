@@ -174,7 +174,10 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 
 	// Phrase match to ensure that documents that contain all the typed terms (in order) are given the full popularity boost
 	phraseMatchQuery := elastic.NewFunctionScoreQuery().
-		Query(elastic.NewMatchPhraseQuery("prefLabel.edge_ngram", textQuery)).
+		Query(elastic.NewBoolQuery().Should(
+			elastic.NewMatchPhraseQuery("prefLabel.edge_ngram", textQuery),
+			elastic.NewMatchPhraseQuery("aliases.edge_ngram", textQuery),
+		).MinimumNumberShouldMatch(1)).
 		AddScoreFunc(elastic.NewWeightFactorFunction(4.5)).
 		AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).
 		ScoreMode("multiply").
