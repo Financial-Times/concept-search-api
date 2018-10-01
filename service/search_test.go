@@ -911,7 +911,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularityAliasMat
 	require.NoError(s.T(), err)
 
 	uuid2 := uuid.NewV4().String()
-	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "Luca Panziera", []string{"Dr Git"}, &ConceptMetrics{AnnotationsCount: 4})
+	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "Luca The Fraud", []string{"Dr Git"}, &ConceptMetrics{AnnotationsCount: 4})
 	require.NoError(s.T(), err)
 
 	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
@@ -925,7 +925,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularityAliasMat
 	theFraud := concepts[1]
 
 	assert.Equal(s.T(), "Luca Panziera", theDoctor.PrefLabel)
-	assert.Equal(s.T(), "Luca Panziera", theFraud.PrefLabel)
+	assert.Equal(s.T(), "Luca The Fraud", theFraud.PrefLabel)
 	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
 }
 
