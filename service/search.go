@@ -164,6 +164,10 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	termMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)               // Additional boost added if whole terms match, i.e. Donald Trump =returns=> Donald J Trump higher than Donald Trumpy
 	exactMatchQuery := elastic.NewMatchQuery("prefLabel.exact_match", textQuery).Boost(0.95) // Further boost if the prefLabel matches exactly (barring special characters)
 
+	topicsBoost := elastic.NewTermQuery("_type", "topics").Boost(1.5)
+	locationBoost := elastic.NewTermQuery("_type", "locations").Boost(0.25)
+	peopleBoost := elastic.NewTermQuery("_type", "people").Boost(0.1)
+
 	// ES library does not support building an exists query like; {"exists": {"field":"scopeNote", "boost":1.7}}
 	// Another option to provide the same functionality/boosting is via a bool query.
 	scopeNoteExistBoost := elastic.NewBoolQuery().Must(elastic.NewExistsQuery("scopeNote")).Boost(1.7)
@@ -187,7 +191,7 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 
 	typeFilter := elastic.NewTermsQuery("_type", util.ToTerms(esTypes)...) // filter by type
 
-	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, scopeNoteExistBoost, phraseMatchQuery, popularityBoost}
+	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, topicsBoost, locationBoost, peopleBoost, scopeNoteExistBoost, phraseMatchQuery, popularityBoost}
 
 	if boostType != "" {
 		shouldMatch = append(shouldMatch, elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8))
