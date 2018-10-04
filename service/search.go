@@ -164,21 +164,19 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	termMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)               // Additional boost added if whole terms match, i.e. Donald Trump =returns=> Donald J Trump higher than Donald Trumpy
 	exactMatchQuery := elastic.NewMatchQuery("prefLabel.exact_match", textQuery).Boost(0.95) // Further boost if the prefLabel matches exactly (barring special characters)
 
-	topicsBoost := elastic.NewTermQuery("_type", "topics").Boost(1.5)
-	locationBoost := elastic.NewTermQuery("_type", "locations").Boost(0.25)
-	peopleBoost := elastic.NewTermQuery("_type", "people").Boost(0.1)
-
 	// ES library does not support building an exists query like; {"exists": {"field":"scopeNote", "boost":1.7}}
 	// Another option to provide the same functionality/boosting is via a bool query.
 	scopeNoteExistBoost := elastic.NewBoolQuery().Must(elastic.NewExistsQuery("scopeNote")).Boost(1.7)
 
 	// Phrase match to ensure that documents that contain all the typed terms (in order) are given the full popularity boost
+	// Also ensure that topics are given a boost which is proportional to the popularity boost
 	phraseMatchQuery := elastic.NewFunctionScoreQuery().
 		Query(elastic.NewBoolQuery().Should(
 			elastic.NewMatchPhraseQuery("prefLabel.edge_ngram", textQuery),
 			elastic.NewMatchPhraseQuery("aliases.edge_ngram", textQuery),
 		).MinimumNumberShouldMatch(1)).
 		AddScoreFunc(elastic.NewWeightFactorFunction(4.5)).
+		Add(elastic.NewTermQuery("_type", "topics"), elastic.NewWeightFactorFunction(1.4)).
 		AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).
 		ScoreMode("multiply").
 		BoostMode("replace")
@@ -189,7 +187,7 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 
 	typeFilter := elastic.NewTermsQuery("_type", util.ToTerms(esTypes)...) // filter by type
 
-	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, topicsBoost, locationBoost, peopleBoost, scopeNoteExistBoost, phraseMatchQuery, popularityBoost}
+	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, scopeNoteExistBoost, phraseMatchQuery, popularityBoost}
 
 	if boostType != "" {
 		shouldMatch = append(shouldMatch, elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8))
