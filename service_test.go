@@ -141,6 +141,9 @@ func TestConceptFinder(t *testing.T) {
 
 		for i, uuid := range testCase.expectedUUIDs {
 			assert.True(t, strings.Contains(searchResults.Results[i].ID, uuid))
+			if testCase.requestURL == requestURLWithScoreAndDeprecated {
+				assert.True(t, searchResults.Results[i].IsDeprecated)
+			}
 		}
 
 		if testCase.requestURL == requestURLWithScore ||

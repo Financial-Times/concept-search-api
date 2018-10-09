@@ -341,6 +341,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeDeprecatedFla
 
 	for _, concept := range conceptsWithoutDeprecated {
 		assert.NotEqual(s.T(), prefLabel, concept.PrefLabel)
+		assert.False(s.T(), concept.IsDeprecated)
 	}
 
 	conceptsWithDeprecated, err := service.FindAllConceptsByType("http://www.ft.com/ontology/person/Person", true)
@@ -350,6 +351,9 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeDeprecatedFla
 	for _, concept := range conceptsWithDeprecated {
 		if prefLabel == concept.PrefLabel {
 			deprecatedConceptsFound++
+			assert.True(s.T(), concept.IsDeprecated)
+		} else {
+			assert.False(s.T(), concept.IsDeprecated)
 		}
 	}
 	assert.Equal(s.T(), 1, deprecatedConceptsFound, "expect found concepts")

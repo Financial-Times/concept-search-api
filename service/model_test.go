@@ -45,12 +45,13 @@ func TestConvertToSimpleConcept(t *testing.T) {
 	directType := "http://www.ft.com/ontology/GenreSubClass"
 
 	esConcept := EsConceptModel{
-		Id:         id,
-		ApiUrl:     apiUrl,
-		PrefLabel:  label,
-		Types:      []string{"any"},
-		DirectType: directType,
-		Aliases:    []string{},
+		Id:           id,
+		ApiUrl:       apiUrl,
+		PrefLabel:    label,
+		Types:        []string{"any"},
+		DirectType:   directType,
+		Aliases:      []string{},
+		IsDeprecated: true,
 	}
 
 	actual := ConvertToSimpleConcept(esConcept)
@@ -59,6 +60,7 @@ func TestConvertToSimpleConcept(t *testing.T) {
 	assert.Equal(t, apiUrl, actual.ApiUrl, "apiUrl")
 	assert.Equal(t, directType, actual.ConceptType, "the type is not correct")
 	assert.Equal(t, label, actual.PrefLabel, "prefLabel")
+	assert.Equal(t, true, actual.IsDeprecated, "isDeprecated")
 }
 
 func TestConvertToSimpleConceptWithIdCorrect(t *testing.T) {
@@ -98,6 +100,7 @@ func TestConvertToSimpleConceptWithFTAuthor(t *testing.T) {
 	actual := ConvertToSimpleConcept(esConcept)
 	require.NotNil(t, actual.IsFTAuthor)
 	assert.True(t, *actual.IsFTAuthor)
+	assert.Equal(t, false, actual.IsDeprecated, "isDeprecated")
 }
 
 func TestConvertToSimpleConceptWithNonBoolFTAuthor(t *testing.T) {
