@@ -79,7 +79,7 @@
 
 [[constraint]]
   name = "gopkg.in/olivere/elastic.v5"
-  version = "5.0.74"
+  version = "5.0.75"
 
 [prune]
   go-tests = true

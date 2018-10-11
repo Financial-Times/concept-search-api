@@ -158,7 +158,7 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	}
 
 	textMatch := elastic.NewMatchQuery("prefLabel.edge_ngram", textQuery)
-	aliasesExactMatchMustQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery)
+	aliasesExactMatchMustQuery := elastic.NewMatchQuery("aliases.edge_ngram", textQuery).Boost(0.8)
 	mustQuery := elastic.NewBoolQuery().Should(textMatch, aliasesExactMatchMustQuery).MinimumNumberShouldMatch(1) // All searches must either match loosely on `prefLabel`, or exactly on `aliases`
 
 	termMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)               // Additional boost added if whole terms match, i.e. Donald Trump =returns=> Donald J Trump higher than Donald Trumpy
@@ -173,9 +173,14 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	scopeNoteExistBoost := elastic.NewBoolQuery().Must(elastic.NewExistsQuery("scopeNote")).Boost(1.7)
 
 	// Phrase match to ensure that documents that contain all the typed terms (in order) are given the full popularity boost
+	// Also ensure that topics are given a boost which is proportional to the popularity boost
 	phraseMatchQuery := elastic.NewFunctionScoreQuery().
-		Query(elastic.NewMatchPhraseQuery("prefLabel.edge_ngram", textQuery)).
+		Query(elastic.NewBoolQuery().Should(
+			elastic.NewMatchPhraseQuery("prefLabel.edge_ngram", textQuery),
+			elastic.NewMatchPhraseQuery("aliases.edge_ngram", textQuery),
+		).MinimumNumberShouldMatch(1)).
 		AddScoreFunc(elastic.NewWeightFactorFunction(4.5)).
+		Add(elastic.NewTermQuery("_type", "topics"), elastic.NewWeightFactorFunction(1.4)).
 		AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).
 		ScoreMode("multiply").
 		BoostMode("replace")

@@ -17,23 +17,23 @@ import (
 )
 
 const (
-	apiBaseURL         = "http://test.api.ft.com"
-	testIndexName      = "test-index"
-	esGenreType        = "genres"
-	esBrandType        = "brands"
-	esPeopleType       = "people"
-	esOrganisationType = "organisations"
-	esLocationType     = "locations"
-	esTopicType        = "topics"
+	apiBaseURL             = "http://test.api.ft.com"
+	testIndexName          = "test-index"
+	esGenreType            = "genres"
+	esBrandType            = "brands"
+	esPeopleType           = "people"
+	esOrganisationType     = "organisations"
+	esLocationType         = "locations"
+	esTopicType            = "topics"
 	esAlphavilleSeriesType = "alphaville-series"
-	ftGenreType        = "http://www.ft.com/ontology/Genre"
-	ftBrandType        = "http://www.ft.com/ontology/product/Brand"
-	ftPeopleType       = "http://www.ft.com/ontology/person/Person"
-	ftOrganisationType = "http://www.ft.com/ontology/organisation/Organisation"
-	ftLocationType     = "http://www.ft.com/ontology/Location"
-	ftTopicType        = "http://www.ft.com/ontology/Topic"
-	ftAlphavilleSeriesType ="http://www.ft.com/ontology/AlphavilleSeries"
-	testMappingFile    = "test/mapping.json"
+	ftGenreType            = "http://www.ft.com/ontology/Genre"
+	ftBrandType            = "http://www.ft.com/ontology/product/Brand"
+	ftPeopleType           = "http://www.ft.com/ontology/person/Person"
+	ftOrganisationType     = "http://www.ft.com/ontology/organisation/Organisation"
+	ftLocationType         = "http://www.ft.com/ontology/Location"
+	ftTopicType            = "http://www.ft.com/ontology/Topic"
+	ftAlphavilleSeriesType = "http://www.ft.com/ontology/AlphavilleSeries"
+	testMappingFile        = "test/mapping.json"
 )
 
 func TestNoElasticClient(t *testing.T) {
@@ -766,13 +766,13 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), conceptsWithDeprecated, 4)
 
-	theDeprecatedAuthor := conceptsWithDeprecated[0]
-	theAuthor := conceptsWithDeprecated[1]
+	theAuthor := conceptsWithDeprecated[0]
+	theDeprecatedAuthor := conceptsWithDeprecated[1]
 	theRealEditor := conceptsWithDeprecated[2]
 	theFake := conceptsWithDeprecated[3]
 
-	assert.Equal(s.T(), "Robert Shrimpley", theDeprecatedAuthor.PrefLabel)
 	assert.Equal(s.T(), "Robert Author Shrimpley", theAuthor.PrefLabel)
+	assert.Equal(s.T(), "Robert Shrimpley", theDeprecatedAuthor.PrefLabel)
 	assert.Equal(s.T(), "Robert Real Shrimpley", theRealEditor.PrefLabel)
 	assert.Equal(s.T(), "Roberto Shrimpley", theFake.PrefLabel)
 
@@ -903,5 +903,57 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularity() {
 
 	assert.Equal(s.T(), "United States of America", theCountry.PrefLabel)
 	assert.Equal(s.T(), "USADA", theFraud.PrefLabel)
+	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularityAliasMatch() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	uuid1 := uuid.NewV4().String()
+	err := writeTestConcept(s.ec, uuid1, esLocationType, ftLocationType, "Luca Panziera", []string{"Dr Git"}, &ConceptMetrics{AnnotationsCount: 15000})
+	require.NoError(s.T(), err)
+
+	uuid2 := uuid.NewV4().String()
+	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "Luca The Fraud", []string{"Dr Git"}, &ConceptMetrics{AnnotationsCount: 4})
+	require.NoError(s.T(), err)
+
+	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	require.NoError(s.T(), err)
+
+	concepts, err := service.SearchConceptByTextAndTypes("Dr G", []string{ftLocationType}, true)
+	require.NoError(s.T(), err)
+	require.Len(s.T(), concepts, 2)
+
+	theDoctor := concepts[0]
+	theFraud := concepts[1]
+
+	assert.Equal(s.T(), "Luca Panziera", theDoctor.PrefLabel)
+	assert.Equal(s.T(), "Luca The Fraud", theFraud.PrefLabel)
+	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByAliasPartialMatch() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	uuid1 := uuid.NewV4().String()
+	err := writeTestConcept(s.ec, uuid1, esLocationType, ftLocationType, "United States of America", []string{"Franklin D Roosevelt"}, &ConceptMetrics{AnnotationsCount: 0})
+	require.NoError(s.T(), err)
+
+	uuid2 := uuid.NewV4().String()
+	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "USADA", []string{"USA"}, &ConceptMetrics{AnnotationsCount: 0})
+	require.NoError(s.T(), err)
+
+	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	require.NoError(s.T(), err)
+
+	concepts, err := service.SearchConceptByTextAndTypes("roose", []string{ftLocationType}, true)
+	require.NoError(s.T(), err)
+	require.Len(s.T(), concepts, 1)
+
+	theCountry := concepts[0]
+
+	assert.Equal(s.T(), "United States of America", theCountry.PrefLabel)
 	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
 }
