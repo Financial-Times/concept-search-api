@@ -2,7 +2,7 @@
 
 [![CircleCI](https://circleci.com/gh/Financial-Times/concept-search-api.svg?style=shield)](https://circleci.com/gh/Financial-Times/concept-search-api) [![Go Report Card](https://goreportcard.com/badge/github.com/Financial-Times/concept-search-api)](https://goreportcard.com/report/github.com/Financial-Times/concept-search-api) [![Coverage Status](https://coveralls.io/repos/github/Financial-Times/concept-search-api/badge.svg)](https://coveralls.io/github/Financial-Times/concept-search-api)
 
-API for searching concepts in an Amazon Elasticsearch domain.
+API for searching concepts in an Amazon Elasticsearch cluster.
 
 :warning: The AWS SDK for Go [does not currently include support for ES data plane api](https://github.com/aws/aws-sdk-go/issues/710), but the Signer is exposed since v1.2.0.
 
@@ -38,12 +38,12 @@ Other parameters:
 
 ## How to test
 
-To run the full test suite of integration tests, you must have a running instance of elasticsearch and set the env var 
+To run the full test suite of integration tests, you must have a running instance of elasticsearch and set the env var
 e.g
 
 ```
 export ELASTICSEARCH_TEST_URL=http://localhost:9200
-``` 
+```
 
 run the command
 
