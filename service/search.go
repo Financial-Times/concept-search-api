@@ -182,16 +182,19 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 		AddScoreFunc(elastic.NewWeightFactorFunction(4.5)).
 		Add(elastic.NewTermQuery("_type", "topics"), elastic.NewWeightFactorFunction(1.4)).
 		AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).
+		AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.weekAnnotationsCount").Modifier("ln1p").Missing(0)).
 		ScoreMode("multiply").
 		BoostMode("replace")
 
 	popularityBoost := elastic.NewFunctionScoreQuery().AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).Boost(1.5) // smooth the annotations count
 
+	lastWeekPopularityBoost := elastic.NewFunctionScoreQuery().AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.weekAnnotationsCount").Modifier("ln1p").Missing(0)).Boost(1.5) // smooth the week annotations count
+
 	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery).Boost(0.85) // Also boost if an alias matches exactly, but this should not precede exact matched prefLabels
 
 	typeFilter := elastic.NewTermsQuery("_type", util.ToTerms(esTypes)...) // filter by type
 
-	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, topicsBoost, locationBoost, peopleBoost, scopeNoteExistBoost, phraseMatchQuery, popularityBoost}
+	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, topicsBoost, locationBoost, peopleBoost, scopeNoteExistBoost, phraseMatchQuery, popularityBoost, lastWeekPopularityBoost}
 
 	if boostType != "" {
 		shouldMatch = append(shouldMatch, elastic.NewTermQuery("isFTAuthor", "true").Boost(1.8))
