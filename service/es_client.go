@@ -46,6 +46,7 @@ func cloneRequest(r *http.Request) *http.Request {
 	for k, s := range r.Header {
 		r2.Header[k] = append([]string(nil), s...)
 	}
+	r2.Host = r.Host
 	return r2
 }
 
