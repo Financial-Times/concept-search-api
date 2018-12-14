@@ -180,7 +180,7 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 			elastic.NewMatchPhraseQuery("aliases.edge_ngram", textQuery),
 		).MinimumNumberShouldMatch(1)).
 		AddScoreFunc(elastic.NewWeightFactorFunction(4.5)).
-		Add(elastic.NewTermQuery("_type", "topics"), elastic.NewWeightFactorFunction(1.4)).
+		Add(elastic.NewTermQuery("_type", "topics"), elastic.NewWeightFactorFunction(4.0)).
 		AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).
 		AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.weekAnnotationsCount").Modifier("ln1p").Missing(0)).
 		ScoreMode("multiply").
