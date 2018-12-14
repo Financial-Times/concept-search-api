@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 type ESServiceMock struct {
@@ -93,15 +95,18 @@ func newESServiceMock(n int) []*ESServiceMock {
 	return services
 }
 
-func newHappyAWSESMock(t *testing.T) *httptest.Server {
+func newHappyAWSESMock(t *testing.T) (ts *httptest.Server) {
 	handlerFunc := func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "I am working!")
+		serverURI, err := url.Parse(ts.URL)
+		require.NoError(t, err)
+
+		assert.Equal(t, serverURI.Hostname()+":"+serverURI.Port(), r.Host)
 		assert.Contains(t, r.Header.Get("authorization"), "AWS4-HMAC-SHA256 Credential", "It is using AWS authentication")
 	}
 	h := &TestHTTPHandler{0, handlerFunc}
 
-	ts := httptest.NewServer(h)
-	return ts
+	ts = httptest.NewServer(h)
+	return
 }
 
 func newUnhappyAWSESMockForNAttempts(t *testing.T, attempts int) *httptest.Server {
