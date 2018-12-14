@@ -182,13 +182,13 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 		AddScoreFunc(elastic.NewWeightFactorFunction(4.5)).
 		Add(elastic.NewTermQuery("_type", "topics"), elastic.NewWeightFactorFunction(4.0)).
 		AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).
-		AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.weekAnnotationsCount").Modifier("ln1p").Missing(0)).
+		AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.prevWeekAnnotationsCount").Modifier("ln1p").Missing(0)).
 		ScoreMode("multiply").
 		BoostMode("replace")
 
 	popularityBoost := elastic.NewFunctionScoreQuery().AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).Boost(1.5) // smooth the annotations count
 
-	lastWeekPopularityBoost := elastic.NewFunctionScoreQuery().AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.weekAnnotationsCount").Modifier("ln1p").Missing(0)).Boost(1.5) // smooth the week annotations count
+	lastWeekPopularityBoost := elastic.NewFunctionScoreQuery().AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.prevWeekAnnotationsCount").Modifier("ln1p").Missing(0)).Boost(1.5) // smooth the week annotations count
 
 	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery).Boost(0.85) // Also boost if an alias matches exactly, but this should not precede exact matched prefLabels
 
