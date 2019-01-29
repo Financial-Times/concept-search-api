@@ -14,7 +14,6 @@ var (
 		"http://www.ft.com/ontology/Location":                  "locations",
 		"http://www.ft.com/ontology/Topic":                     "topics",
 		"http://www.ft.com/ontology/AlphavilleSeries":          "alphaville-series",
-
 	}
 
 	ErrInvalidConceptTypeFormat              = "invalid concept type %v"

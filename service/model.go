@@ -8,16 +8,18 @@ import (
 )
 
 type EsConceptModel struct {
-	Id           string          `json:"id"`
-	ApiUrl       string          `json:"apiUrl"`
-	PrefLabel    string          `json:"prefLabel"`
-	Types        []string        `json:"types"`
-	DirectType   string          `json:"directType"`
-	Aliases      []string        `json:"aliases,omitempty"`
-	IsFTAuthor   *string         `json:"isFTAuthor,omitempty"`
-	IsDeprecated bool            `json:"isDeprecated,omitempty"`
-	ScopeNote    string          `json:"scopeNote,omitempty"`
-	Metrics      *ConceptMetrics `json:"metrics,omitempty"`
+	Id                     string          `json:"id"`
+	ApiUrl                 string          `json:"apiUrl"`
+	PrefLabel              string          `json:"prefLabel"`
+	Types                  []string        `json:"types"`
+	DirectType             string          `json:"directType"`
+	Aliases                []string        `json:"aliases,omitempty"`
+	IsFTAuthor             *string         `json:"isFTAuthor,omitempty"`
+	IsDeprecated           bool            `json:"isDeprecated,omitempty"`
+	ScopeNote              string          `json:"scopeNote,omitempty"`
+	Metrics                *ConceptMetrics `json:"metrics,omitempty"`
+	CountryCode            string          `json:"countryCode,omitempty"`
+	CountryOfIncorporation string          `json:"countryOfIncorporation,omitempty"`
 }
 
 type ConceptMetrics struct {
@@ -25,13 +27,15 @@ type ConceptMetrics struct {
 }
 
 type Concept struct {
-	Id           string `json:"id"`
-	ApiUrl       string `json:"apiUrl"`
-	PrefLabel    string `json:"prefLabel"`
-	ConceptType  string `json:"type"`
-	IsFTAuthor   *bool  `json:"isFTAuthor,omitempty"`
-	IsDeprecated bool   `json:"isDeprecated,omitempty"`
-	ScopeNote    string `json:"scopeNote,omitempty"`
+	Id                     string `json:"id"`
+	ApiUrl                 string `json:"apiUrl"`
+	PrefLabel              string `json:"prefLabel"`
+	ConceptType            string `json:"type"`
+	IsFTAuthor             *bool  `json:"isFTAuthor,omitempty"`
+	IsDeprecated           bool   `json:"isDeprecated,omitempty"`
+	ScopeNote              string `json:"scopeNote,omitempty"`
+	CountryCode            string `json:"countryCode,omitempty"`
+	CountryOfIncorporation string `json:"countryOfIncorporation,omitempty"`
 }
 
 type Concepts []Concept
@@ -47,6 +51,8 @@ func ConvertToSimpleConcept(esConcept EsConceptModel) Concept {
 	c.ConceptType = esConcept.DirectType
 	c.PrefLabel = esConcept.PrefLabel
 	c.ScopeNote = esConcept.ScopeNote
+	c.CountryCode = esConcept.CountryCode
+	c.CountryOfIncorporation = esConcept.CountryOfIncorporation
 	if esConcept.IsFTAuthor != nil {
 		ftAuthor, err := strconv.ParseBool(*esConcept.IsFTAuthor)
 		if err != nil {

@@ -44,14 +44,18 @@ func TestConvertToSimpleConcept(t *testing.T) {
 	label := "Test Concept"
 	directType := "http://www.ft.com/ontology/GenreSubClass"
 
+	countryCode := "CA"
+	countryOfIncorporation := "US"
 	esConcept := EsConceptModel{
-		Id:           id,
-		ApiUrl:       apiUrl,
-		PrefLabel:    label,
-		Types:        []string{"any"},
-		DirectType:   directType,
-		Aliases:      []string{},
-		IsDeprecated: true,
+		Id:                     id,
+		ApiUrl:                 apiUrl,
+		PrefLabel:              label,
+		Types:                  []string{"any"},
+		DirectType:             directType,
+		Aliases:                []string{},
+		IsDeprecated:           true,
+		CountryCode:            countryCode,
+		CountryOfIncorporation: countryOfIncorporation,
 	}
 
 	actual := ConvertToSimpleConcept(esConcept)
@@ -61,6 +65,8 @@ func TestConvertToSimpleConcept(t *testing.T) {
 	assert.Equal(t, directType, actual.ConceptType, "the type is not correct")
 	assert.Equal(t, label, actual.PrefLabel, "prefLabel")
 	assert.Equal(t, true, actual.IsDeprecated, "isDeprecated")
+	assert.Equal(t, countryCode, actual.CountryCode, "countryCode")
+	assert.Equal(t, countryOfIncorporation, actual.CountryOfIncorporation, "countryOfIncorporation")
 }
 
 func TestConvertToSimpleConceptWithIdCorrect(t *testing.T) {

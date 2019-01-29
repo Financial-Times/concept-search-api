@@ -256,6 +256,33 @@ func writeTestConceptWithScopeNote(ec *elastic.Client, uuid string, esConceptTyp
 	return nil
 }
 
+func writeTestConceptWithCountryCodeAndCountryOfIncorporation(ec *elastic.Client, uuid string, esConceptType string,
+	ftConceptType string, prefLabel string, aliases []string, countryCode string, countryOfIncorporation string) error {
+
+	payload := EsConceptModel{
+		Id:                     uuid,
+		ApiUrl:                 fmt.Sprintf("%s/%s/%s", apiBaseURL, esConceptType, uuid),
+		PrefLabel:              prefLabel,
+		Types:                  []string{ftConceptType},
+		DirectType:             ftConceptType,
+		Aliases:                aliases,
+		CountryCode:            countryCode,
+		CountryOfIncorporation: countryOfIncorporation,
+	}
+
+	_, err := ec.Index().
+		Index(testIndexName).
+		Type(esConceptType).
+		Id(uuid).
+		BodyJson(payload).
+		Do(context.Background())
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func writeTestConceptModel(ec *elastic.Client, esConceptType string, model EsConceptModel) error {
 	_, err := ec.Index().
 		Index(testIndexName).
@@ -956,4 +983,28 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByAliasPartialMatch(
 
 	assert.Equal(s.T(), "United States of America", theCountry.PrefLabel)
 	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestFindOrganisationWithCountryCodeAndCountryOfIncorporation() {
+	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	uuid := uuid.NewV4().String()
+	err := writeTestConceptWithCountryCodeAndCountryOfIncorporation(s.ec, uuid, esOrganisationType, ftOrganisationType, "MooTech Ltd.", []string{"MooTech Ltd."}, "CA", "US")
+	require.NoError(s.T(), err)
+
+	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	require.NoError(s.T(), err)
+
+	concepts, err := service.SearchConceptByTextAndTypes("Moo", []string{ftOrganisationType}, false)
+	require.NoError(s.T(), err)
+	require.Len(s.T(), concepts, 1)
+
+	theCompany := concepts[0]
+
+	assert.Equal(s.T(), "MooTech Ltd.", theCompany.PrefLabel)
+	assert.Equal(s.T(), "CA", theCompany.CountryCode)
+	assert.Equal(s.T(), "US", theCompany.CountryOfIncorporation)
+
+	cleanup(s.T(), s.ec, esOrganisationType, uuid)
 }
