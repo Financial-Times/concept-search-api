@@ -77,6 +77,16 @@
           "index": false,
           "norms": false
         },
+        "countryCode": {
+          "type": "text",
+          "index": false,
+          "norms": false
+        },
+        "countryOfIncorporation": {
+          "type": "text",
+          "index": false,
+          "norms": false
+        },
         "prefLabel": {
           "type": "text",
           "analyzer": "folding",
