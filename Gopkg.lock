@@ -160,8 +160,8 @@
     "config",
     "uritemplates"
   ]
-  revision = "d94782c1eadecb8e1d3dcd5f38ba533b66992ff2"
-  version = "v5.0.74"
+  revision = "2a49cd32474903f20e8a6c2feae0f37e0e5a74cd"
+  version = "v5.0.79"
 
 [[projects]]
   name = "gopkg.in/yaml.v2"
@@ -172,6 +172,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c361cc95c5f74ee56a7433f21a33b7ced0c6a2936b1f190dcbe448513a712419"
+  inputs-digest = "7462e825e34a4013c6bb8f1d07612d1778b2bd404fe5a0e1e0bfb3ce8cb8301a"
   solver-name = "gps-cdcl"
   solver-version = 1

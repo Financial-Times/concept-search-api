@@ -16,7 +16,7 @@ import (
 	"log"
 
 	"github.com/stretchr/testify/assert"
-	elastic "gopkg.in/olivere/elastic.v5"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 func TestConceptFinder(t *testing.T) {
@@ -28,91 +28,92 @@ func TestConceptFinder(t *testing.T) {
 		requestBody   string
 		expectedUUIDs []string
 		expectedScore []float64
+		assertFields  map[string]func(concept)
 	}{
 		{
-			nil,
-			http.StatusInternalServerError,
-			defaultRequestURL,
-			validRequestBody,
-			nil, nil,
+			returnCode:  http.StatusInternalServerError,
+			requestURL:  defaultRequestURL,
+			requestBody: validRequestBody,
 		},
 		{
-			failClient{},
-			http.StatusBadRequest,
-			defaultRequestURL,
-			invalidRequestBody,
-			nil, nil,
+			client:      failClient{},
+			returnCode:  http.StatusBadRequest,
+			requestURL:  defaultRequestURL,
+			requestBody: invalidRequestBody,
 		},
 		{
-			failClient{},
-			http.StatusInternalServerError,
-			defaultRequestURL,
-			validRequestBody,
-			nil, nil,
+			client:      failClient{},
+			returnCode:  http.StatusInternalServerError,
+			requestURL:  defaultRequestURL,
+			requestBody: validRequestBody,
 		},
 		{
-			mockClient{
+			client: mockClient{
 				queryResponse: validResponse,
 			},
-			http.StatusOK,
-			defaultRequestURL,
-			validRequestBody,
-			[]string{"9a0dd8b8-2ae4-34ca-8639-cfef69711eb9", "6084734d-f4c2-3375-b298-dbbc6c00a680"},
-			nil,
+			returnCode:    http.StatusOK,
+			requestURL:    defaultRequestURL,
+			requestBody:   validRequestBody,
+			expectedUUIDs: []string{"9a0dd8b8-2ae4-34ca-8639-cfef69711eb9", "6084734d-f4c2-3375-b298-dbbc6c00a680"},
+			assertFields: map[string]func(concept){
+				"9a0dd8b8-2ae4-34ca-8639-cfef69711eb9":
+				func(c concept) {
+					assert.Equal(t, "Foobar SpA", c.PrefLabel)
+					assert.Equal(t, "", c.ScopeNote)
+					assert.Equal(t, "http://www.ft.com/ontology/company/PublicCompany", c.DirectType)
+					assert.Equal(t, "CA", c.CountryCode)
+					assert.Equal(t, "US", c.CountryOfIncorporation)
+				}},
 		},
 		{
-			mockClient{
+			client: mockClient{
 				queryResponse: emptyResponse,
 			},
-			http.StatusNotFound,
-			defaultRequestURL,
-			validRequestBody,
-			nil, nil,
+			returnCode:  http.StatusNotFound,
+			requestURL:  defaultRequestURL,
+			requestBody: validRequestBody,
 		},
 		{
-			mockClient{
+			client: mockClient{
 				queryResponse: validResponse,
 			},
-			http.StatusOK,
-			requestURLWithScore,
-			validRequestBody,
-			[]string{"9a0dd8b8-2ae4-34ca-8639-cfef69711eb9", "6084734d-f4c2-3375-b298-dbbc6c00a680"},
-			[]float64{9.992676, 2.68152},
+			returnCode:    http.StatusOK,
+			requestURL:    requestURLWithScore,
+			requestBody:   validRequestBody,
+			expectedUUIDs: []string{"9a0dd8b8-2ae4-34ca-8639-cfef69711eb9", "6084734d-f4c2-3375-b298-dbbc6c00a680"},
+			expectedScore: []float64{9.992676, 2.68152},
 		},
 		{
-			mockClient{
+			client: mockClient{
 				queryResponse: validResponseDeprecated,
 			},
-			http.StatusOK,
-			requestURLWithScoreAndDeprecated,
-			validRequestBodyForDeprecated,
-			[]string{"74877f31-6c39-4e07-a85a-39236354a93e"},
-			[]float64{113.70959},
+			returnCode:    http.StatusOK,
+			requestURL:    requestURLWithScoreAndDeprecated,
+			requestBody:   validRequestBodyForDeprecated,
+			expectedUUIDs: []string{"74877f31-6c39-4e07-a85a-39236354a93e"},
+			expectedScore: []float64{113.70959},
 		},
 		{
-			mockClient{
+			client: mockClient{
 				queryResponse: invalidResponseBadHits,
 			},
-			http.StatusInternalServerError,
-			defaultRequestURL,
-			validRequestBody,
-			nil, nil,
+			returnCode:  http.StatusInternalServerError,
+			requestURL:  defaultRequestURL,
+			requestBody: validRequestBody,
 		},
 		{
-			mockClient{
+			client: mockClient{
 				queryResponse: invvalidResponseBadConcept,
 			},
-			http.StatusInternalServerError,
-			defaultRequestURL,
-			validRequestBody,
-			nil, nil,
+			returnCode:  http.StatusInternalServerError,
+			requestURL:  defaultRequestURL,
+			requestBody: validRequestBody,
 		},
 		{
-			failClient{},
-			http.StatusBadRequest,
-			defaultRequestURL,
-			missingTermRequestBody,
-			nil, nil,
+			client:      failClient{},
+			returnCode:  http.StatusBadRequest,
+			requestURL:  defaultRequestURL,
+			requestBody: missingTermRequestBody,
 		},
 	}
 
@@ -143,6 +144,12 @@ func TestConceptFinder(t *testing.T) {
 			assert.True(t, strings.Contains(searchResults.Results[i].ID, uuid))
 			if testCase.requestURL == requestURLWithScoreAndDeprecated {
 				assert.True(t, searchResults.Results[i].IsDeprecated)
+			}
+			if testCase.assertFields != nil {
+				assertFields, found := testCase.assertFields[uuid]
+				if found {
+					assertFields(searchResults.Results[i])
+				}
 			}
 		}
 
@@ -653,12 +660,16 @@ const validResponse = `{
           "types": [
             "http://www.ft.com/ontology/core/Thing",
             "http://www.ft.com/ontology/concept/Concept",
-            "http://www.ft.com/ontology/organisation/Organisation"
+            "http://www.ft.com/ontology/organisation/Organisation",
+            "http://www.ft.com/ontology/company/Company",
+            "http://www.ft.com/ontology/company/PublicCompany"
           ],
-          "directType": "http://www.ft.com/ontology/organisation/Organisation",
+          "directType": "http://www.ft.com/ontology/company/PublicCompany",
           "aliases": [
             "Foobar SpA"
-          ]
+          ],
+          "countryCode": "CA",
+          "countryOfIncorporation": "US"
         }
       },
       {
