@@ -49,6 +49,7 @@ paths:
               - http://www.ft.com/ontology/Location
               - http://www.ft.com/ontology/Topic
               - http://www.ft.com/ontology/AlphavilleSeries
+              - http://www.ft.com/ontology/company/PublicCompany
           collectionFormat: multi
           required: true
           x-example:

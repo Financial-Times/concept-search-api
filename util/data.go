@@ -14,6 +14,7 @@ var (
 		"http://www.ft.com/ontology/Location":                  "locations",
 		"http://www.ft.com/ontology/Topic":                     "topics",
 		"http://www.ft.com/ontology/AlphavilleSeries":          "alphaville-series",
+		"http://www.ft.com/ontology/company/PublicCompany":     "public-company",
 	}
 
 	ErrInvalidConceptTypeFormat              = "invalid concept type %v"
