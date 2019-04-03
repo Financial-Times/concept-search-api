@@ -8,6 +8,7 @@ import (
 
 	"github.com/Financial-Times/concept-search-api/service"
 	"gopkg.in/olivere/elastic.v5"
+	"strings"
 )
 
 type Handler struct {
@@ -119,7 +120,7 @@ func (h *Handler) findConceptsByType(conceptTypes []string, includeDeprecated bo
 	}
 
 	// at this point we go to the default alias
-	if conceptTypes[0] == "PublicCompany" {
+	if strings.Contains(conceptTypes[0], "PublicCompany") {
 		// different query for Public Companies
 		return h.service.FindAllConceptsByDirectType(conceptTypes[0], includeDeprecated)
 	}
