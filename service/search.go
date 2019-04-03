@@ -24,6 +24,7 @@ type ConceptSearchService interface {
 	SetElasticClient(client *elastic.Client)
 	FindConceptsById(ids []string) ([]Concept, error)
 	FindAllConceptsByType(conceptType string, includeDeprecated bool) ([]Concept, error)
+	FindAllConceptsByDirectType(conceptType string, includeDeprecated bool) ([]Concept, error)
 	SearchConceptByTextAndTypes(textQuery string, conceptTypes []string, includeDeprecated bool) ([]Concept, error)
 	SearchConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string, includeDeprecated bool) ([]Concept, error)
 }
@@ -80,6 +81,20 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string, inclu
 	concepts := searchResultToConcepts(result)
 	sort.Sort(concepts)
 	return concepts, nil
+}
+
+func (s *esConceptSearchService) FindAllConceptsByDirectType(conceptType string, includeDeprecated bool) ([]Concept, error) {
+	directTypeMatch := elastic.NewMatchQuery("directType", conceptType)
+	mustQuery := elastic.NewBoolQuery().Should(directTypeMatch)
+
+	result, err := s.esClient.Search(s.index).Size(s.maxSearchResults).Query(mustQuery).Do(context.Background())
+	if err != nil {
+		log.Errorf("error: %v", err)
+		return nil, err
+	}
+	concepts := searchResultToConcepts(result)
+	return concepts, nil
+
 }
 
 func (s *esConceptSearchService) FindConceptsById(ids []string) ([]Concept, error) {

@@ -41,8 +41,9 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	boostType, foundBoostType, boostTypeErr := util.GetSingleValueQueryParameter(req, "boost") // we currently only accept authors, so ignoring the actual boost value
 	ids, foundIds := util.GetMultipleValueQueryParameter(req, "ids")
 	includeDeprecated, _, includeDeprecatedErr := util.GetBoolQueryParameter(req, "include_deprecated", false)
+	searchAllAuthorities, _, allAuthoritiesErr := util.GetBoolQueryParameter(req, "searchAllAuthorities", false)
 
-	err = util.FirstError(modeErr, qErr, boostTypeErr, includeDeprecatedErr)
+	err = util.FirstError(modeErr, qErr, boostTypeErr, includeDeprecatedErr, allAuthoritiesErr)
 	if err != nil {
 		writeHTTPError(w, http.StatusBadRequest, err)
 		return
@@ -68,7 +69,7 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 			} else if foundBoostType {
 				err = NewValidationError("invalid or missing parameters for concept search (boost but no mode)")
 			} else if foundConceptTypes {
-				concepts, err = h.findConceptsByType(conceptTypes, includeDeprecated)
+				concepts, err = h.findConceptsByType(conceptTypes, includeDeprecated, searchAllAuthorities)
 			} else {
 				err = NewValidationError("invalid or missing parameters for concept search")
 			}
@@ -107,13 +108,23 @@ func (h *Handler) searchConcepts(foundBoostType bool, boostType string, foundQ b
 	return h.service.SearchConceptByTextAndTypes(q, conceptTypes, includeDeprecated)
 }
 
-func (h *Handler) findConceptsByType(conceptTypes []string, includeDeprecated bool) ([]service.Concept, error) {
-	if len(conceptTypes) == 1 {
-		return h.service.FindAllConceptsByType(conceptTypes[0], includeDeprecated)
-	} else if len(conceptTypes) > 1 {
+func (h *Handler) findConceptsByType(conceptTypes []string, includeDeprecated bool, searchAllAuthorities bool) ([]service.Concept, error) {
+	if len(conceptTypes) != 1 {
 		return nil, NewValidationError("only a single type is supported by this kind of request")
 	}
-	return []service.Concept{}, nil
+
+	if searchAllAuthorities {
+		// go to the new alias
+		return nil, nil
+	}
+
+	// at this point we go to the default alias
+	if conceptTypes[0] == "PublicCompany" {
+		// different query for Public Companies
+		return h.service.FindAllConceptsByDirectType(conceptTypes[0], includeDeprecated)
+	}
+
+	return h.service.FindAllConceptsByType(conceptTypes[0], includeDeprecated)
 }
 
 func writeHTTPError(w http.ResponseWriter, status int, err error) {
