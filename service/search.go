@@ -24,14 +24,15 @@ type ConceptSearchService interface {
 	SetElasticClient(client *elastic.Client)
 	FindConceptsById(ids []string) ([]Concept, error)
 	FindAllConceptsByType(conceptType string, includeDeprecated bool) ([]Concept, error)
-	FindAllConceptsByDirectType(conceptType string, includeDeprecated bool) ([]Concept, error)
+	FindAllConceptsByDirectType(conceptType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error)
 	SearchConceptByTextAndTypes(textQuery string, conceptTypes []string, includeDeprecated bool) ([]Concept, error)
 	SearchConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string, includeDeprecated bool) ([]Concept, error)
 }
 
 type esConceptSearchService struct {
 	esClient               *elastic.Client
-	index                  string
+	defaultIndex           string
+	extendedSearchIndex    string
 	maxSearchResults       int
 	maxAutoCompleteResults int
 	mappingRefreshTicker   *time.Ticker
@@ -40,9 +41,10 @@ type esConceptSearchService struct {
 	clientLock             *sync.RWMutex
 }
 
-func NewEsConceptSearchService(index string, maxSearchResults int, maxAutoCompleteResults int, authorsBoost int) ConceptSearchService {
+func NewEsConceptSearchService(defaultIndex string, extendedSearchIndex string, maxSearchResults int, maxAutoCompleteResults int, authorsBoost int) ConceptSearchService {
 	return &esConceptSearchService{
-		index:                  index,
+		defaultIndex:           defaultIndex,
+		extendedSearchIndex:    extendedSearchIndex,
 		maxSearchResults:       maxSearchResults,
 		maxAutoCompleteResults: maxAutoCompleteResults,
 		authorsBoost:           authorsBoost,
@@ -67,7 +69,7 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string, inclu
 		return nil, err
 	}
 
-	query := s.esClient.Search(s.index).Type(t).Size(s.maxSearchResults)
+	query := s.esClient.Search(s.defaultIndex).Type(t).Size(s.maxSearchResults)
 	if !includeDeprecated {
 		deprecatedQ := elastic.NewBoolQuery().MustNot(elastic.NewTermQuery("isDeprecated", true))
 		query = query.Query(deprecatedQ)
@@ -83,11 +85,12 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string, inclu
 	return concepts, nil
 }
 
-func (s *esConceptSearchService) FindAllConceptsByDirectType(conceptType string, includeDeprecated bool) ([]Concept, error) {
+func (s *esConceptSearchService) FindAllConceptsByDirectType(conceptType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error) {
 	directTypeMatch := elastic.NewMatchQuery("directType", conceptType)
 	mustQuery := elastic.NewBoolQuery().Should(directTypeMatch)
+	index := s.getIndexForAuthoritiesParam(searchAllAuthorities)
 
-	result, err := s.esClient.Search(s.index).Size(s.maxSearchResults).Query(mustQuery).Do(context.Background())
+	result, err := s.esClient.Search(index).Size(s.maxSearchResults).Query(mustQuery).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err
@@ -105,7 +108,7 @@ func (s *esConceptSearchService) FindConceptsById(ids []string) ([]Concept, erro
 		return nil, err
 	}
 	idsQuery := elastic.NewIdsQuery("_all").Ids(ids...)
-	result, err := s.esClient.Search(s.index).Size(s.maxSearchResults).Query(idsQuery).Do(context.Background())
+	result, err := s.esClient.Search(s.defaultIndex).Size(s.maxSearchResults).Query(idsQuery).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err
@@ -223,7 +226,7 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 
 	theQuery := elastic.NewBoolQuery().Must(mustQuery).Should(shouldMatch...).MustNot(mustNotMatch...).Filter(typeFilter).MinimumNumberShouldMatch(0).Boost(1)
 
-	search := s.esClient.Search(s.index).Size(s.maxAutoCompleteResults).Query(theQuery)
+	search := s.esClient.Search(s.defaultIndex).Size(s.maxAutoCompleteResults).Query(theQuery)
 
 	result, err := search.SearchType("dfs_query_then_fetch").Do(context.Background())
 	if err != nil {
@@ -253,4 +256,12 @@ func (s *esConceptSearchService) elasticClient() *elastic.Client {
 	s.clientLock.RLock()
 	defer s.clientLock.RUnlock()
 	return s.esClient
+}
+
+func (s *esConceptSearchService) getIndexForAuthoritiesParam(searchAllAuthorities bool) string {
+	if searchAllAuthorities {
+		return s.extendedSearchIndex
+	}
+
+	return s.defaultIndex
 }

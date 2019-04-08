@@ -114,15 +114,8 @@ func (h *Handler) findConceptsByType(conceptTypes []string, includeDeprecated bo
 		return nil, NewValidationError("only a single type is supported by this kind of request")
 	}
 
-	if searchAllAuthorities {
-		// go to the new alias
-		return nil, nil
-	}
-
-	// at this point we go to the default alias
 	if strings.Contains(conceptTypes[0], "PublicCompany") {
-		// different query for Public Companies
-		return h.service.FindAllConceptsByDirectType(conceptTypes[0], includeDeprecated)
+		return h.service.FindAllConceptsByDirectType(conceptTypes[0], searchAllAuthorities, includeDeprecated)
 	}
 
 	return h.service.FindAllConceptsByType(conceptTypes[0], includeDeprecated)

@@ -30,6 +30,11 @@ func (s *mockConceptSearchService) FindAllConceptsByType(conceptType string, inc
 	return args.Get(0).([]service.Concept), args.Error(1)
 }
 
+func (s *mockConceptSearchService) FindAllConceptsByDirectType(conceptType string, searchAllAuthorities bool, includeDeprecated bool) ([]service.Concept, error) {
+	args := s.Called(conceptType, includeDeprecated)
+	return args.Get(0).([]service.Concept), args.Error(1)
+}
+
 func (s *mockConceptSearchService) FindConceptsById(ids []string) ([]service.Concept, error) {
 	args := s.Called(ids)
 	return args.Get(0).([]service.Concept), args.Error(1)

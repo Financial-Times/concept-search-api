@@ -47,11 +47,17 @@ func main() {
 		Desc:   "Authentication method for ES cluster (aws or none)",
 		EnvVar: "AUTH",
 	})
-	esIndex := app.String(cli.StringOpt{
-		Name:   "elasticsearch-index",
+	esDefaultIndex := app.String(cli.StringOpt{
+		Name:   "elasticsearch-default-index",
 		Value:  "concepts",
-		Desc:   "Elasticsearch index",
-		EnvVar: "ELASTICSEARCH_INDEX",
+		Desc:   "Elasticsearch default index",
+		EnvVar: "ELASTICSEARCH_DEFAULT_INDEX",
+	})
+	esExtendedSearchIndex := app.String(cli.StringOpt{
+		Name:   "elasticsearch-extended-index",
+		Value:  "concepts",
+		Desc:   "Elasticsearch extended index",
+		EnvVar: "ELASTICSEARCH_EXTENDED_SEARCH_INDEX",
 	})
 	apiYml := app.String(cli.StringOpt{
 		Name:   "api-yml",
@@ -87,10 +93,10 @@ func main() {
 	log.SetLevel(log.InfoLevel)
 
 	app.Action = func() {
-		logStartupConfig(port, esEndpoint, esAuth, esIndex, searchResultLimit)
+		logStartupConfig(port, esEndpoint, esAuth, esDefaultIndex, esExtendedSearchIndex, searchResultLimit)
 
-		search := service.NewEsConceptSearchService(*esIndex, *searchResultLimit, *autoCompleteResultLimit, *authorsBoost)
-		conceptFinder := newConceptFinder(*esIndex, *searchResultLimit)
+		search := service.NewEsConceptSearchService(*esDefaultIndex, *esExtendedSearchIndex, *searchResultLimit, *autoCompleteResultLimit, *authorsBoost)
+		conceptFinder := newConceptFinder(*esDefaultIndex, *searchResultLimit)
 		healthcheck := newEsHealthService()
 
 		if *esAuth == "aws" {
@@ -111,12 +117,13 @@ func main() {
 	}
 }
 
-func logStartupConfig(port, esEndpoint, esAuth, esIndex *string, searchResultLimit *int) {
+func logStartupConfig(port, esEndpoint, esAuth, esDefaultIndex *string, esExtendedSearchIndex *string, searchResultLimit *int) {
 	log.Info("Concept Search API uses the following configurations:")
 	log.Infof("port: %v", *port)
 	log.Infof("elasticsearch-endpoint: %v", *esEndpoint)
 	log.Infof("elasticsearch-auth: %v", *esAuth)
-	log.Infof("elasticsearch-index: %v", *esIndex)
+	log.Infof("elasticsearch-index: %v", *esDefaultIndex)
+	log.Infof("elasticsearch-extended-index: %v", *esExtendedSearchIndex)
 	log.Infof("search-result-limit: %v", *searchResultLimit)
 }
 

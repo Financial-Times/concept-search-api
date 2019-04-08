@@ -35,8 +35,10 @@ spec:
         env:
         - name: AUTH
           value: aws
-        - name: ELASTICSEARCH_INDEX
+        - name: ELASTICSEARCH_DEFAULT_INDEX
           value: concepts
+        - name: ELASTICSEARCH_EXTENDED_SEARCH_INDEX
+          value: all-conceps
         - name: RESULT_LIMIT
           value: "50"
         - name: AUTOCOMPLETE_LIMIT

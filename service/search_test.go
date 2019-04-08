@@ -18,7 +18,7 @@ import (
 
 const (
 	apiBaseURL             = "http://test.api.ft.com"
-	testIndexName          = "test-index"
+	testDefaultIndex       = "test-index"
 	esGenreType            = "genres"
 	esBrandType            = "brands"
 	esPeopleType           = "people"
@@ -37,7 +37,7 @@ const (
 )
 
 func TestNoElasticClient(t *testing.T) {
-	service := NewEsConceptSearchService("test", 50, 10, 2)
+	service := NewEsConceptSearchService("test", "", 50, 10, 2)
 
 	_, err := service.FindAllConceptsByType(ftGenreType, true)
 	assert.EqualError(t, err, util.ErrNoElasticClient.Error(), "error response")
@@ -89,7 +89,7 @@ func (s *EsConceptSearchServiceTestSuite) SetupSuite() {
 }
 
 func (s *EsConceptSearchServiceTestSuite) TearDownSuite() {
-	s.ec.DeleteIndex(testIndexName).Do(context.Background())
+	s.ec.DeleteIndex(testDefaultIndex).Do(context.Background())
 }
 
 func getElasticSearchTestURL(t *testing.T) string {
@@ -110,7 +110,7 @@ func createIndex(ec *elastic.Client, mappingFile string) error {
 	if err != nil {
 		return err
 	}
-	_, err = ec.CreateIndex(testIndexName).Body(string(mapping)).Do(context.Background())
+	_, err = ec.CreateIndex(testDefaultIndex).Body(string(mapping)).Do(context.Background())
 	if err != nil {
 		return err
 	}
@@ -120,13 +120,13 @@ func createIndex(ec *elastic.Client, mappingFile string) error {
 func cleanup(t *testing.T, ec *elastic.Client, esType string, uuids ...string) {
 	for _, uuid := range uuids {
 		_, err := ec.Delete().
-			Index(testIndexName).
+			Index(testDefaultIndex).
 			Type(esType).
 			Id(uuid).
 			Do(context.TODO())
 		assert.NoError(t, err)
 	}
-	_, err := ec.Refresh(testIndexName).Do(context.TODO())
+	_, err := ec.Refresh(testDefaultIndex).Do(context.TODO())
 	assert.NoError(t, err)
 }
 
@@ -147,7 +147,7 @@ func writeTestAuthors(ec *elastic.Client, amount int) error {
 		}
 
 		_, err := ec.Index().
-			Index(testIndexName).
+			Index(testDefaultIndex).
 			Type(esPeopleType).
 			Id(uuid).
 			BodyJson(payload).
@@ -158,7 +158,7 @@ func writeTestAuthors(ec *elastic.Client, amount int) error {
 	}
 
 	// ensure test data is immediately available from the index
-	_, err := ec.Refresh(testIndexName).Do(context.Background())
+	_, err := ec.Refresh(testDefaultIndex).Do(context.Background())
 	if err != nil {
 		return err
 	}
@@ -176,7 +176,7 @@ func writeTestConcepts(ec *elastic.Client, esConceptType string, ftConceptType s
 	}
 
 	// ensure test data is immediately available from the index
-	_, err := ec.Refresh(testIndexName).Do(context.Background())
+	_, err := ec.Refresh(testDefaultIndex).Do(context.Background())
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func writeTestPerson(ec *elastic.Client, uuid string, prefLabel string, ftAuthor
 	}
 
 	_, err := ec.Index().
-		Index(testIndexName).
+		Index(testDefaultIndex).
 		Type(esPeopleType).
 		Id(uuid).
 		BodyJson(payload).
@@ -218,7 +218,7 @@ func writeTestConcept(ec *elastic.Client, uuid string, esConceptType string, ftC
 	}
 
 	_, err := ec.Index().
-		Index(testIndexName).
+		Index(testDefaultIndex).
 		Type(esConceptType).
 		Id(uuid).
 		BodyJson(payload).
@@ -244,7 +244,7 @@ func writeTestConceptWithScopeNote(ec *elastic.Client, uuid string, esConceptTyp
 	}
 
 	_, err := ec.Index().
-		Index(testIndexName).
+		Index(testDefaultIndex).
 		Type(esConceptType).
 		Id(uuid).
 		BodyJson(payload).
@@ -271,7 +271,7 @@ func writeTestConceptWithCountryCodeAndCountryOfIncorporation(ec *elastic.Client
 	}
 
 	_, err := ec.Index().
-		Index(testIndexName).
+		Index(testDefaultIndex).
 		Type(esConceptType).
 		Id(uuid).
 		BodyJson(payload).
@@ -285,7 +285,7 @@ func writeTestConceptWithCountryCodeAndCountryOfIncorporation(ec *elastic.Client
 
 func writeTestConceptModel(ec *elastic.Client, esConceptType string, model EsConceptModel) error {
 	_, err := ec.Index().
-		Index(testIndexName).
+		Index(testDefaultIndex).
 		Type(esConceptType).
 		Id(model.Id).
 		BodyJson(model).
@@ -298,7 +298,7 @@ func writeTestConceptModel(ec *elastic.Client, esConceptType string, model EsCon
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByType() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	concepts, err := service.FindAllConceptsByType(ftGenreType, true)
@@ -317,7 +317,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByType() {
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeResultSize() {
-	service := NewEsConceptSearchService(testIndexName, 3, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 3, 10, 2)
 	service.SetElasticClient(s.ec)
 	concepts, err := service.FindAllConceptsByType(ftGenreType, true)
 
@@ -335,7 +335,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeResultSize() 
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeInvalid() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	_, err := service.FindAllConceptsByType("http://www.ft.com/ontology/Foo", true)
@@ -344,7 +344,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeInvalid() {
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeDeprecatedFlag() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid := uuid.NewV4().String()
@@ -360,7 +360,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeDeprecatedFla
 		IsDeprecated: true,
 	})
 	assert.NoError(s.T(), err, "no error expected during indexing a new person concept")
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
 	conceptsWithoutDeprecated, err := service.FindAllConceptsByType("http://www.ft.com/ontology/person/Person", false)
@@ -389,7 +389,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeDeprecatedFla
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypes() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	concepts, err := service.SearchConceptByTextAndTypes("test", []string{ftPeopleType}, true)
@@ -402,7 +402,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypes() {
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesMultipleTypes() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	concepts, err := service.SearchConceptByTextAndTypes("test", []string{ftBrandType, ftAlphavilleSeriesType}, true)
@@ -415,7 +415,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesMultipl
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesNoText() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	_, err := service.SearchConceptByTextAndTypes("", []string{ftPeopleType}, true)
@@ -426,10 +426,10 @@ func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsSingle() {
 	uuid1 := uuid.NewV4().String()
 	err := writeTestConcept(s.ec, uuid1, esPeopleType, ftPeopleType, "Eric Phillips inc", []string{}, nil)
 	require.NoError(s.T(), err)
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	concepts, err := service.FindConceptsById([]string{uuid1})
@@ -450,10 +450,10 @@ func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsMultiple() {
 	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "little pond", []string{}, nil)
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	testIds := []string{uuid1, uuid2}
@@ -473,7 +473,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsMultiple() {
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsSingleInvalidUUID() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	concepts, err := service.FindConceptsById([]string{"uuid1"})
@@ -491,10 +491,10 @@ func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsMultipleMixValidI
 	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "big pond", []string{}, nil)
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	testIds := []string{uuid1, "xxx", uuid2, "zzzz"}
@@ -515,7 +515,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsMultipleMixValidI
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsEmptyStringValue() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	_, err := service.FindConceptsById([]string{""})
@@ -523,7 +523,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsEmptyStringValue(
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsEmptySlice() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	_, err := service.FindConceptsById([]string{})
@@ -531,7 +531,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsEmptySlice() {
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsNilSlice() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	_, err := service.FindConceptsById(nil)
@@ -539,7 +539,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsNilSlice() {
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesNoConceptTypes() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	_, err := service.SearchConceptByTextAndTypes("pippo", []string{}, true)
@@ -547,7 +547,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesNoConce
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesInvalidConceptType() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	_, err := service.SearchConceptByTextAndTypes("pippo", []string{"http://www.ft.com/ontology/Foo"}, true)
@@ -555,7 +555,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesInvalid
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesTermMatchBoosted() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
@@ -566,7 +566,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesTermMat
 	err = writeTestConcept(s.ec, uuid2, esPeopleType, ftPeopleType, "Donald J Trump", []string{}, nil)
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
 	concepts, err := service.SearchConceptByTextAndTypes("donald trump", []string{ftPeopleType}, true)
@@ -582,7 +582,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesTermMat
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMatchBoosted() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
@@ -593,7 +593,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMa
 	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "New York City Magistrates (New York, New York)", []string{}, nil)
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
 	concepts, err := service.SearchConceptByTextAndTypes("new york", []string{ftLocationType}, true)
@@ -609,7 +609,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMa
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMatchBoostedWithScopeNotePresent() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
@@ -620,7 +620,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMa
 	err = writeTestConceptWithScopeNote(s.ec, uuid2, esLocationType, ftLocationType, "New York City Magistrates (New York, New York)", []string{}, "New York City Magistrates scopeNote")
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
 	concepts, err := service.SearchConceptByTextAndTypes("new yor", []string{ftLocationType}, true)
@@ -636,7 +636,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMa
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesDeprecated() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
@@ -655,7 +655,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesDepreca
 	})
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
 	concepts, err := service.SearchConceptByTextAndTypes("new york", []string{ftLocationType}, true)
@@ -680,7 +680,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesDepreca
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAuthorsBoost() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
@@ -695,7 +695,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 	err = writeTestPerson(s.ec, uuid3, "Robert Author Shrimpley", "true")
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
 	concepts, err := service.SearchConceptByTextAndTypesWithBoost("robert shrimpley", []string{ftPeopleType}, "authors", true)
@@ -714,7 +714,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 
 // If 4 concepts are equivalent, then the type boosts should order them as expected.
 func (s *EsConceptSearchServiceTestSuite) TestSearch__SpecificTypesAreBoosted() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
@@ -733,7 +733,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearch__SpecificTypesAreBoosted() 
 	err = writeTestConcept(s.ec, uuid4, esTopicType, ftTopicType, "Fannie Mae", []string{}, nil)
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
 	concepts, err := service.SearchConceptByTextAndTypes("Fannie Mae", []string{ftPeopleType, ftTopicType, ftLocationType, ftOrganisationType}, true)
@@ -757,7 +757,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearch__SpecificTypesAreBoosted() 
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAuthorsBoostAndDeprecated() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
@@ -786,7 +786,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 	})
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
 	conceptsWithDeprecated, err := service.SearchConceptByTextAndTypesWithBoost("robert shrimpley", []string{ftPeopleType}, "authors", true)
@@ -819,7 +819,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByExactMatchAliases() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
@@ -830,7 +830,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByExactMatchAliases(
 	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "USADA", []string{}, nil)
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
 	concepts, err := service.SearchConceptByTextAndTypes("USA", []string{ftLocationType}, true)
@@ -846,7 +846,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByExactMatchAliases(
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoostRestrictedSize() {
-	service := NewEsConceptSearchService(testIndexName, 10, 1, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 1, 2)
 	service.SetElasticClient(s.ec)
 
 	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{ftPeopleType}, "authors", true)
@@ -855,7 +855,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoo
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoostNoInputText() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	concepts, err := service.SearchConceptByTextAndTypesWithBoost("", []string{ftPeopleType}, "authors", true)
@@ -864,7 +864,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoo
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoostNoTypes() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{}, "authors", true)
@@ -873,7 +873,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoo
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoostMultipleTypes() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{ftPeopleType, ftLocationType}, "authors", true)
@@ -882,7 +882,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoo
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithInvalidBoost() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{ftPeopleType}, "pluto", true)
@@ -891,7 +891,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithInv
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoostNoESConnection() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 
 	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{ftPeopleType}, "authors", true)
 	assert.EqualError(s.T(), err, util.ErrNoElasticClient.Error())
@@ -899,7 +899,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoo
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoostInvalidConceptType() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 
 	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{ftGenreType}, "authors", true)
 	assert.EqualError(s.T(), err, fmt.Sprintf(util.ErrInvalidConceptTypeFormat, ftGenreType))
@@ -907,7 +907,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoo
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularity() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
@@ -918,7 +918,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularity() {
 	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "USADA", []string{"USA"}, &ConceptMetrics{AnnotationsCount: 4})
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
 	concepts, err := service.SearchConceptByTextAndTypes("USA", []string{ftLocationType}, true)
@@ -934,7 +934,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularity() {
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularityAliasMatch() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
@@ -945,7 +945,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularityAliasMat
 	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "Luca The Fraud", []string{"Dr Git"}, &ConceptMetrics{AnnotationsCount: 4})
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
 	concepts, err := service.SearchConceptByTextAndTypes("Dr G", []string{ftLocationType}, true)
@@ -961,7 +961,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularityAliasMat
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularitySameAnnotationsCount() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
@@ -972,7 +972,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularitySa
 	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "USADA", []string{"USA"}, &ConceptMetrics{PrevWeekAnnotationsCount: 2, AnnotationsCount: 10})
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
 	concepts, err := service.SearchConceptByTextAndTypes("USA", []string{ftLocationType}, true)
@@ -988,7 +988,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularitySa
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularityNoRecentAnnotations() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
@@ -999,7 +999,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularityNo
 	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "USADA", []string{"USA"}, &ConceptMetrics{PrevWeekAnnotationsCount: 0, AnnotationsCount: 10})
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
 	concepts, err := service.SearchConceptByTextAndTypes("USA", []string{ftLocationType}, true)
@@ -1015,7 +1015,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularityNo
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularity() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
@@ -1026,7 +1026,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularity()
 	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "USADA", []string{"USA"}, &ConceptMetrics{PrevWeekAnnotationsCount: 20, AnnotationsCount: 100})
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
 	concepts, err := service.SearchConceptByTextAndTypes("USA", []string{ftLocationType}, true)
@@ -1042,7 +1042,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularity()
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByAliasPartialMatch() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid1 := uuid.NewV4().String()
@@ -1053,7 +1053,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByAliasPartialMatch(
 	err = writeTestConcept(s.ec, uuid2, esLocationType, ftLocationType, "USADA", []string{"USA"}, &ConceptMetrics{AnnotationsCount: 0})
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
 	concepts, err := service.SearchConceptByTextAndTypes("roose", []string{ftLocationType}, true)
@@ -1067,14 +1067,14 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByAliasPartialMatch(
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindOrganisationWithCountryCodeAndCountryOfIncorporation() {
-	service := NewEsConceptSearchService(testIndexName, 10, 10, 2)
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
 	uuid := uuid.NewV4().String()
 	err := writeTestConceptWithCountryCodeAndCountryOfIncorporation(s.ec, uuid, esOrganisationType, ftOrganisationType, "MooTech Ltd.", []string{"MooTech Ltd."}, "CA", "US")
 	require.NoError(s.T(), err)
 
-	_, err = s.ec.Refresh(testIndexName).Do(context.Background())
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
 	concepts, err := service.SearchConceptByTextAndTypes("Moo", []string{ftOrganisationType}, false)
