@@ -38,7 +38,7 @@ spec:
         - name: ELASTICSEARCH_DEFAULT_INDEX
           value: concepts
         - name: ELASTICSEARCH_EXTENDED_SEARCH_INDEX
-          value: all-conceps
+          value: all-concepts
         - name: RESULT_LIMIT
           value: "50"
         - name: AUTOCOMPLETE_LIMIT
