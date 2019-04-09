@@ -96,7 +96,7 @@ func main() {
 		logStartupConfig(port, esEndpoint, esAuth, esDefaultIndex, esExtendedSearchIndex, searchResultLimit)
 
 		search := service.NewEsConceptSearchService(*esDefaultIndex, *esExtendedSearchIndex, *searchResultLimit, *autoCompleteResultLimit, *authorsBoost)
-		conceptFinder := newConceptFinder(*esDefaultIndex, *searchResultLimit)
+		conceptFinder := newConceptFinder(*esDefaultIndex, *esExtendedSearchIndex, *searchResultLimit)
 		healthcheck := newEsHealthService()
 
 		if *esAuth == "aws" {

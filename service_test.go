@@ -56,8 +56,7 @@ func TestConceptFinder(t *testing.T) {
 			requestBody:   validRequestBody,
 			expectedUUIDs: []string{"9a0dd8b8-2ae4-34ca-8639-cfef69711eb9", "6084734d-f4c2-3375-b298-dbbc6c00a680"},
 			assertFields: map[string]func(concept){
-				"9a0dd8b8-2ae4-34ca-8639-cfef69711eb9":
-				func(c concept) {
+				"9a0dd8b8-2ae4-34ca-8639-cfef69711eb9": func(c concept) {
 					assert.Equal(t, "Foobar SpA", c.PrefLabel)
 					assert.Equal(t, "", c.ScopeNote)
 					assert.Equal(t, "http://www.ft.com/ontology/company/PublicCompany", c.DirectType)
@@ -119,7 +118,7 @@ func TestConceptFinder(t *testing.T) {
 
 	for _, testCase := range testCases {
 		conceptFinder := &esConceptFinder{
-			indexName:         "concept",
+			defaultIndex:      "concept",
 			searchResultLimit: 50,
 			lockClient:        &sync.RWMutex{},
 		}
@@ -340,7 +339,7 @@ func TestConceptFinderForBestMatch(t *testing.T) {
 
 	for _, testCase := range testCases {
 		conceptFinder := &esConceptFinder{
-			indexName:         "concept",
+			defaultIndex:      "concept",
 			searchResultLimit: 50,
 			lockClient:        &sync.RWMutex{},
 		}
@@ -403,7 +402,7 @@ func TestEsQueryScore(t *testing.T) {
 	// prepare request and trigger this
 	req, _ := http.NewRequest("POST", "http://dummy_host/concepts?include_score=true", strings.NewReader(`{"term": "Anna"}`))
 	w := httptest.NewRecorder()
-	conceptFinder := newConceptFinder(filterScoreTestingIndexName, 10)
+	conceptFinder := newConceptFinder(filterScoreTestingIndexName, "", 10)
 	conceptFinder.SetElasticClient(ec)
 	conceptFinder.FindConcept(w, req)
 
@@ -452,7 +451,7 @@ func TestEsBestMatchImpl(t *testing.T) {
 			"conceptTypes": ["http://www.ft.com/ontology/person/Person"]
 		}`))
 	w := httptest.NewRecorder()
-	conceptFinder := newConceptFinder(bestMatchIndexName, 10)
+	conceptFinder := newConceptFinder(bestMatchIndexName, "", 10)
 	conceptFinder.SetElasticClient(ec)
 	conceptFinder.FindConcept(w, req)
 

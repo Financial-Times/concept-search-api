@@ -19,17 +19,20 @@ type conceptFinder interface {
 }
 
 type esConceptFinder struct {
-	client            esClient
-	indexName         string
+	client              esClient
+	defaultIndex        string
+	extendedSearchIndex string
+
 	searchResultLimit int
 	lockClient        *sync.RWMutex
 }
 
-func newConceptFinder(index string, resultLimit int) conceptFinder {
+func newConceptFinder(defaultIndex string, extendedSearchIndex string, resultLimit int) conceptFinder {
 	return &esConceptFinder{
-		indexName:         index,
-		searchResultLimit: resultLimit,
-		lockClient:        &sync.RWMutex{},
+		defaultIndex:        defaultIndex,
+		extendedSearchIndex: extendedSearchIndex,
+		searchResultLimit:   resultLimit,
+		lockClient:          &sync.RWMutex{},
 	}
 }
 
@@ -87,7 +90,12 @@ func (service *esConceptFinder) findConceptsWithTerm(writer http.ResponseWriter,
 		finalQuery = finalQuery.MustNot(elastic.NewTermQuery("isDeprecated", true))
 	}
 
-	searchResult, err := service.esClient().query(service.indexName, finalQuery, service.searchResultLimit)
+	index := service.defaultIndex
+	if isSearchAllAuthorities(request) {
+		index = service.extendedSearchIndex
+	}
+
+	searchResult, err := service.esClient().query(index, finalQuery, service.searchResultLimit)
 
 	if err != nil {
 		log.Errorf("There was an error executing the query on ES: %s", err.Error())
@@ -129,7 +137,12 @@ func (service *esConceptFinder) findConceptsWithBestMatch(writer http.ResponseWr
 		searchRequests = append(searchRequests, searchWrapper.searchRequest)
 	}
 
-	res, err := service.esClient().multiSearchQuery(service.indexName, searchRequests...)
+	index := service.defaultIndex
+	if isSearchAllAuthorities(request) {
+		index = service.extendedSearchIndex
+	}
+
+	res, err := service.esClient().multiSearchQuery(index, searchRequests...)
 	if err != nil {
 		log.Errorf("There was an error executing the query on ES: %s", err.Error())
 		writer.WriteHeader(http.StatusInternalServerError)
@@ -185,15 +198,21 @@ func getFoundConcepts(elasticResult *elastic.SearchResult, isScoreIncluded bool,
 }
 
 func isDeprecatedIncluded(request *http.Request) bool {
-	queryParam := request.URL.Query().Get("include_deprecated")
-	if len(queryParam) == 0 {
-		return false
-	}
-	includeDeprecated, err := strconv.ParseBool(queryParam)
+	includeDeprecated, _, err := util.GetBoolQueryParameter(request, "include_deprecated", false)
 	if err != nil {
 		return false
 	}
+
 	return includeDeprecated
+}
+
+func isSearchAllAuthorities(request *http.Request) bool {
+	searchAllAuthorities, _, err := util.GetBoolQueryParameter(request, "searchAllAuthorities", false)
+	if err != nil {
+		return false
+	}
+
+	return searchAllAuthorities
 }
 
 func isFTAuthorIncluded(request *http.Request) bool {
