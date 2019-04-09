@@ -23,7 +23,7 @@ var (
 type ConceptSearchService interface {
 	SetElasticClient(client *elastic.Client)
 	FindConceptsById(ids []string) ([]Concept, error)
-	FindAllConceptsByType(conceptType string, includeDeprecated bool) ([]Concept, error)
+	FindAllConceptsByType(conceptType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error)
 	FindAllConceptsByDirectType(conceptType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error)
 	SearchConceptByTextAndTypes(textQuery string, conceptTypes []string, includeDeprecated bool) ([]Concept, error)
 	SearchConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string, includeDeprecated bool) ([]Concept, error)
@@ -59,7 +59,7 @@ func (s *esConceptSearchService) checkElasticClient() error {
 	return nil
 }
 
-func (s *esConceptSearchService) FindAllConceptsByType(conceptType string, includeDeprecated bool) ([]Concept, error) {
+func (s *esConceptSearchService) FindAllConceptsByType(conceptType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error) {
 	t := util.EsType(conceptType)
 	if t == "" {
 		return nil, util.NewInputErrorf(util.ErrInvalidConceptTypeFormat, conceptType)
@@ -69,7 +69,8 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string, inclu
 		return nil, err
 	}
 
-	query := s.esClient.Search(s.defaultIndex).Type(t).Size(s.maxSearchResults)
+	index := s.getIndexForAuthoritiesParam(searchAllAuthorities)
+	query := s.esClient.Search(index).Type(t).Size(s.maxSearchResults)
 	if !includeDeprecated {
 		deprecatedQ := elastic.NewBoolQuery().MustNot(elastic.NewTermQuery("isDeprecated", true))
 		query = query.Query(deprecatedQ)
@@ -89,8 +90,14 @@ func (s *esConceptSearchService) FindAllConceptsByDirectType(conceptType string,
 	directTypeMatch := elastic.NewMatchQuery("directType", conceptType)
 	mustQuery := elastic.NewBoolQuery().Should(directTypeMatch)
 	index := s.getIndexForAuthoritiesParam(searchAllAuthorities)
+	query := s.esClient.Search(index).Size(s.maxSearchResults).Query(mustQuery)
 
-	result, err := s.esClient.Search(index).Size(s.maxSearchResults).Query(mustQuery).Do(context.Background())
+	if !includeDeprecated {
+		deprecatedQ := elastic.NewBoolQuery().MustNot(elastic.NewTermQuery("isDeprecated", true))
+		query = query.Query(deprecatedQ)
+	}
+
+	result, err := query.Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err

@@ -118,7 +118,7 @@ func (h *Handler) findConceptsByType(conceptTypes []string, includeDeprecated bo
 		return h.service.FindAllConceptsByDirectType(conceptTypes[0], searchAllAuthorities, includeDeprecated)
 	}
 
-	return h.service.FindAllConceptsByType(conceptTypes[0], includeDeprecated)
+	return h.service.FindAllConceptsByType(conceptTypes[0], searchAllAuthorities, includeDeprecated)
 }
 
 func writeHTTPError(w http.ResponseWriter, status int, err error) {

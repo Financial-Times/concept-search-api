@@ -39,7 +39,7 @@ const (
 func TestNoElasticClient(t *testing.T) {
 	service := NewEsConceptSearchService("test", "", 50, 10, 2)
 
-	_, err := service.FindAllConceptsByType(ftGenreType, true)
+	_, err := service.FindAllConceptsByType(ftGenreType, false, true)
 	assert.EqualError(t, err, util.ErrNoElasticClient.Error(), "error response")
 
 	_, err = service.SearchConceptByTextAndTypes("lucy", []string{ftBrandType}, true)
@@ -301,7 +301,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByType() {
 	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
-	concepts, err := service.FindAllConceptsByType(ftGenreType, true)
+	concepts, err := service.FindAllConceptsByType(ftGenreType, false, true)
 
 	assert.NoError(s.T(), err, "expected no error for ES read")
 	assert.Len(s.T(), concepts, 4, "there should be four genres")
@@ -319,7 +319,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByType() {
 func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeResultSize() {
 	service := NewEsConceptSearchService(testDefaultIndex, "", 3, 10, 2)
 	service.SetElasticClient(s.ec)
-	concepts, err := service.FindAllConceptsByType(ftGenreType, true)
+	concepts, err := service.FindAllConceptsByType(ftGenreType, false, true)
 
 	assert.NoError(s.T(), err, "expected no error for ES read")
 	assert.Len(s.T(), concepts, 3, "there should be three genres")
@@ -338,7 +338,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeInvalid() {
 	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
-	_, err := service.FindAllConceptsByType("http://www.ft.com/ontology/Foo", true)
+	_, err := service.FindAllConceptsByType("http://www.ft.com/ontology/Foo", false, true)
 
 	assert.EqualError(s.T(), err, fmt.Sprintf(util.ErrInvalidConceptTypeFormat, "http://www.ft.com/ontology/Foo"), "expected error")
 }
@@ -363,7 +363,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeDeprecatedFla
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	conceptsWithoutDeprecated, err := service.FindAllConceptsByType("http://www.ft.com/ontology/person/Person", false)
+	conceptsWithoutDeprecated, err := service.FindAllConceptsByType("http://www.ft.com/ontology/person/Person", false, false)
 	assert.NoError(s.T(), err, "no error expected")
 
 	for _, concept := range conceptsWithoutDeprecated {
@@ -371,7 +371,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeDeprecatedFla
 		assert.False(s.T(), concept.IsDeprecated)
 	}
 
-	conceptsWithDeprecated, err := service.FindAllConceptsByType("http://www.ft.com/ontology/person/Person", true)
+	conceptsWithDeprecated, err := service.FindAllConceptsByType("http://www.ft.com/ontology/person/Person", false, true)
 	assert.NoError(s.T(), err, "no error expected")
 
 	deprecatedConceptsFound := 0
