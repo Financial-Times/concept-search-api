@@ -55,7 +55,7 @@ func main() {
 	})
 	esExtendedSearchIndex := app.String(cli.StringOpt{
 		Name:   "elasticsearch-extended-index",
-		Value:  "concepts",
+		Value:  "all-concepts",
 		Desc:   "Elasticsearch extended index",
 		EnvVar: "ELASTICSEARCH_EXTENDED_SEARCH_INDEX",
 	})

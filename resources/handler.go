@@ -42,9 +42,9 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	boostType, foundBoostType, boostTypeErr := util.GetSingleValueQueryParameter(req, "boost") // we currently only accept authors, so ignoring the actual boost value
 	ids, foundIds := util.GetMultipleValueQueryParameter(req, "ids")
 	includeDeprecated, _, includeDeprecatedErr := util.GetBoolQueryParameter(req, "include_deprecated", false)
-	searchAllAuthorities, _, allAuthoritiesErr := util.GetBoolQueryParameter(req, "searchAllAuthorities", false)
+	searchAllAuthorities, _, searchAllErr := util.GetBoolQueryParameter(req, "searchAllAuthorities", false)
 
-	err = util.FirstError(modeErr, qErr, boostTypeErr, includeDeprecatedErr, allAuthoritiesErr)
+	err = util.FirstError(modeErr, qErr, boostTypeErr, includeDeprecatedErr, searchAllErr)
 	if err != nil {
 		writeHTTPError(w, http.StatusBadRequest, err)
 		return
@@ -110,7 +110,11 @@ func (h *Handler) searchConcepts(foundBoostType bool, boostType string, foundQ b
 }
 
 func (h *Handler) findConceptsByType(conceptTypes []string, includeDeprecated bool, searchAllAuthorities bool) ([]service.Concept, error) {
-	if len(conceptTypes) != 1 {
+	if len(conceptTypes) == 0 {
+		return []service.Concept{}, nil
+	}
+
+	if len(conceptTypes) > 1 {
 		return nil, NewValidationError("only a single type is supported by this kind of request")
 	}
 

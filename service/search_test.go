@@ -19,6 +19,7 @@ import (
 const (
 	apiBaseURL             = "http://test.api.ft.com"
 	testDefaultIndex       = "test-index"
+	testExtendedIndex      = "test-extended-index"
 	esGenreType            = "genres"
 	esBrandType            = "brands"
 	esPeopleType           = "people"
@@ -33,6 +34,7 @@ const (
 	ftLocationType         = "http://www.ft.com/ontology/Location"
 	ftTopicType            = "http://www.ft.com/ontology/Topic"
 	ftAlphavilleSeriesType = "http://www.ft.com/ontology/AlphavilleSeries"
+	ftPublicCompanies      = "http://www.ft.com/ontology/company/PublicCompany"
 	testMappingFile        = "test/mapping.json"
 )
 
@@ -86,6 +88,8 @@ func (s *EsConceptSearchServiceTestSuite) SetupSuite() {
 	require.NoError(s.T(), err, "expected no error in adding topics")
 	err = writeTestConcepts(s.ec, esAlphavilleSeriesType, ftAlphavilleSeriesType, 1)
 	require.NoError(s.T(), err, "expected no error in adding topics")
+	err = writeTestConcepts(s.ec, esOrganisationType, ftPublicCompanies, 4)
+	require.NoError(s.T(), err, "expected no error in adding public companies")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TearDownSuite() {
@@ -386,6 +390,25 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeDeprecatedFla
 	assert.Equal(s.T(), 1, deprecatedConceptsFound, "expect found concepts")
 
 	cleanup(s.T(), s.ec, esPeopleType, uuid)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByDirectType() {
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.FindAllConceptsByDirectType(ftPublicCompanies, false, false)
+
+	assert.NoError(s.T(), err, "expected no error for ES read")
+	assert.Len(s.T(), concepts, 3, "there should be four public companies")
+
+	var prev string
+	for i := range concepts {
+		if i > 0 {
+			assert.Equal(s.T(), -1, strings.Compare(prev, concepts[i].PrefLabel), "concepts should be ordered")
+		}
+		assert.Equal(s.T(), ftPublicCompanies, concepts[i].ConceptType, "Results should be of type PublicCompany")
+		prev = concepts[i].PrefLabel
+	}
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypes() {
