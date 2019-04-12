@@ -94,6 +94,23 @@ func TestConceptFinder(t *testing.T) {
 		},
 		{
 			client: mockClient{
+				queryResponse: validResponse,
+			},
+			returnCode:    http.StatusOK,
+			requestURL:    requestURLWithAllAuthorities,
+			requestBody:   validRequestBody,
+			expectedUUIDs: []string{"9a0dd8b8-2ae4-34ca-8639-cfef69711eb9", "6084734d-f4c2-3375-b298-dbbc6c00a680"},
+			assertFields: map[string]func(concept){
+				"9a0dd8b8-2ae4-34ca-8639-cfef69711eb9": func(c concept) {
+					assert.Equal(t, "Foobar SpA", c.PrefLabel)
+					assert.Equal(t, "", c.ScopeNote)
+					assert.Equal(t, "http://www.ft.com/ontology/company/PublicCompany", c.DirectType)
+					assert.Equal(t, "CA", c.CountryCode)
+					assert.Equal(t, "US", c.CountryOfIncorporation)
+				}},
+		},
+		{
+			client: mockClient{
 				queryResponse: invalidResponseBadHits,
 			},
 			returnCode:  http.StatusInternalServerError,
@@ -626,14 +643,17 @@ func (mc mockClient) getClusterHealth() (*elastic.ClusterHealthResponse, error) 
 	return &elastic.ClusterHealthResponse{}, nil
 }
 
-const validRequestBody = `{"term":"Foobar"}`
-const validRequestBodyForDeprecated = `{"term": "Rick And Morty"}`
-const invalidRequestBody = `{"term":"Foobar}`
-const missingTermRequestBody = `{"ter":"Foobar"}`
+const (
+	validRequestBody              = `{"term":"Foobar"}`
+	validRequestBodyForDeprecated = `{"term": "Rick And Morty"}`
+	invalidRequestBody            = `{"term":"Foobar}`
+	missingTermRequestBody        = `{"ter":"Foobar"}`
 
-const defaultRequestURL = "http://nothing/at/all"
-const requestURLWithScore = "http://nothing/at/all?include_score=true"
-const requestURLWithScoreAndDeprecated = "http://nothing/at/all?include_score=true&include_deprecated=true"
+	defaultRequestURL                = "http://nothing/at/all"
+	requestURLWithScore              = "http://nothing/at/all?include_score=true"
+	requestURLWithScoreAndDeprecated = "http://nothing/at/all?include_score=true&include_deprecated=true"
+	requestURLWithAllAuthorities     = "http://nothing/at/all?searchAllAuthorities=true"
+)
 
 const validResponse = `{
   "took": 111,
