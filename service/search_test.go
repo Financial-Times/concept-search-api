@@ -19,6 +19,7 @@ import (
 const (
 	apiBaseURL             = "http://test.api.ft.com"
 	testDefaultIndex       = "test-index"
+	testExtendedIndex      = "test-extended-index"
 	esGenreType            = "genres"
 	esBrandType            = "brands"
 	esPeopleType           = "people"
@@ -33,6 +34,7 @@ const (
 	ftLocationType         = "http://www.ft.com/ontology/Location"
 	ftTopicType            = "http://www.ft.com/ontology/Topic"
 	ftAlphavilleSeriesType = "http://www.ft.com/ontology/AlphavilleSeries"
+	ftPublicCompanies      = "http://www.ft.com/ontology/company/PublicCompany"
 	testMappingFile        = "test/mapping.json"
 )
 
@@ -67,7 +69,10 @@ func (s *EsConceptSearchServiceTestSuite) SetupSuite() {
 
 	s.ec = ec
 
-	err = createIndex(s.ec, testMappingFile)
+	err = createIndex(s.ec, testDefaultIndex, testMappingFile)
+	require.NoError(s.T(), err, "expected no error in creating index")
+
+	err = createIndex(s.ec, testExtendedIndex, testMappingFile)
 	require.NoError(s.T(), err, "expected no error in creating index")
 
 	writeTestConcepts(s.ec, esGenreType, ftGenreType, 4)
@@ -86,10 +91,13 @@ func (s *EsConceptSearchServiceTestSuite) SetupSuite() {
 	require.NoError(s.T(), err, "expected no error in adding topics")
 	err = writeTestConcepts(s.ec, esAlphavilleSeriesType, ftAlphavilleSeriesType, 1)
 	require.NoError(s.T(), err, "expected no error in adding topics")
+	err = writeTestConcepts(s.ec, esOrganisationType, ftPublicCompanies, 4)
+	require.NoError(s.T(), err, "expected no error in adding public companies")
 }
 
 func (s *EsConceptSearchServiceTestSuite) TearDownSuite() {
 	s.ec.DeleteIndex(testDefaultIndex).Do(context.Background())
+	s.ec.DeleteIndex(testExtendedIndex).Do(context.Background())
 }
 
 func getElasticSearchTestURL(t *testing.T) string {
@@ -98,6 +106,7 @@ func getElasticSearchTestURL(t *testing.T) string {
 	}
 
 	esURL := os.Getenv("ELASTICSEARCH_TEST_URL")
+	esURL = "http://localhost:9200"
 	if strings.TrimSpace(esURL) == "" {
 		t.Fatal("Please set the environment variable ELASTICSEARCH_TEST_URL to run ElasticSearch integration tests (e.g. export ELASTICSEARCH_TEST_URL=http://localhost:9200). Alternatively, run `go test -short` to skip them.")
 	}
@@ -105,12 +114,12 @@ func getElasticSearchTestURL(t *testing.T) string {
 	return esURL
 }
 
-func createIndex(ec *elastic.Client, mappingFile string) error {
+func createIndex(ec *elastic.Client, indexName string, mappingFile string) error {
 	mapping, err := ioutil.ReadFile(mappingFile)
 	if err != nil {
 		return err
 	}
-	_, err = ec.CreateIndex(testDefaultIndex).Body(string(mapping)).Do(context.Background())
+	_, err = ec.CreateIndex(indexName).Body(string(mapping)).Do(context.Background())
 	if err != nil {
 		return err
 	}
@@ -386,6 +395,25 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeDeprecatedFla
 	assert.Equal(s.T(), 1, deprecatedConceptsFound, "expect found concepts")
 
 	cleanup(s.T(), s.ec, esPeopleType, uuid)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByDirectType() {
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.FindAllConceptsByDirectType(ftPublicCompanies, false, false)
+
+	assert.NoError(s.T(), err, "expected no error for ES read")
+	assert.Len(s.T(), concepts, 4, "there should be four public companies")
+
+	var prev string
+	for i := range concepts {
+		if i > 0 {
+			assert.Equal(s.T(), -1, strings.Compare(prev, concepts[i].PrefLabel), "concepts should be ordered")
+		}
+		assert.Equal(s.T(), ftPublicCompanies, concepts[i].ConceptType, "Results should be of type PublicCompany")
+		prev = concepts[i].PrefLabel
+	}
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypes() {

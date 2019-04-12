@@ -87,24 +87,22 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string, searc
 }
 
 func (s *esConceptSearchService) FindAllConceptsByDirectType(conceptType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error) {
-	directTypeMatch := elastic.NewMatchQuery("directType", conceptType)
-	mustQuery := elastic.NewBoolQuery().Should(directTypeMatch)
-	index := s.getIndexForAuthoritiesParam(searchAllAuthorities)
-	query := s.esClient.Search(index).Size(s.maxSearchResults).Query(mustQuery)
+	boolQuery := elastic.NewBoolQuery()
+	boolQuery.Must(elastic.NewMatchQuery("directType", conceptType))
 
 	if !includeDeprecated {
-		deprecatedQ := elastic.NewBoolQuery().MustNot(elastic.NewTermQuery("isDeprecated", true))
-		query = query.Query(deprecatedQ)
+		boolQuery.MustNot(elastic.NewTermQuery("isDeprecated", true))
 	}
 
-	result, err := query.Do(context.Background())
+	index := s.getIndexForAuthoritiesParam(searchAllAuthorities)
+	result, err := s.esClient.Search(index).Size(s.maxSearchResults).Query(boolQuery).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err
 	}
 	concepts := searchResultToConcepts(result)
+	sort.Sort(concepts)
 	return concepts, nil
-
 }
 
 func (s *esConceptSearchService) FindConceptsById(ids []string) ([]Concept, error) {
