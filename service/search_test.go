@@ -44,7 +44,7 @@ func TestNoElasticClient(t *testing.T) {
 	_, err := service.FindAllConceptsByType(ftGenreType, false, true)
 	assert.EqualError(t, err, util.ErrNoElasticClient.Error(), "error response")
 
-	_, err = service.SearchConceptByTextAndTypes("lucy", []string{ftBrandType}, true)
+	_, err = service.SearchConceptByTextAndTypes("lucy", []string{ftBrandType}, false, true)
 	assert.EqualError(t, err, util.ErrNoElasticClient.Error(), "error response")
 }
 
@@ -419,7 +419,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypes() {
 	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
-	concepts, err := service.SearchConceptByTextAndTypes("test", []string{ftPeopleType}, true)
+	concepts, err := service.SearchConceptByTextAndTypes("test", []string{ftPeopleType}, false, true)
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), concepts, 8)
 
@@ -432,7 +432,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesMultipl
 	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
-	concepts, err := service.SearchConceptByTextAndTypes("test", []string{ftBrandType, ftAlphavilleSeriesType}, true)
+	concepts, err := service.SearchConceptByTextAndTypes("test", []string{ftBrandType, ftAlphavilleSeriesType}, false, true)
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), concepts, 5)
 
@@ -445,7 +445,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesNoText(
 	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
-	_, err := service.SearchConceptByTextAndTypes("", []string{ftPeopleType}, true)
+	_, err := service.SearchConceptByTextAndTypes("", []string{ftPeopleType}, false, true)
 	assert.EqualError(s.T(), err, errEmptyTextParameter.Error())
 }
 
@@ -569,7 +569,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesNoConce
 	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
-	_, err := service.SearchConceptByTextAndTypes("pippo", []string{}, true)
+	_, err := service.SearchConceptByTextAndTypes("pippo", []string{}, false, true)
 	assert.EqualError(s.T(), err, util.ErrNoConceptTypeParameter.Error())
 }
 
@@ -577,7 +577,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesInvalid
 	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
-	_, err := service.SearchConceptByTextAndTypes("pippo", []string{"http://www.ft.com/ontology/Foo"}, true)
+	_, err := service.SearchConceptByTextAndTypes("pippo", []string{"http://www.ft.com/ontology/Foo"}, false, true)
 	assert.EqualError(s.T(), err, fmt.Sprintf(util.ErrInvalidConceptTypeFormat, "http://www.ft.com/ontology/Foo"))
 }
 
@@ -596,7 +596,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesTermMat
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypes("donald trump", []string{ftPeopleType}, true)
+	concepts, err := service.SearchConceptByTextAndTypes("donald trump", []string{ftPeopleType}, false, true)
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), concepts, 2)
 
@@ -623,7 +623,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMa
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypes("new york", []string{ftLocationType}, true)
+	concepts, err := service.SearchConceptByTextAndTypes("new york", []string{ftLocationType}, false, true)
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), concepts, 2)
 
@@ -650,7 +650,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMa
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypes("new yor", []string{ftLocationType}, true)
+	concepts, err := service.SearchConceptByTextAndTypes("new yor", []string{ftLocationType}, false, true)
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), concepts, 2)
 
@@ -685,7 +685,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesDepreca
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypes("new york", []string{ftLocationType}, true)
+	concepts, err := service.SearchConceptByTextAndTypes("new york", []string{ftLocationType}, false, true)
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), concepts, 2)
 
@@ -695,7 +695,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesDepreca
 	assert.Equal(s.T(), "New York", nyc.PrefLabel, "Failure could indicate that the wrong concept had the higher boost")
 	assert.Equal(s.T(), "New York Deprecated", nycDeprecated.PrefLabel, "Failure could indicate that the wrong concept had the higher boost")
 
-	concepts, err = service.SearchConceptByTextAndTypes("new york", []string{ftLocationType}, false)
+	concepts, err = service.SearchConceptByTextAndTypes("new york", []string{ftLocationType}, false, false)
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), concepts, 1)
 
@@ -725,7 +725,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypesWithBoost("robert shrimpley", []string{ftPeopleType}, "authors", true)
+	concepts, err := service.SearchConceptByTextAndTypesWithBoost("robert shrimpley", []string{ftPeopleType}, "authors", false, true)
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), concepts, 3)
 
@@ -763,7 +763,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearch__SpecificTypesAreBoosted() 
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypes("Fannie Mae", []string{ftPeopleType, ftTopicType, ftLocationType, ftOrganisationType}, true)
+	concepts, err := service.SearchConceptByTextAndTypes("Fannie Mae", []string{ftPeopleType, ftTopicType, ftLocationType, ftOrganisationType}, false, true)
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), concepts, 4)
 
@@ -816,7 +816,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	conceptsWithDeprecated, err := service.SearchConceptByTextAndTypesWithBoost("robert shrimpley", []string{ftPeopleType}, "authors", true)
+	conceptsWithDeprecated, err := service.SearchConceptByTextAndTypesWithBoost("robert shrimpley", []string{ftPeopleType}, "authors", false, true)
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), conceptsWithDeprecated, 4)
 
@@ -830,7 +830,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 	assert.Equal(s.T(), "Robert Real Shrimpley", theRealEditor.PrefLabel)
 	assert.Equal(s.T(), "Roberto Shrimpley", theFake.PrefLabel)
 
-	conceptsWithoutDeprecated, err := service.SearchConceptByTextAndTypesWithBoost("robert shrimpley", []string{ftPeopleType}, "authors", false)
+	conceptsWithoutDeprecated, err := service.SearchConceptByTextAndTypesWithBoost("robert shrimpley", []string{ftPeopleType}, "authors", false, false)
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), conceptsWithoutDeprecated, 3)
 
@@ -860,7 +860,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByExactMatchAliases(
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypes("USA", []string{ftLocationType}, true)
+	concepts, err := service.SearchConceptByTextAndTypes("USA", []string{ftLocationType}, false, true)
 	require.NoError(s.T(), err)
 	require.Len(s.T(), concepts, 2)
 
@@ -876,7 +876,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoo
 	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 1, 2)
 	service.SetElasticClient(s.ec)
 
-	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{ftPeopleType}, "authors", true)
+	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{ftPeopleType}, "authors", false, true)
 	assert.NoError(s.T(), err, "expected no error for ES read")
 	assert.Len(s.T(), concepts, 1, "there should be one results")
 }
@@ -885,7 +885,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoo
 	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
-	concepts, err := service.SearchConceptByTextAndTypesWithBoost("", []string{ftPeopleType}, "authors", true)
+	concepts, err := service.SearchConceptByTextAndTypesWithBoost("", []string{ftPeopleType}, "authors", false, true)
 	assert.EqualError(s.T(), err, errEmptyTextParameter.Error())
 	assert.Nil(s.T(), concepts)
 }
@@ -894,7 +894,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoo
 	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
-	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{}, "authors", true)
+	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{}, "authors", false, true)
 	assert.EqualError(s.T(), err, util.ErrNoConceptTypeParameter.Error())
 	assert.Nil(s.T(), concepts)
 }
@@ -903,7 +903,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoo
 	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
-	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{ftPeopleType, ftLocationType}, "authors", true)
+	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{ftPeopleType, ftLocationType}, "authors", false, true)
 	assert.EqualError(s.T(), err, util.ErrNotSupportedCombinationOfConceptTypes.Error())
 	assert.Nil(s.T(), concepts)
 }
@@ -912,7 +912,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithInv
 	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)
 
-	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{ftPeopleType}, "pluto", true)
+	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{ftPeopleType}, "pluto", false, true)
 	assert.EqualError(s.T(), err, util.ErrInvalidBoostTypeParameter.Error())
 	assert.Nil(s.T(), concepts)
 }
@@ -920,7 +920,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithInv
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoostNoESConnection() {
 	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 
-	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{ftPeopleType}, "authors", true)
+	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{ftPeopleType}, "authors", false, true)
 	assert.EqualError(s.T(), err, util.ErrNoElasticClient.Error())
 	assert.Nil(s.T(), concepts)
 }
@@ -928,7 +928,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoo
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoostInvalidConceptType() {
 	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 
-	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{ftGenreType}, "authors", true)
+	concepts, err := service.SearchConceptByTextAndTypesWithBoost("test", []string{ftGenreType}, "authors", false, true)
 	assert.EqualError(s.T(), err, fmt.Sprintf(util.ErrInvalidConceptTypeFormat, ftGenreType))
 	assert.Nil(s.T(), concepts)
 }
@@ -948,7 +948,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularity() {
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypes("USA", []string{ftLocationType}, true)
+	concepts, err := service.SearchConceptByTextAndTypes("USA", []string{ftLocationType}, false, true)
 	require.NoError(s.T(), err)
 	require.Len(s.T(), concepts, 2)
 
@@ -975,7 +975,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularityAliasMat
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypes("Dr G", []string{ftLocationType}, true)
+	concepts, err := service.SearchConceptByTextAndTypes("Dr G", []string{ftLocationType}, false, true)
 	require.NoError(s.T(), err)
 	require.Len(s.T(), concepts, 2)
 
@@ -1002,7 +1002,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularitySa
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypes("USA", []string{ftLocationType}, true)
+	concepts, err := service.SearchConceptByTextAndTypes("USA", []string{ftLocationType}, false, true)
 	require.NoError(s.T(), err)
 	require.Len(s.T(), concepts, 2)
 
@@ -1029,7 +1029,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularityNo
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypes("USA", []string{ftLocationType}, true)
+	concepts, err := service.SearchConceptByTextAndTypes("USA", []string{ftLocationType}, false, true)
 	require.NoError(s.T(), err)
 	require.Len(s.T(), concepts, 2)
 
@@ -1056,7 +1056,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularity()
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypes("USA", []string{ftLocationType}, true)
+	concepts, err := service.SearchConceptByTextAndTypes("USA", []string{ftLocationType}, false, true)
 	require.NoError(s.T(), err)
 	require.Len(s.T(), concepts, 2)
 
@@ -1083,7 +1083,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByAliasPartialMatch(
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypes("roose", []string{ftLocationType}, true)
+	concepts, err := service.SearchConceptByTextAndTypes("roose", []string{ftLocationType}, false, true)
 	require.NoError(s.T(), err)
 	require.Len(s.T(), concepts, 1)
 
@@ -1104,7 +1104,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindOrganisationWithCountryCodeAnd
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	concepts, err := service.SearchConceptByTextAndTypes("Moo", []string{ftOrganisationType}, false)
+	concepts, err := service.SearchConceptByTextAndTypes("Moo", []string{ftOrganisationType}, false, false)
 	require.NoError(s.T(), err)
 	require.Len(s.T(), concepts, 1)
 

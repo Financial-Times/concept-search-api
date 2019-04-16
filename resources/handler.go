@@ -61,7 +61,7 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 				err = NewValidationError("invalid or missing parameters for concept search (require type)")
 			} else {
 				if mode == "search" {
-					concepts, err = h.searchConcepts(foundBoostType, boostType, foundQ, q, conceptTypes, includeDeprecated)
+					concepts, err = h.searchConcepts(foundBoostType, boostType, foundQ, q, conceptTypes, searchAllAuthorities, includeDeprecated)
 				}
 			}
 		} else {
@@ -100,13 +100,13 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func (h *Handler) searchConcepts(foundBoostType bool, boostType string, foundQ bool, q string, conceptTypes []string, includeDeprecated bool) ([]service.Concept, error) {
+func (h *Handler) searchConcepts(foundBoostType bool, boostType string, foundQ bool, q string, conceptTypes []string, searchAllAuthorities bool, includeDeprecated bool) ([]service.Concept, error) {
 	if !foundQ {
 		return nil, NewValidationError("invalid or missing parameters for concept search (require q)")
 	} else if foundBoostType {
-		return h.service.SearchConceptByTextAndTypesWithBoost(q, conceptTypes, boostType, includeDeprecated)
+		return h.service.SearchConceptByTextAndTypesWithBoost(q, conceptTypes, boostType, searchAllAuthorities, includeDeprecated)
 	}
-	return h.service.SearchConceptByTextAndTypes(q, conceptTypes, includeDeprecated)
+	return h.service.SearchConceptByTextAndTypes(q, conceptTypes, searchAllAuthorities, includeDeprecated)
 }
 
 func (h *Handler) findConceptsByType(conceptTypes []string, includeDeprecated bool, searchAllAuthorities bool) ([]service.Concept, error) {
