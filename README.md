@@ -68,6 +68,11 @@ To include the score you need to add the query parameter `include_score` with th
 curl -XPOST {concept-search-api-url}/concept/search?include_score=true -d '{"term":"FOO"}'
 ```
 
+By default the endpoint only retrieves results with TME or Smartlogic authority. To extend the search domain you need to add the query parameter `searchAllAuthorities` with the value `true`. This will return TME, Smartlogic, Factset or any other and no authority results.
+```
+curl -XPOST {concept-search-api-url}/concept/search?searchAllAuthorities=true -d '{"term":"FOO"}'
+```
+
 By default the endpoint returns only *non-deprecated* concepts. In order to get the deprecated concepts too, you should provide query parameter `include_deprecated` with the value `true`.
 ```
 curl -XPOST {concept-search-api-url}/concept/search?include_deprecated=true -d '{"term":"FOO"}'
@@ -120,6 +125,26 @@ This endpoint is used for typeahead style queries for concepts. The request has 
 ```
 curl {concept-search-api-url}/concepts?type=http://www.ft.com/ontology/Genre
 ```
+
+Optional query parameters:
+- To activate the search mode, you can send the `mode` parameter with the value `search`, and `q` parameter with the value of the search query
+	```
+	curl {concept-search-api-url}/concepts?type=http://www.ft.com/ontology/organisation/Organisation&mode=search&q=FOO
+	```
+- `boost` parameter can be specified when activating  the search mode, but it is currently supported only for authors
+	
+	E.g. The following request will return results with `"isFTAuthor": true`
+	```
+	curl {concept-search-api-url}/concepts?type=http://www.ft.com/ontology/person/Person&mode=search&q=FOO&boost=authors
+	``` 
+- `searchAllAuthorities` parameter can be used to extend the search domain. This will return TME, Smartlogic, Factset or any other and no authority results	
+	```
+	curl {concept-search-api-url}/concepts?type=http://www.ft.com/ontology/Genre&searchAllAuthorities=true
+	```
+- `include_deprecated` paramenter can be used to include deprecated concepts in the search result
+	```
+	curl {concept-search-api-url}/concepts?type=http://www.ft.com/ontology/Genre&include_deprecated=true
+	```
 
 Please see the [Swagger YML](./_ft/api.yml) for more details.
 
