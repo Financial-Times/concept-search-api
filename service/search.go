@@ -23,14 +23,16 @@ var (
 type ConceptSearchService interface {
 	SetElasticClient(client *elastic.Client)
 	FindConceptsById(ids []string) ([]Concept, error)
-	FindAllConceptsByType(conceptType string, includeDeprecated bool) ([]Concept, error)
-	SearchConceptByTextAndTypes(textQuery string, conceptTypes []string, includeDeprecated bool) ([]Concept, error)
-	SearchConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string, includeDeprecated bool) ([]Concept, error)
+	FindAllConceptsByType(conceptType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error)
+	FindAllConceptsByDirectType(conceptType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error)
+	SearchConceptByTextAndTypes(textQuery string, conceptTypes []string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error)
+	SearchConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error)
 }
 
 type esConceptSearchService struct {
 	esClient               *elastic.Client
-	index                  string
+	defaultIndex           string
+	extendedSearchIndex    string
 	maxSearchResults       int
 	maxAutoCompleteResults int
 	mappingRefreshTicker   *time.Ticker
@@ -39,9 +41,10 @@ type esConceptSearchService struct {
 	clientLock             *sync.RWMutex
 }
 
-func NewEsConceptSearchService(index string, maxSearchResults int, maxAutoCompleteResults int, authorsBoost int) ConceptSearchService {
+func NewEsConceptSearchService(defaultIndex string, extendedSearchIndex string, maxSearchResults int, maxAutoCompleteResults int, authorsBoost int) ConceptSearchService {
 	return &esConceptSearchService{
-		index:                  index,
+		defaultIndex:           defaultIndex,
+		extendedSearchIndex:    extendedSearchIndex,
 		maxSearchResults:       maxSearchResults,
 		maxAutoCompleteResults: maxAutoCompleteResults,
 		authorsBoost:           authorsBoost,
@@ -56,7 +59,7 @@ func (s *esConceptSearchService) checkElasticClient() error {
 	return nil
 }
 
-func (s *esConceptSearchService) FindAllConceptsByType(conceptType string, includeDeprecated bool) ([]Concept, error) {
+func (s *esConceptSearchService) FindAllConceptsByType(conceptType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error) {
 	t := util.EsType(conceptType)
 	if t == "" {
 		return nil, util.NewInputErrorf(util.ErrInvalidConceptTypeFormat, conceptType)
@@ -66,13 +69,33 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string, inclu
 		return nil, err
 	}
 
-	query := s.esClient.Search(s.index).Type(t).Size(s.maxSearchResults)
+	index := s.getIndexForAuthoritiesParam(searchAllAuthorities)
+	query := s.esClient.Search(index).Type(t).Size(s.maxSearchResults)
 	if !includeDeprecated {
 		deprecatedQ := elastic.NewBoolQuery().MustNot(elastic.NewTermQuery("isDeprecated", true))
 		query = query.Query(deprecatedQ)
 	}
 
 	result, err := query.Do(context.Background())
+	if err != nil {
+		log.Errorf("error: %v", err)
+		return nil, err
+	}
+	concepts := searchResultToConcepts(result)
+	sort.Sort(concepts)
+	return concepts, nil
+}
+
+func (s *esConceptSearchService) FindAllConceptsByDirectType(conceptType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error) {
+	boolQuery := elastic.NewBoolQuery()
+	boolQuery.Must(elastic.NewMatchQuery("directType", conceptType))
+
+	if !includeDeprecated {
+		boolQuery.MustNot(elastic.NewTermQuery("isDeprecated", true))
+	}
+
+	index := s.getIndexForAuthoritiesParam(searchAllAuthorities)
+	result, err := s.esClient.Search(index).Size(s.maxSearchResults).Query(boolQuery).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err
@@ -90,7 +113,7 @@ func (s *esConceptSearchService) FindConceptsById(ids []string) ([]Concept, erro
 		return nil, err
 	}
 	idsQuery := elastic.NewIdsQuery("_all").Ids(ids...)
-	result, err := s.esClient.Search(s.index).Size(s.maxSearchResults).Query(idsQuery).Do(context.Background())
+	result, err := s.esClient.Search(s.defaultIndex).Size(s.maxSearchResults).Query(idsQuery).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err
@@ -121,7 +144,7 @@ func transformToConcept(source *json.RawMessage) (Concept, error) {
 	return ConvertToSimpleConcept(esConcept), nil
 }
 
-func (s *esConceptSearchService) SearchConceptByTextAndTypes(textQuery string, conceptTypes []string, includeDeprecated bool) ([]Concept, error) {
+func (s *esConceptSearchService) SearchConceptByTextAndTypes(textQuery string, conceptTypes []string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error) {
 	if textQuery == "" {
 		return nil, errEmptyTextParameter
 	}
@@ -132,10 +155,10 @@ func (s *esConceptSearchService) SearchConceptByTextAndTypes(textQuery string, c
 	if err := s.checkElasticClient(); err != nil {
 		return nil, err
 	}
-	return s.searchConceptsForMultipleTypes(textQuery, conceptTypes, "", includeDeprecated)
+	return s.searchConceptsForMultipleTypes(textQuery, conceptTypes, "", searchAllAuthorities, includeDeprecated)
 }
 
-func (s *esConceptSearchService) SearchConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string, includeDeprecated bool) ([]Concept, error) {
+func (s *esConceptSearchService) SearchConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error) {
 	if err := util.ValidateForAuthorsSearch(conceptTypes, boostType); err != nil {
 		return nil, err
 	}
@@ -148,10 +171,10 @@ func (s *esConceptSearchService) SearchConceptByTextAndTypesWithBoost(textQuery 
 	if err := s.checkElasticClient(); err != nil {
 		return nil, err
 	}
-	return s.searchConceptsForMultipleTypes(textQuery, conceptTypes, boostType, includeDeprecated)
+	return s.searchConceptsForMultipleTypes(textQuery, conceptTypes, boostType, searchAllAuthorities, includeDeprecated)
 }
 
-func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string, conceptTypes []string, boostType string, includeDeprecated bool) ([]Concept, error) {
+func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string, conceptTypes []string, boostType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error) {
 	esTypes, err := util.ValidateAndConvertToEsTypes(conceptTypes)
 	if err != nil {
 		return nil, err
@@ -208,7 +231,8 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 
 	theQuery := elastic.NewBoolQuery().Must(mustQuery).Should(shouldMatch...).MustNot(mustNotMatch...).Filter(typeFilter).MinimumNumberShouldMatch(0).Boost(1)
 
-	search := s.esClient.Search(s.index).Size(s.maxAutoCompleteResults).Query(theQuery)
+	index := s.getIndexForAuthoritiesParam(searchAllAuthorities)
+	search := s.esClient.Search(index).Size(s.maxAutoCompleteResults).Query(theQuery)
 
 	result, err := search.SearchType("dfs_query_then_fetch").Do(context.Background())
 	if err != nil {
@@ -238,4 +262,12 @@ func (s *esConceptSearchService) elasticClient() *elastic.Client {
 	s.clientLock.RLock()
 	defer s.clientLock.RUnlock()
 	return s.esClient
+}
+
+func (s *esConceptSearchService) getIndexForAuthoritiesParam(searchAllAuthorities bool) string {
+	if searchAllAuthorities {
+		return s.extendedSearchIndex
+	}
+
+	return s.defaultIndex
 }
