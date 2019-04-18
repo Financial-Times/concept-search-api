@@ -441,6 +441,32 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesMultipl
 	}
 }
 
+func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesPublicCompanies() {
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.SearchConceptByTextAndTypes("test", []string{ftPublicCompanies}, false, true)
+	assert.NoError(s.T(), err)
+	assert.Len(s.T(), concepts, 4)
+
+	for _, concept := range concepts {
+		assert.True(s.T(), concept.ConceptType == ftPublicCompanies, "expect concept to have type PublicCompany")
+	}
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesMultipleTypesWithPublicCompanies() {
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.SearchConceptByTextAndTypes("test", []string{ftBrandType, ftPublicCompanies}, false, true)
+	assert.NoError(s.T(), err)
+	assert.Len(s.T(), concepts, 8)
+
+	for _, concept := range concepts {
+		assert.True(s.T(), concept.ConceptType == ftBrandType || concept.ConceptType == ftPublicCompanies, "expect concept to be either brand or public company")
+	}
+}
+
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesNoText() {
 	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 2)
 	service.SetElasticClient(s.ec)

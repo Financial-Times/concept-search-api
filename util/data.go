@@ -5,6 +5,10 @@ import (
 	"fmt"
 )
 
+const (
+	PublicCompany = "http://www.ft.com/ontology/company/PublicCompany"
+)
+
 var (
 	esTypeMapping = map[string]string{
 		"http://www.ft.com/ontology/Genre":                     "genres",
@@ -14,7 +18,6 @@ var (
 		"http://www.ft.com/ontology/Location":                  "locations",
 		"http://www.ft.com/ontology/Topic":                     "topics",
 		"http://www.ft.com/ontology/AlphavilleSeries":          "alphaville-series",
-		"http://www.ft.com/ontology/company/PublicCompany":     "organisations",
 	}
 
 	ErrInvalidConceptTypeFormat              = "invalid concept type %v"
@@ -72,16 +75,22 @@ func ValidateForAuthorsSearch(conceptTypes []string, boostType string) error {
 	return nil
 }
 
-func ValidateAndConvertToEsTypes(conceptTypes []string) ([]string, error) {
+func ValidateAndConvertToEsTypes(conceptTypes []string) ([]string, bool, error) {
 	esTypes := make([]string, len(conceptTypes))
+	isPublicCompany := false
+
 	for _, t := range conceptTypes {
+		if t == PublicCompany {
+			isPublicCompany = true
+			continue
+		}
 		esT := EsType(t)
 		if esT == "" {
-			return esTypes, NewInputErrorf(ErrInvalidConceptTypeFormat, t)
+			return esTypes, false, NewInputErrorf(ErrInvalidConceptTypeFormat, t)
 		}
 		esTypes = append(esTypes, esT)
 	}
-	return esTypes, nil
+	return esTypes, isPublicCompany, nil
 }
 
 type InputError struct {

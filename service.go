@@ -280,7 +280,7 @@ func createSearchRequestsForBestMatch(request *http.Request, criteria *searchCri
 
 		// filter for given concept types
 		if len(criteria.ConceptTypes) > 0 {
-			esTypes, err := util.ValidateAndConvertToEsTypes(criteria.ConceptTypes)
+			esTypes, _, err := util.ValidateAndConvertToEsTypes(criteria.ConceptTypes)
 			if err != nil {
 				return nil, http.StatusBadRequest, err
 			}

@@ -175,7 +175,7 @@ func (s *esConceptSearchService) SearchConceptByTextAndTypesWithBoost(textQuery 
 }
 
 func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string, conceptTypes []string, boostType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error) {
-	esTypes, err := util.ValidateAndConvertToEsTypes(conceptTypes)
+	esTypes, isPublicCompanyType, err := util.ValidateAndConvertToEsTypes(conceptTypes)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +215,11 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 
 	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery).Boost(0.85) // Also boost if an alias matches exactly, but this should not precede exact matched prefLabels
 
-	typeFilter := elastic.NewTermsQuery("_type", util.ToTerms(esTypes)...) // filter by type
+	typeFilters := []elastic.Query{elastic.NewTermsQuery("_type", util.ToTerms(esTypes)...)}
+	if isPublicCompanyType {
+		typeFilters = append(typeFilters, elastic.NewTermQuery("directType", util.PublicCompany))
+	}
+	typeFilterQuery := elastic.NewBoolQuery().Should(typeFilters...)
 
 	shouldMatch := []elastic.Query{termMatchQuery, exactMatchQuery, aliasesExactMatchShouldQuery, topicsBoost, locationBoost, peopleBoost, scopeNoteExistBoost, phraseMatchQuery, popularityBoost, lastWeekPopularityBoost}
 
@@ -229,7 +233,7 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 		mustNotMatch = append(mustNotMatch, elastic.NewTermQuery("isDeprecated", true)) // exclude deprecated docs
 	}
 
-	theQuery := elastic.NewBoolQuery().Must(mustQuery).Should(shouldMatch...).MustNot(mustNotMatch...).Filter(typeFilter).MinimumNumberShouldMatch(0).Boost(1)
+	theQuery := elastic.NewBoolQuery().Must(mustQuery).Should(shouldMatch...).MustNot(mustNotMatch...).Filter(typeFilterQuery).MinimumNumberShouldMatch(0).Boost(1)
 
 	index := s.getIndexForAuthoritiesParam(searchAllAuthorities)
 	search := s.esClient.Search(index).Size(s.maxAutoCompleteResults).Query(theQuery)
