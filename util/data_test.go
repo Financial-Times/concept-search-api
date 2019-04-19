@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,13 +34,28 @@ func TestValidateAuthors(t *testing.T) {
 	assert.Nil(t, ValidateForAuthorsSearch([]string{"http://www.ft.com/ontology/person/Person"}, "authors"))
 }
 
-func TestValidateEsTypes(t *testing.T) {
-	res, err := ValidateAndConvertToEsTypes([]string{"http://www.ft.com/ontology/Foo", "http://www.ft.com/ontology/person/Person"})
-	assert.Contains(t, err.Error(), "http://www.ft.com/ontology/Foo")
-
-	res, err = ValidateAndConvertToEsTypes([]string{"http://www.ft.com/ontology/person/Person"})
+func TestValidateEsTypesNoError(t *testing.T) {
+	res, isPublicCompany, err := ValidateAndConvertToEsTypes([]string{"http://www.ft.com/ontology/person/Person"})
 	assert.NoError(t, err)
 	assert.Len(t, res, 2)
 	assert.Equal(t, "", res[0])
 	assert.Equal(t, "people", res[1])
+	assert.Equal(t, false, isPublicCompany)
+}
+
+func TestValidateEsTypesReturnError(t *testing.T) {
+	_, isPublicCompany, err := ValidateAndConvertToEsTypes([]string{"http://www.ft.com/ontology/Foo", "http://www.ft.com/ontology/person/Person"})
+	assert.Contains(t, err.Error(), "http://www.ft.com/ontology/Foo")
+	assert.Equal(t, false, isPublicCompany)
+}
+
+func TestValidateEsTypesWithPublicCompany(t *testing.T) {
+	res, isPublicCompany, err := ValidateAndConvertToEsTypes([]string{"http://www.ft.com/ontology/person/Person", "http://www.ft.com/ontology/company/PublicCompany"})
+	fmt.Printf("%v", res)
+	assert.NoError(t, err)
+	assert.Len(t, res, 3)
+	assert.Equal(t, "", res[0])
+	assert.Equal(t, "", res[1])
+	assert.Equal(t, "people", res[2])
+	assert.Equal(t, true, isPublicCompany)
 }
