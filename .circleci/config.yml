@@ -18,6 +18,8 @@ jobs:
             # Setting GO111MODULE=off so that go get does not update the go.mod and go.sum files
             GO111MODULE=off go get -u github.com/mattn/goveralls
             GO111MODULE=off go get -u github.com/jstemmer/go-junit-report
+            curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.18.0
+            git clone git@github.com:Financial-Times/upp-coding-standard.git
       - run:
           name: Make result folders
           command: |
@@ -26,6 +28,9 @@ jobs:
       - run:
           name: Go Build
           command: go build -mod=readonly -v
+      - run:
+          name: Run Linters
+          command: golangci-lint run --config upp-coding-standard/golangci-config/.golangci.yml --new-from-rev=master
       - run:
           name: Run Tests
           command: |
