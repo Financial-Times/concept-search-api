@@ -1,20 +1,17 @@
-FROM golang:1.10-alpine
+FROM golang:1
 
 ENV PROJECT=concept-search-api
-
-# Include code
 ENV ORG_PATH="github.com/Financial-Times"
 ENV SRC_FOLDER="${GOPATH}/src/${ORG_PATH}/${PROJECT}"
+
 COPY . ${SRC_FOLDER}
 WORKDIR ${SRC_FOLDER}
 
 RUN mkdir -p /artifacts/_ft
 RUN cp -r ${SRC_FOLDER}/_ft /artifacts/_ft
-# Set up our extra bits in the image
-RUN apk --no-cache add git curl
+
 RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 
-# Install dependancies and build app
 RUN $GOPATH/bin/dep ensure -vendor-only
 RUN BUILDINFO_PACKAGE="${ORG_PATH}/${PROJECT}/vendor/${ORG_PATH}/service-status-go/buildinfo." \
     && VERSION="version=$(git describe --tag --always 2> /dev/null)" \
