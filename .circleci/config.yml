@@ -8,7 +8,8 @@ jobs:
           CIRCLE_TEST_REPORT: /tmp/test-results
           CIRCLE_COVERAGE_REPORT: /tmp/coverage-results
           ELASTICSEARCH_TEST_URL: http://localhost:9200
-      - image: elasticsearch:5.1
+      # Versions prior to 5.3 have a problem with cgroups on newer kernels as described here: https://github.com/ptanov/docker-elasticsearch-5.2-cgroups2#docker-elasticsearch-522-cgroups2
+      - image: elasticsearch:5.3
     steps:
       - checkout
       - run:
@@ -54,7 +55,7 @@ jobs:
         environment:
           GOPATH: /go
           API_YML: /go/src/github.com/Financial-Times/concept-search-api/_ft/api.yml
-      - image: elasticsearch:5.1
+      - image: elasticsearch:5.3
     steps:
       - checkout
       - run:
