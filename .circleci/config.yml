@@ -15,24 +15,21 @@ jobs:
       - run:
           name: External Dependencies
           command: |
-            go get -u github.com/mattn/goveralls
-            go get -u github.com/jstemmer/go-junit-report
-            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+            # Setting GO111MODULE=off so that go get does not update the go.mod and go.sum files
+            GO111MODULE=off go get -u github.com/mattn/goveralls
+            GO111MODULE=off go get -u github.com/jstemmer/go-junit-report
       - run:
           name: Make result folders
           command: |
             mkdir -p ${CIRCLE_TEST_REPORT}
             mkdir -p ${CIRCLE_COVERAGE_REPORT}
       - run:
-          name: Download vendored dependencies
-          command: dep ensure -v -vendor-only
-      - run:
           name: Go Build
-          command: go build -v
+          command: go build -mod=readonly -v
       - run:
           name: Run Tests
           command: |
-            go test -v -race -cover -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out ./... | go-junit-report > ${CIRCLE_TEST_REPORT}/junit.xml
+            go test -mod=readonly -v -race -cover -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out ./... | go-junit-report > ${CIRCLE_TEST_REPORT}/junit.xml
       - run:
           name: Upload Coverage
           command: goveralls -coverprofile=$CIRCLE_COVERAGE_REPORT/coverage.out -service=circle-ci -repotoken=$COVERALLS_TOKEN
@@ -59,15 +56,8 @@ jobs:
     steps:
       - checkout
       - run:
-          name: External Dependencies
-          command: |
-            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-      - run:
-          name: Download vendored dependencies
-          command: dep ensure -v -vendor-only
-      - run:
           name: Go Build
-          command: go build -v
+          command: go build -mod=readonly -v
       - run:
           name: Download dredd
           command: |
