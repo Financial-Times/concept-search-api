@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/Financial-Times/concept-search-api/util"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -842,7 +842,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
 	require.NoError(s.T(), err)
 
-	conceptsWithDeprecated, err := service.SearchConceptByTextAndTypesWithBoost("robert shrimpley", []string{ftPeopleType}, "authors", false, true)
+	conceptsWithDeprecated, err := service.SearchConceptByTextAndTypesWithBoost("robert shrimple", []string{ftPeopleType}, "authors", false, true)
 	assert.NoError(s.T(), err)
 	assert.Len(s.T(), conceptsWithDeprecated, 4)
 
