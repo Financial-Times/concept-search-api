@@ -1,0 +1,18 @@
+FROM golang:1
+
+ENV PROJECT="concept-rw-elasticsearch"
+ENV ORG_PATH="github.com/Financial-Times"
+ENV SRC_FOLDER="${GOPATH}/src/${ORG_PATH}/${PROJECT}"
+
+WORKDIR ${SRC_FOLDER}
+
+COPY . /${SRC_FOLDER}/
+
+RUN echo "Fetching dependencies..." \
+    && git clone https://github.com/vishnubob/wait-for-it.git \
+    && cd wait-for-it \
+    && mv ./wait-for-it.sh ${SRC_FOLDER}
+
+
+
+ENTRYPOINT ["./wait-for-it.sh", "elasticsearch:9200", "-t", "60", "--"]

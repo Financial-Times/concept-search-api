@@ -1,84 +1,20 @@
-version: 2
-jobs:
-  build:
-    working_directory: /go/src/github.com/Financial-Times/concept-search-api
-    docker:
-      - image: golang:1
-        environment:
-          CIRCLE_TEST_REPORT: /tmp/test-results
-          CIRCLE_COVERAGE_REPORT: /tmp/coverage-results
-          ELASTICSEARCH_TEST_URL: http://localhost:9200
-      # Versions prior to 5.3 have a problem with cgroups on newer kernels as described here: https://github.com/ptanov/docker-elasticsearch-5.2-cgroups2#docker-elasticsearch-522-cgroups2
-      - image: elasticsearch:5.3
-    steps:
-      - checkout
-      - run:
-          name: External Dependencies
-          command: |
-            # Setting GO111MODULE=off so that go get does not update the go.mod and go.sum files
-            GO111MODULE=off go get -u github.com/mattn/goveralls
-            GO111MODULE=off go get -u github.com/jstemmer/go-junit-report
-            curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.18.0
-            git clone git@github.com:Financial-Times/upp-coding-standard.git
-      - run:
-          name: Make result folders
-          command: |
-            mkdir -p ${CIRCLE_TEST_REPORT}
-            mkdir -p ${CIRCLE_COVERAGE_REPORT}
-      - run:
-          name: Go Build
-          command: go build -mod=readonly -v
-      - run:
-          name: Run Linters
-          command: golangci-lint run --config upp-coding-standard/golangci-config/.golangci.yml --new-from-rev=master
-      - run:
-          name: Run Tests
-          command: |
-            go test -mod=readonly -v -race -cover -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out ./... | go-junit-report > ${CIRCLE_TEST_REPORT}/junit.xml
-      - run:
-          name: Upload Coverage
-          command: goveralls -coverprofile=$CIRCLE_COVERAGE_REPORT/coverage.out -service=circle-ci -repotoken=$COVERALLS_TOKEN
-      - store_test_results:
-          path: /tmp/test-results
-  dockerfile:
-    working_directory: /concept-search-api
-    docker:
-      - image: docker:18.03
-    steps:
-      - checkout
-      - setup_docker_engine
-      - run:
-          name: Build Dockerfile
-          command: docker build .
-  dredd:
-    working_directory: /go/src/github.com/Financial-Times/concept-search-api
-    docker:
-      - image: golang:1
-        environment:
-          GOPATH: /go
-          API_YML: /go/src/github.com/Financial-Times/concept-search-api/_ft/api.yml
-      - image: elasticsearch:5.3
-    steps:
-      - checkout
-      - run:
-          name: Go Build
-          command: go build -mod=readonly -v
-      - run:
-          name: Download dredd
-          command: |
-            curl -sL https://deb.nodesource.com/setup_11.x | bash -
-            DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs=11.\*
-            npm install -g --unsafe-perm --loglevel warn --user 0 --no-progress dredd@8.0.0
-            rm -rf /var/lib/apt/lists/*
-      - run:
-          name: Dredd API Testing
-          command: dredd
+version: 2.1
+
+orbs:
+  ft-golang-ci: financial-times/golang-ci@1
+
 workflows:
-  version: 2
-  test-and-build-docker:
+  tests_and_docker:
     jobs:
-      - build
-      - dredd
-      - dockerfile:
+      - ft-golang-ci/build-and-test:
+          name: build-and-test-project
+          executor-name: ft-golang-ci/default-with-elasticsearch
+      - ft-golang-ci/docker-build:
+          name: build-docker-image
           requires:
-            - build
+            - build-and-test-project
+  snyk-scanning:
+    jobs:
+      - ft-golang-ci/scan:
+          name: scan-dependencies
+          context: cm-team-snyk
