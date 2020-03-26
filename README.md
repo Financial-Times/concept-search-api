@@ -38,8 +38,7 @@ Other parameters:
 
 ## How to test
 
-To run the full test suite of integration tests, you must have a running instance of elasticsearch and set the env var
-e.g
+To run the full test suite of integration tests, you must have a running instance of elasticsearch. By default the application will look for the elasticsearch instance at http://localhost:9200. Otherwise you could specify a URL yourself as given by the example below:
 
 ```
 export ELASTICSEARCH_TEST_URL=http://localhost:9200
