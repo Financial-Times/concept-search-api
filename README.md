@@ -38,18 +38,19 @@ Other parameters:
 
 ## How to test
 
+* Unit tests only: `go test -mod=readonly -race ./...`
+* Unit and integration tests:
+    ```
+    docker-compose -f docker-compose-tests.yml up -d --build && \
+    docker logs -f test-runner && \
+    docker-compose -f docker-compose-tests.yml down -v
+    ```
+
 To run the full test suite of integration tests, you must have a running instance of elasticsearch. By default the application will look for the elasticsearch instance at http://localhost:9200. Otherwise you could specify a URL yourself as given by the example below:
 
 ```
 export ELASTICSEARCH_TEST_URL=http://localhost:9200
 ```
-
-run the command
-
-```
-docker-compose -f docker-compose-tests.yml up test-runner
-```
-to skip the integration tests use the -short option.
 
 ## Available DATA endpoints:
 
