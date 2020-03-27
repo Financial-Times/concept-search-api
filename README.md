@@ -47,7 +47,7 @@ export ELASTICSEARCH_TEST_URL=http://localhost:9200
 run the command
 
 ```
-go test -race ./...
+docker-compose -f docker-compose-tests.yml up test-runner
 ```
 to skip the integration tests use the -short option.
 
