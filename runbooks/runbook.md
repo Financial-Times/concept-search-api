@@ -1,4 +1,4 @@
-# UPP - Concept search API
+# UPP - Concept Search API
 
 This service is an API for searching concepts in an Amazon Elasticsearch domain.
 
@@ -60,8 +60,7 @@ No
 
 ## Dependencies
 
-- upp-prod-delivery-eu
-- upp-prod-delivery-us
+- concept-elasticsearch-cluster
 
 ## Failover Architecture Type
 
