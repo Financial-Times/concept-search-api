@@ -2,4 +2,3 @@
 replicaCount: 2
 service:
   name: concept-search-api
-eksCluster: true
