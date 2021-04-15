@@ -8,6 +8,17 @@ info:
   contact:
     name: Universal Publishing
     email: universal.publishing@ft.com
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+
+security:
+  - ApiKeyAuth: []
+
 paths:
   /concepts:
     get:
