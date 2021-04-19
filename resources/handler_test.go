@@ -3,6 +3,7 @@ package resources
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -513,6 +514,22 @@ func TestConceptsByIdParameterCombinationError(t *testing.T) {
 	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, "invalid parameters, 'ids' cannot be combined with any other parameter", respObject["message"])
+	svc.AssertExpectations(t)
+}
+
+func TestConceptsByIdMaxIdsLimitError(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?ids=1&ids=2", nil)
+	svc := &mockConceptSearchService{}
+	svc.On("FindConceptsById", []string{"1", "2"}).Return([]service.Concept{}, util.NewInputErrorf(util.ErrMaxIdsLimitFormat, 2, 1))
+
+	actual := doHttpCall(svc, req)
+
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := unmarshallResponseMessage(t, actual)
+
+	assert.Equal(t, fmt.Sprintf(util.ErrMaxIdsLimitFormat, 2, 1), respObject["message"])
 	svc.AssertExpectations(t)
 }
 

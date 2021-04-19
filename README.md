@@ -34,6 +34,8 @@ Other parameters:
 - index-name (defaults to concept)
 - elasticsearch-index (defaults to concept)
 - search-result-limit (defaults to 50)
+- max-ids-limit (defaults to 1000)
+- autocomplete-result-limit (defaults to 10)
 - elasticsearch-trace (defaults to false)
 
 ## How to test
