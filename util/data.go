@@ -21,6 +21,7 @@ var (
 	}
 
 	ErrInvalidConceptTypeFormat              = "invalid concept type %v"
+	ErrMaxIdsLimitFormat                     = "number of 'ids' parameters exceeds the limit, supplied: %v; the max number of 'ids' is %v"
 	ErrNoElasticClient                       = errors.New("no ElasticSearch client available")
 	ErrNoConceptTypeParameter                = NewInputError("no concept type specified")
 	ErrNotSupportedCombinationOfConceptTypes = NewInputError("the combination of concept types is not supported")

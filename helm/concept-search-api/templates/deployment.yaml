@@ -41,6 +41,8 @@ spec:
           value: all-concepts
         - name: RESULT_LIMIT
           value: "50"
+        - name: MAX_IDS_LIMIT
+          value: "1000"
         - name: AUTOCOMPLETE_LIMIT
           value: "20"
         - name: ELASTICSEARCH_ENDPOINT

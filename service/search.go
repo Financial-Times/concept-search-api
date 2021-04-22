@@ -34,20 +34,20 @@ type esConceptSearchService struct {
 	defaultIndex           string
 	extendedSearchIndex    string
 	maxSearchResults       int
+	maxIdsLimit            int
 	maxAutoCompleteResults int
 	mappingRefreshTicker   *time.Ticker
 	mappingRefreshInterval time.Duration
-	authorsBoost           int
 	clientLock             *sync.RWMutex
 }
 
-func NewEsConceptSearchService(defaultIndex string, extendedSearchIndex string, maxSearchResults int, maxAutoCompleteResults int, authorsBoost int) ConceptSearchService {
+func NewEsConceptSearchService(defaultIndex string, extendedSearchIndex string, maxSearchResults int, maxIdsLimit int, maxAutoCompleteResults int) ConceptSearchService {
 	return &esConceptSearchService{
 		defaultIndex:           defaultIndex,
 		extendedSearchIndex:    extendedSearchIndex,
 		maxSearchResults:       maxSearchResults,
+		maxIdsLimit:            maxIdsLimit,
 		maxAutoCompleteResults: maxAutoCompleteResults,
-		authorsBoost:           authorsBoost,
 		clientLock:             &sync.RWMutex{},
 	}
 }
@@ -109,11 +109,14 @@ func (s *esConceptSearchService) FindConceptsById(ids []string) ([]Concept, erro
 	if ids == nil || len(ids) == 0 || containsOnlyEmptyValues(ids) {
 		return nil, errEmptyIdsParameter
 	}
+	if len(ids) > s.maxIdsLimit {
+		return nil, util.NewInputErrorf(util.ErrMaxIdsLimitFormat, len(ids), s.maxIdsLimit)
+	}
 	if err := s.checkElasticClient(); err != nil {
 		return nil, err
 	}
 	idsQuery := elastic.NewIdsQuery("_all").Ids(ids...)
-	result, err := s.esClient.Search(s.defaultIndex).Size(s.maxSearchResults).Query(idsQuery).Do(context.Background())
+	result, err := s.esClient.Search(s.defaultIndex).Size(len(ids)).Query(idsQuery).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err

@@ -71,17 +71,17 @@ func main() {
 		Desc:   "The maximum number of search results returned",
 		EnvVar: "RESULT_LIMIT",
 	})
+	maxIdsLimit := app.Int(cli.IntOpt{
+		Name:   "max-ids-limit",
+		Value:  1000,
+		Desc:   "The maximum number of uuids allowed as input for the 'ids' parameter",
+		EnvVar: "MAX_IDS_LIMIT",
+	})
 	autoCompleteResultLimit := app.Int(cli.IntOpt{
 		Name:   "autocomplete-result-limit",
 		Value:  10,
 		Desc:   "The maximum number of autocomplete results returned",
 		EnvVar: "AUTOCOMPLETE_LIMIT",
-	})
-	authorsBoost := app.Int(cli.IntOpt{
-		Name:   "authors-boost",
-		Value:  10,
-		Desc:   "The boost to apply to authors during a /concepts?boost=author typeahead search.",
-		EnvVar: "AUTHORS_BOOST",
 	})
 	esTraceLogging := app.Bool(cli.BoolOpt{
 		Name:   "elasticsearch-trace",
@@ -93,9 +93,9 @@ func main() {
 	log.SetLevel(log.InfoLevel)
 
 	app.Action = func() {
-		logStartupConfig(port, esEndpoint, esAuth, esDefaultIndex, esExtendedSearchIndex, searchResultLimit)
+		logStartupConfig(port, esEndpoint, esAuth, esDefaultIndex, esExtendedSearchIndex, searchResultLimit, maxIdsLimit, autoCompleteResultLimit)
 
-		search := service.NewEsConceptSearchService(*esDefaultIndex, *esExtendedSearchIndex, *searchResultLimit, *autoCompleteResultLimit, *authorsBoost)
+		search := service.NewEsConceptSearchService(*esDefaultIndex, *esExtendedSearchIndex, *searchResultLimit, *maxIdsLimit, *autoCompleteResultLimit)
 		conceptFinder := newConceptFinder(*esDefaultIndex, *esExtendedSearchIndex, *searchResultLimit)
 		healthcheck := newEsHealthService()
 
@@ -117,7 +117,7 @@ func main() {
 	}
 }
 
-func logStartupConfig(port, esEndpoint, esAuth, esDefaultIndex *string, esExtendedSearchIndex *string, searchResultLimit *int) {
+func logStartupConfig(port, esEndpoint, esAuth, esDefaultIndex *string, esExtendedSearchIndex *string, searchResultLimit *int, maxIdsLimit *int, autoCompleteResultLimit *int) {
 	log.Info("Concept Search API uses the following configurations:")
 	log.Infof("port: %v", *port)
 	log.Infof("elasticsearch-endpoint: %v", *esEndpoint)
@@ -125,6 +125,8 @@ func logStartupConfig(port, esEndpoint, esAuth, esDefaultIndex *string, esExtend
 	log.Infof("elasticsearch-index: %v", *esDefaultIndex)
 	log.Infof("elasticsearch-extended-index: %v", *esExtendedSearchIndex)
 	log.Infof("search-result-limit: %v", *searchResultLimit)
+	log.Infof("max-ids-limit: %v", *maxIdsLimit)
+	log.Infof("autocomplete-result-limit: %v", autoCompleteResultLimit)
 }
 
 func routeRequest(port *string, apiYml *string, conceptFinder conceptFinder, handler *resources.Handler, healthService *esHealthService) {

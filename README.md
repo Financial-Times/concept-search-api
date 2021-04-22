@@ -33,7 +33,9 @@ Other parameters:
 - port (defaults to 8080)
 - index-name (defaults to concept)
 - elasticsearch-index (defaults to concept)
-- search-result-limit (defaults to 50)
+- search-result-limit (defaults to 50) - the maximum number of returned results for a search (excluding the search with the `ids` parameter or the searches used for autocomplete)
+- max-ids-limit (defaults to 1000) - the maximum number of uuids that can be passed to the search with the `ids` parameter
+- autocomplete-result-limit (defaults to 10) - the maximum number of returned results for the searches used for autocomplete
 - elasticsearch-trace (defaults to false)
 
 ## How to test
