@@ -186,6 +186,9 @@ paths:
         "500":
           description: Failed to search for concepts, usually caused by issues with ES.
   /__health:
+    servers:
+      - url: https://upp-prod-delivery-glb.upp.ft.com/__concept-search-api/
+      - url: https://upp-staging-delivery-glb.upp.ft.com/__concept-search-api/
     get:
       summary: Healthchecks
       description: Runs application healthchecks and returns FT Healthcheck style json.
@@ -217,6 +220,9 @@ paths:
                     ok: true
                     schemaVersion: 1
   /__health-details:
+    servers:
+      - url: https://upp-prod-delivery-glb.upp.ft.com/__concept-search-api/
+      - url: https://upp-staging-delivery-glb.upp.ft.com/__concept-search-api/
     get:
       summary: Healthcheck Details
       description: Returns healthcheck data for the external ES cluster.
@@ -248,6 +254,9 @@ paths:
                     validation_failures: null
                     indices: null
   /__build-info:
+    servers:
+      - url: https://upp-prod-delivery-glb.upp.ft.com/__concept-search-api/
+      - url: https://upp-staging-delivery-glb.upp.ft.com/__concept-search-api/
     get:
       summary: Build Information
       description: >
@@ -269,6 +278,9 @@ paths:
                     builder: go version go1.6.3 linux/amd64
                     dateTime: "20161123122615"
   /__gtg:
+    servers:
+      - url: https://upp-prod-delivery-glb.upp.ft.com/__concept-search-api/
+      - url: https://upp-staging-delivery-glb.upp.ft.com/__concept-search-api/
     get:
       summary: Good To Go
       description: Lightly healthchecks the application, and returns a 200 if it's
@@ -290,6 +302,9 @@ paths:
             do not use the app. See the /__health endpoint for more detailed
             information.
   /__api:
+    servers:
+      - url: https://upp-prod-delivery-glb.upp.ft.com/__concept-search-api/
+      - url: https://upp-staging-delivery-glb.upp.ft.com/__concept-search-api/
     get:
       summary: API Documentation
       description: Returns OpenAPI documentation for the application.
@@ -303,5 +318,21 @@ paths:
               schema:
                 type: string
 servers:
-  - url: http://api.ft.com/
   - url: https://api.ft.com/
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+    BasicAuth:
+      type: http
+      scheme: basic
+security: [
+  {
+    ApiKeyAuth: []
+  },
+  {
+    BasicAuth: []
+  }
+]
