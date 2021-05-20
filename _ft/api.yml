@@ -334,6 +334,7 @@ paths:
 
 servers:
   - url: https://api.ft.com/
+  - url: https://api-t.ft.com/
 
 components:
   securitySchemes:
