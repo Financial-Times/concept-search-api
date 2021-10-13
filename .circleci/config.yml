@@ -20,8 +20,8 @@ jobs:
       - run:
           name: Download dredd
           command: |
-            curl -sL https://deb.nodesource.com/setup_11.x | bash -
-            DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs=11.\*
+            curl -sL https://deb.nodesource.com/setup_14.x | bash -
+            DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs=14.\*
             npm install -g --unsafe-perm --loglevel warn --user 0 --no-progress dredd@8.0.0
             rm -rf /var/lib/apt/lists/*
       - run:
