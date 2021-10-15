@@ -31,8 +31,7 @@ paths:
             for concepts by the given type. Multiple types can be specified in
             the request.
           required: true
-          example:
-            - http://www.ft.com/ontology/person/Person
+          default: http://www.ft.com/ontology/person/Person
           explode: true
           schema:
             type: array
@@ -57,6 +56,7 @@ paths:
           example: Fred
           schema:
             type: string
+          default: q
         - name: mode
           in: query
           description: >
@@ -68,6 +68,7 @@ paths:
             type: string
             enum:
               - search
+          default: search
         - name: boost
           in: query
           description: >
@@ -80,6 +81,7 @@ paths:
             type: string
             enum:
               - authors
+          default: authors
         - name: ids
           in: query
           description: >
@@ -93,12 +95,14 @@ paths:
               type: string
               minimum: 1
               uniqueItems: true
+          default: 90af4959-c61b-423e-9095-97de5c69dac9
         - name: include_deprecated
           in: query
           required: false
           description: Include the deprecated concepts too.
           schema:
             type: boolean
+          default: false
       responses:
         "200":
           description: Returns concepts based on the provided query parameters.
@@ -129,12 +133,14 @@ paths:
           description: Include the ES scores for each item in the response.
           schema:
             type: boolean
+          default: false
         - name: include_deprecated
           in: query
           required: false
           description: Include the deprecated concepts too.
           schema:
             type: boolean
+          default: false
       requestBody:
         content:
           application/json:
