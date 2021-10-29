@@ -31,6 +31,7 @@ paths:
             for concepts by the given type. Multiple types can be specified in
             the request.
           required: true
+          example: http://www.ft.com/ontology/person/Person
           explode: true
           schema:
             type: array
@@ -47,8 +48,6 @@ paths:
                 - http://www.ft.com/ontology/Topic
                 - http://www.ft.com/ontology/AlphavilleSeries
                 - http://www.ft.com/ontology/company/PublicCompany
-          example:
-            http://www.ft.com/ontology/Genre
         - name: q
           in: query
           description: The query text to use to find concepts. Must be set if the `mode` is
@@ -68,6 +67,7 @@ paths:
             type: string
             enum:
               - search
+          example: search
         - name: boost
           in: query
           description: >
@@ -129,12 +129,14 @@ paths:
           description: Include the ES scores for each item in the response.
           schema:
             type: boolean
+          default: false
         - name: include_deprecated
           in: query
           required: false
           description: Include the deprecated concepts too.
           schema:
             type: boolean
+          default: false
       requestBody:
         content:
           application/json:
