@@ -43,4 +43,6 @@ workflows:
     jobs:
       - ft-golang-ci/scan:
           name: scan-dependencies
-          context: cm-team-snyk
+          context:
+            - cm-team-snyk
+            - cm-team-github
