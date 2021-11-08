@@ -17,6 +17,7 @@ details: false
 method: []
 color: true
 path: []
+logLevel: debug
 hooks-worker-timeout: 5000
 hooks-worker-connect-timeout: 1500
 hooks-worker-connect-retry: 500
