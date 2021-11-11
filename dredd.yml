@@ -1,7 +1,6 @@
 dry-run: null
 hookfiles: './_ft/dredd-setup-es-hook.js'
 language: nodejs
-sandbox: false
 server: ./concept-search-api
 server-wait: 3
 init: false
@@ -17,9 +16,7 @@ inline-errors: false
 details: false
 method: []
 color: true
-level: info
-timestamp: false
-silent: false
+loglevel: warning
 path: []
 hooks-worker-timeout: 5000
 hooks-worker-connect-timeout: 1500
