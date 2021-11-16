@@ -1,6 +1,6 @@
 FROM golang:1
 
-ENV PROJECT="concept-rw-elasticsearch"
+ENV PROJECT=concept-search-api
 ENV ORG_PATH="github.com/Financial-Times"
 ENV SRC_FOLDER="${GOPATH}/src/${ORG_PATH}/${PROJECT}"
 

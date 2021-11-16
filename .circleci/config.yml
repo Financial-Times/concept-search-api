@@ -3,31 +3,6 @@ version: 2.1
 orbs:
   ft-golang-ci: financial-times/golang-ci@1
 
-jobs:
-  dredd:
-    working_directory: /go/src/github.com/Financial-Times/concept-search-api
-    docker:
-      - image: golang:1
-        environment:
-          GOPATH: /go
-          API_YML: /go/src/github.com/Financial-Times/concept-search-api/_ft/api.yml
-      - image: elasticsearch:5.3
-    steps:
-      - checkout
-      - run:
-          name: Go Build
-          command: go build -mod=readonly -v
-      - run:
-          name: Download dredd
-          command: |
-            curl -sL https://deb.nodesource.com/setup_16.x | bash -
-            DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs=16.\*
-            npm install -g --unsafe-perm --loglevel warn --user 0 --no-progress dredd@14.0.*
-            rm -rf /var/lib/apt/lists/*
-      - run:
-          name: Dredd API Testing
-          command: dredd
-
 workflows:
   tests_and_docker:
     jobs:
@@ -38,7 +13,6 @@ workflows:
           name: build-docker-image
           requires:
             - build-and-test-project
-      - dredd
   snyk-scanning:
     jobs:
       - ft-golang-ci/scan:
