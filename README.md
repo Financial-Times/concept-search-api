@@ -12,31 +12,33 @@ The taken approach to access AES (Amazon Elasticsearch Service):
 - Use https://github.com/olivere/elastic library to any ES request, after passing in the above created client
 
 ## How to run
-Make sure you have `dep` on your local machine. Run the following command to install it otherwise:
-```
-curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-```
 
-```
-mkdir $GOPATH/src/github.com/Financial-Times/concept-search-api
-cd $GOPATH/src/github.com/concept-search-api
+To build the project `go1.17` or newer is required to be present beforehand.
+
+```shell
 git clone https://github.com/Financial-Times/concept-search-api.git
-cd concept-search-api && dep ensure -vendor-only
+cd concept-search-api 
 go build
 ./concept-search-api --aws-access-key="{access key}" --aws-secret-access-key="{secret key}"
 ```
-It is also possible to provide the Elasticsearch endpoint, region, the port you expect the app to run on, the Elasticsearch index on which the search is performed and the maximum number of returned results.
 
-Other parameters:
-- elasticsearch-endpoint
-- elasticsearch-region
-- port (defaults to 8080)
-- index-name (defaults to concept)
-- elasticsearch-index (defaults to concept)
-- search-result-limit (defaults to 50) - the maximum number of returned results for a search (excluding the search with the `ids` parameter or the searches used for autocomplete)
-- max-ids-limit (defaults to 1000) - the maximum number of uuids that can be passed to the search with the `ids` parameter
-- autocomplete-result-limit (defaults to 10) - the maximum number of returned results for the searches used for autocomplete
-- elasticsearch-trace (defaults to false)
+It is also possible to provide the Elasticsearch endpoint, the port you expect the app to run on, the Elasticsearch index on which the search is performed and the maximum number of returned results.
+
+```
+Other parameters:                               
+--port                           Port to listen on (env $PORT) (default "8080")
+--aws-access-key                 AWS ACCESS KEY (env $AWS_ACCESS_KEY_ID)
+--aws-secret-access-key          AWS SECRET ACCESS KEY (env $AWS_SECRET_ACCESS_KEY)
+--elasticsearch-endpoint         AES endpoint (env $ELASTICSEARCH_ENDPOINT) (default "http://localhost:9200")
+--auth                           Authentication method for ES cluster (aws or none) (env $AUTH) (default "none")
+--elasticsearch-default-index    Elasticsearch default index (env $ELASTICSEARCH_DEFAULT_INDEX) (default "concepts")
+--elasticsearch-extended-index   Elasticsearch extended index (env $ELASTICSEARCH_EXTENDED_SEARCH_INDEX) (default "all-concepts")
+--api-yml                        Location of the API Swagger YML file. (env $API_YML) (default "./api.yml")
+--search-result-limit            The maximum number of search results returned (excluding the search with the `ids` parameter or the searches used for autocomplete) (env $RESULT_LIMIT) (default 50)
+--max-ids-limit                  The maximum number of uuids allowed as search input for the `ids` parameter (env $MAX_IDS_LIMIT) (default 1000)
+--autocomplete-result-limit      The maximum number of autocomplete results returned (env $AUTOCOMPLETE_LIMIT) (default 10)
+--elasticsearch-trace            Whether to log ElasticSearch HTTP requests and responses (env $ELASTICSEARCH_TRACE) (defaults false)
+```
 
 ## How to test
 
@@ -59,28 +61,33 @@ export ELASTICSEARCH_TEST_URL=http://localhost:9200
 ### POST /concept/search
 
 The endpoint is used for searching concepts. The payload is a JSON with a field called `term`. The value of this field represents the search criteria. For example searching for _FOO_ looks like this:
-```
+
+```shell
 curl -XPOST {concept-search-api-url}/concept/search -d '{"term":"FOO"}'
 ```
 
-The matching concepts are returned ordered by the strength of their match. However the actual score is not included.
+The matching concepts are returned ordered by the strength of their match. However, the actual score is not included.
 
 To include the score you need to add the query parameter `include_score` with the value `true`. If the parameter has a value other than `true` the score will not be included. The score is a field that appears in each concept alongside the data that represents the actual concept. For example searching for _FOO_ with scoring looks like this:
+
 ```
 curl -XPOST {concept-search-api-url}/concept/search?include_score=true -d '{"term":"FOO"}'
 ```
 
-By default the endpoint only retrieves results with TME or Smartlogic authority. To extend the search domain you need to add the query parameter `searchAllAuthorities` with the value `true`. This will return TME, Smartlogic, Factset or any other and no authority results.
+By default, the endpoint only retrieves results with TME or Smartlogic authority. To extend the search domain you need to add the query parameter `searchAllAuthorities` with the value `true`. This will return TME, Smartlogic, Factset or any other and no authority results. NB: The filtering is implemented by applying a filter on the `concept` alias in the elasticsearch index.
+
 ```
 curl -XPOST {concept-search-api-url}/concept/search?searchAllAuthorities=true -d '{"term":"FOO"}'
 ```
 
-By default the endpoint returns only *non-deprecated* concepts. In order to get the deprecated concepts too, you should provide query parameter `include_deprecated` with the value `true`.
+By default, the endpoint returns only *non-deprecated* concepts. In order to get the deprecated concepts too, you should provide query parameter `include_deprecated` with the value `true`.
+
 ```
 curl -XPOST {concept-search-api-url}/concept/search?include_deprecated=true -d '{"term":"FOO"}'
 ```
 
 Exact matches are preferred over partial ones and an example of search results with scoring and include deprecated would look like this:
+
 ```
 [
   {
@@ -118,6 +125,7 @@ Exact matches are preferred over partial ones and an example of search results w
   }
 ]
 ```
+
 If no results are found a 404 - Not Found response will be returned. In case the payload of the search request does not follow the indicated structure a 400 - Bad request will be returned. If the search fails for various reasons independent from the caller a 500 - Internal Server Error is returned.
 
 ### GET /concepts
