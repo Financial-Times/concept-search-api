@@ -14,3 +14,5 @@ services:
     image: elasticsearch:5.3
     ports:
       - "9201:9200"
+    environment:
+      ES_JAVA_OPTS: "-Xms750m -Xmx750m"
