@@ -7,7 +7,7 @@ services:
     container_name: test-runner
     environment:
       - ELASTICSEARCH_TEST_URL=http://elasticsearch:9200
-    command: ["go", "test", "-mod=readonly", "-v", "-race", "./..."]
+    command: ["go", "test", "-mod=readonly", "-v", "-race", "-tags=integration", "./..."]
     depends_on:
       - elasticsearch
   elasticsearch:
