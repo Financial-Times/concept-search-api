@@ -137,10 +137,12 @@ curl {concept-search-api-url}/concepts?type=http://www.ft.com/ontology/Genre
 ```
 
 Optional query parameters:
-- To activate the search mode, you can send the `mode` parameter with the value `search`, and `q` parameter with the value of the search query
-	```
-	curl {concept-search-api-url}/concepts?type=http://www.ft.com/ontology/organisation/Organisation&mode=search&q=FOO
-	```
+- To activate the search mode, you can send the `mode` parameter with the values described in the table below, and `q` parameter with the value of the search query
+
+| Mode          | Description                                                                                                                                                                                                                                                                                                                                                                           |
+|---------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `mode=search` | Optimized for time-sensitive types such as topics, people <br> ``` curl {concept-search-api-url}/concepts?type=http://www.ft.com/ontology/organisation/Organisation&mode=search&q=FOO ```                                                                                                                                                                                             |
+| `mode=text`   | Optimized for types that are not time-sensitive. Uses full-text ES queries.  **Note: Currently requests are possible only if either organization or public company type is supplied to the request** <br> ``` curl {concept-search-api-url}/concepts?type=http://www.ft.com/ontology/organisation/Organisation&type=http://www.ft.com/ontology/company/PublicCompany&mode=text&q=FOO ``` |
 - `boost` parameter can be specified when activating  the search mode, but it is currently supported only for authors
 	
 	E.g. The following request will return results with `"isFTAuthor": true`

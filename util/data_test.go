@@ -59,3 +59,16 @@ func TestValidateEsTypesWithPublicCompany(t *testing.T) {
 	assert.Equal(t, "people", res[2])
 	assert.Equal(t, true, isPublicCompany)
 }
+
+func TestValidateConceptTypesForTextModeSearch(t *testing.T) {
+	validConceptTypes1 := []string{"http://www.ft.com/ontology/organisation/Organisation", "http://www.ft.com/ontology/company/PublicCompany"}
+	validConceptTypes2 := []string{"http://www.ft.com/ontology/organisation/Organisation", "http://www.ft.com/ontology/product/Brand"}
+	invalidConceptTypes1 := []string{"http://www.ft.com/ontology/person/Person"}
+	invalidConceptTypes2 := []string{}
+
+	assert.Nil(t, ValidateConceptTypesForTextModeSearch(validConceptTypes1))
+	assert.Nil(t, ValidateConceptTypesForTextModeSearch(validConceptTypes2))
+
+	assert.Error(t, ValidateConceptTypesForTextModeSearch(invalidConceptTypes1))
+	assert.Error(t, ValidateConceptTypesForTextModeSearch(invalidConceptTypes2))
+}
