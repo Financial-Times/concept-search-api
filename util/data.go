@@ -98,7 +98,7 @@ func ValidateConceptTypesForTextModeSearch(conceptTypes []string) error {
 	validConceptTypesForTextMode := []string{"http://www.ft.com/ontology/organisation/Organisation", "http://www.ft.com/ontology/company/PublicCompany"}
 
 	for _, conceptType := range conceptTypes {
-		contains, err := Contains(validConceptTypesForTextMode, conceptType)
+		contains, err := contains(validConceptTypesForTextMode, conceptType)
 		if err != nil {
 			return err
 		}
