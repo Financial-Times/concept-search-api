@@ -1,47 +1,31 @@
 package util
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestContainsPositive(t *testing.T) {
-	slice1 := []string{"foo", "bar"}
-	target := "bar"
+func TestContains(t *testing.T) {
+	var testCases = []struct {
+		inputSlice []string
+		inputTarget string
+		expectedOutput bool
+		expectedError error
+	}{
+	{ inputSlice: []string{"foo", "bar"}, inputTarget: "bar", expectedOutput: true, expectedError: nil},
+	{ inputSlice: []string{"foo", "bar"}, inputTarget: "baz", expectedOutput: false, expectedError: nil},
+	{ inputSlice: []string{}, inputTarget: "baz", expectedOutput: false, expectedError: errors.New("invalid contains arguments")},
+	{ inputSlice: []string{"foo", "bar"}, inputTarget: "", expectedOutput: false, expectedError: errors.New("invalid contains arguments")},
+	}
 
-	contains, err := contains(slice1, target)
+	for _, tc := range testCases {
+		actualOutput, actualError := contains(tc.inputSlice, tc.inputTarget)
 
-	assert.True(t, contains)
-	assert.Nil(t, err)
-}
+		require.Equal(t, tc.expectedError, actualError)
+		assert.Equal(t, tc.expectedOutput, actualOutput)
+	}
 
-func TestContainsNegative(t *testing.T) {
-	slice1 := []string{"foo", "bar"}
-	target := "baz"
-
-	contains, err := contains(slice1, target)
-
-	assert.False(t, contains)
-	assert.Nil(t, err)
-}
-
-func TestContainsEmptySlice(t *testing.T) {
-	slice1 := []string{}
-	target := "baz"
-
-	contains, err := contains(slice1, target)
-
-	assert.False(t, contains)
-	assert.Error(t, err)
-}
-
-func TestContainsEmptyString(t *testing.T) {
-	slice1 := []string{"foo", "bar"}
-	target := ""
-
-	contains, err := contains(slice1, target)
-
-	assert.False(t, contains)
-	assert.Error(t, err)
 }
