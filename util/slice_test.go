@@ -27,5 +27,4 @@ func TestContains(t *testing.T) {
 		require.Equal(t, tc.expectedError, actualError)
 		assert.Equal(t, tc.expectedOutput, actualOutput)
 	}
-
 }
