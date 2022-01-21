@@ -10,15 +10,15 @@ import (
 
 func TestContains(t *testing.T) {
 	var testCases = []struct {
-		inputSlice []string
-		inputTarget string
+		inputSlice     []string
+		inputTarget    string
 		expectedOutput bool
-		expectedError error
+		expectedError  error
 	}{
-	{ inputSlice: []string{"foo", "bar"}, inputTarget: "bar", expectedOutput: true, expectedError: nil},
-	{ inputSlice: []string{"foo", "bar"}, inputTarget: "baz", expectedOutput: false, expectedError: nil},
-	{ inputSlice: []string{}, inputTarget: "baz", expectedOutput: false, expectedError: errors.New("invalid contains arguments")},
-	{ inputSlice: []string{"foo", "bar"}, inputTarget: "", expectedOutput: false, expectedError: errors.New("invalid contains arguments")},
+		{inputSlice: []string{"foo", "bar"}, inputTarget: "bar", expectedOutput: true, expectedError: nil},
+		{inputSlice: []string{"foo", "bar"}, inputTarget: "baz", expectedOutput: false, expectedError: nil},
+		{inputSlice: []string{}, inputTarget: "baz", expectedOutput: false, expectedError: errors.New("invalid contains arguments")},
+		{inputSlice: []string{"foo", "bar"}, inputTarget: "", expectedOutput: false, expectedError: errors.New("invalid contains arguments")},
 	}
 
 	for _, tc := range testCases {
