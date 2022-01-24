@@ -13,9 +13,9 @@ import (
 	"github.com/Financial-Times/concept-search-api/service"
 	"github.com/Financial-Times/concept-search-api/util"
 	"github.com/husobee/vestigo"
+	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"gopkg.in/olivere/elastic.v5"
 )
 
 var (

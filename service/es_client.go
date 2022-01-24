@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 	awsauth "github.com/smartystreets/go-aws-auth"
-	"gopkg.in/olivere/elastic.v5"
 )
 
 type ESService interface {

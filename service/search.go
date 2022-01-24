@@ -9,8 +9,8 @@ import (
 
 	"github.com/Financial-Times/concept-search-api/util"
 
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/olivere/elastic.v5"
 )
 
 var (
@@ -69,14 +69,15 @@ func (s *esConceptSearchService) FindAllConceptsByType(conceptType string, searc
 		return nil, err
 	}
 
-	index := s.getIndexForAuthoritiesParam(searchAllAuthorities)
-	query := s.esClient.Search(index).Type(t).Size(s.maxSearchResults)
+	boolQuery := elastic.NewBoolQuery()
+	boolQuery.Must(elastic.NewTermQuery("type", t))
+
 	if !includeDeprecated {
-		deprecatedQ := elastic.NewBoolQuery().MustNot(elastic.NewTermQuery("isDeprecated", true))
-		query = query.Query(deprecatedQ)
+		boolQuery.MustNot(elastic.NewTermQuery("isDeprecated", true))
 	}
 
-	result, err := query.Do(context.Background())
+	index := s.getIndexForAuthoritiesParam(searchAllAuthorities)
+	result, err := s.esClient.Search(index).Size(s.maxSearchResults).Query(boolQuery).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err
@@ -115,7 +116,7 @@ func (s *esConceptSearchService) FindConceptsById(ids []string) ([]Concept, erro
 	if err := s.checkElasticClient(); err != nil {
 		return nil, err
 	}
-	idsQuery := elastic.NewIdsQuery("_all").Ids(ids...)
+	idsQuery := elastic.NewIdsQuery().Ids(ids...)
 	result, err := s.esClient.Search(s.defaultIndex).Size(len(ids)).Query(idsQuery).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
@@ -138,9 +139,9 @@ func searchResultToConcepts(result *elastic.SearchResult) Concepts {
 	return concepts
 }
 
-func transformToConcept(source *json.RawMessage) (Concept, error) {
+func transformToConcept(source json.RawMessage) (Concept, error) {
 	esConcept := EsConceptModel{}
-	err := json.Unmarshal(*source, &esConcept)
+	err := json.Unmarshal(source, &esConcept)
 	if err != nil {
 		return Concept{}, err
 	}
@@ -190,9 +191,9 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	termMatchQuery := elastic.NewMatchQuery("prefLabel", textQuery).Boost(0.1)             // Additional boost added if whole terms match, i.e. Donald Trump =returns=> Donald J Trump higher than Donald Trumpy
 	exactMatchQuery := elastic.NewMatchQuery("prefLabel.exact_match", textQuery).Boost(15) // Further boost if the prefLabel matches exactly (barring special characters)
 
-	topicsBoost := elastic.NewTermQuery("_type", "topics").Boost(1.5)
-	locationBoost := elastic.NewTermQuery("_type", "locations").Boost(0.25)
-	peopleBoost := elastic.NewTermQuery("_type", "people").Boost(0.1)
+	topicsBoost := elastic.NewTermQuery("type", "topics").Boost(1.5)
+	locationBoost := elastic.NewTermQuery("type", "locations").Boost(0.25)
+	peopleBoost := elastic.NewTermQuery("type", "people").Boost(0.1)
 
 	// ES library does not support building an exists query like; {"exists": {"field":"scopeNote", "boost":1.7}}
 	// Another option to provide the same functionality/boosting is via a bool query.
@@ -206,7 +207,7 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 			elastic.NewMatchPhraseQuery("aliases.edge_ngram", textQuery),
 		).MinimumNumberShouldMatch(1)).
 		AddScoreFunc(elastic.NewWeightFactorFunction(4.5)).
-		Add(elastic.NewTermQuery("_type", "topics"), elastic.NewWeightFactorFunction(4.0)).
+		Add(elastic.NewTermQuery("type", "topics"), elastic.NewWeightFactorFunction(4.0)).
 		AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.annotationsCount").Modifier("ln1p").Missing(0)).
 		AddScoreFunc(elastic.NewFieldValueFactorFunction().Field("metrics.prevWeekAnnotationsCount").Modifier("ln2p").Missing(0)).
 		ScoreMode("multiply").
@@ -218,7 +219,7 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 
 	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.exact_match", textQuery).Boost(0.85) // Also boost if an alias matches exactly, but this should not precede exact matched prefLabels
 
-	typeFilters := []elastic.Query{elastic.NewTermsQuery("_type", util.ToTerms(esTypes)...)}
+	typeFilters := []elastic.Query{elastic.NewTermsQuery("type", util.ToTerms(esTypes)...)}
 	if isPublicCompanyType {
 		typeFilters = append(typeFilters, elastic.NewTermQuery("directType", util.PublicCompany))
 	}

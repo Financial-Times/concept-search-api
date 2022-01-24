@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	elastic "gopkg.in/olivere/elastic.v5"
+	"github.com/olivere/elastic/v7"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

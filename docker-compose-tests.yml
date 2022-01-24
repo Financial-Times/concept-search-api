@@ -11,8 +11,8 @@ services:
     depends_on:
       - elasticsearch
   elasticsearch:
-    image: elasticsearch:5.3
+    image: elasticsearch:7.10.1
     ports:
       - "9201:9200"
     environment:
-      ES_JAVA_OPTS: "-Xms750m -Xmx750m"
+      discovery.type: "single-node"

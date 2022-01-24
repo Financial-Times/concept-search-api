@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package main
@@ -17,8 +18,8 @@ import (
 
 	"log"
 
+	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/olivere/elastic.v5"
 )
 
 func TestConceptFinder(t *testing.T) {
@@ -410,7 +411,6 @@ func TestEsQueryScore(t *testing.T) {
 	for uuid, conceptBody := range filterScoreTestingData {
 		_, e := ec.Index().
 			Index(filterScoreTestingIndexName).
-			Type("people").
 			BodyString(conceptBody).
 			Id(uuid).
 			Do(context.Background())
@@ -450,7 +450,6 @@ func TestEsBestMatchImpl(t *testing.T) {
 	for uuid, conceptBody := range bestMatchTestingData {
 		_, e := ec.Index().
 			Index(bestMatchIndexName).
-			Type("people").
 			BodyString(conceptBody).
 			Id(uuid).
 			Do(context.Background())
@@ -666,16 +665,20 @@ const validResponse = `{
     "failed": 0
   },
   "hits": {
-    "total": 540,
+    "total": {
+      "value": 540, 
+      "relation": "eq"
+    },
     "max_score": 9.992676,
     "hits": [
       {
         "_index": "concept",
-        "_type": "organisations",
+        "_type": "_doc",
         "_id": "9a0dd8b8-2ae4-34ca-8639-cfef69711eb9",
         "_score": 9.992676,
         "_source": {
           "id": "http://api.ft.com/things/9a0dd8b8-2ae4-34ca-8639-cfef69711eb9",
+          "type": "organisations",
           "apiUrl": "http://api.ft.com/organisations/9a0dd8b8-2ae4-34ca-8639-cfef69711eb9",
           "prefLabel": "Foobar SpA",
           "types": [
@@ -695,11 +698,12 @@ const validResponse = `{
       },
       {
         "_index": "concept",
-        "_type": "organisations",
+        "_type": "_doc",
         "_id": "6084734d-f4c2-3375-b298-dbbc6c00a680",
         "_score": 2.68152,
         "_source": {
           "id": "http://api.ft.com/things/6084734d-f4c2-3375-b298-dbbc6c00a680",
+          "type": "organisations",
           "apiUrl": "http://api.ft.com/organisations/6084734d-f4c2-3375-b298-dbbc6c00a680",
           "prefLabel": "Foobar GmbH",
           "types": [
@@ -721,16 +725,20 @@ const validResponseDeprecated = `{
     "failed": 0
   },
   "hits": {
-    "total": 1,
+    "total": {
+      "value": 1, 
+      "relation": "eq"
+    },
     "max_score": 113.70959,
     "hits": [
 			{
 				"_index": "concept",
-				"_type": "genres",
+				"_type": "_doc",
 				"_id": "74877f31-6c39-4e07-a85a-39236354a93e",
 				"_score": 113.70959,
 				"_source": {
 						"id": "http://api.ft.com/things/74877f31-6c39-4e07-a85a-39236354a93e",
+						"type": "genres",
 						"apiUrl": "http://api.ft.com/things/74877f31-6c39-4e07-a85a-39236354a93e",
 						"prefLabel": "Rick And Morty",
 						"types": [
@@ -760,7 +768,10 @@ const emptyResponse = `{
     "failed": 0
   },
   "hits": {
-    "total": 0,
+    "total": {
+      "value": 0, 
+      "relation": "eq"
+    },
     "max_score": null,
     "hits": []
   }
@@ -775,12 +786,15 @@ const invalidResponseBadHits = `{
     "failed": 0
   },
   "hits: {
-    "total": 999,
+    "total": {
+      "value": 999, 
+      "relation": "eq"
+    },
     "max_score": 9.992676,
     "hits": [
       {
         "_index": "concept",
-        "_type": "organisations",
+        "_type": "_doc",
         "_id": "9a0dd8b8-2ae4-34ca-8639-cfef69711eb9",
 }`
 
@@ -793,7 +807,10 @@ const invvalidResponseBadConcept = `{
     "failed": 0
   },
   "hits": {
-    "total": 540,
+    "total": {
+      "value": 540, 
+      "relation": "eq"
+    },
     "max_score": 9.992676,
     "hits": [
       {
@@ -808,6 +825,7 @@ var filterScoreTestingIndexName = "concepts_score_test"
 var filterScoreTestingData = map[string]string{
 	"08147da5-8110-407c-a51c-a91855e6b073": `{
 	"id": "http://api.ft.com/things/08147da5-8110-407c-a51c-a91855e6b073",
+    "type": "people",
 	"apiUrl": "http://api.ft.com/people/08147da5-8110-407c-a51c-a91855e6b073",
 	"prefLabel": "Anna Whitwham",
 	"types": [
@@ -830,6 +848,7 @@ var filterScoreTestingData = map[string]string{
 }`,
 	"a0ec2c50-1174-48f2-b804-d1f346bb7256": `{
 	"id": "http://api.ft.com/things/a0ec2c50-1174-48f2-b804-d1f346bb7256",
+	"type": "topics",
 	"apiUrl": "http://api.ft.com/things/a0ec2c50-1174-48f2-b804-d1f346bb7256",
 	"prefLabel": "Onyx Pike Broader Transitive",
 	"types": [
@@ -855,6 +874,7 @@ var bestMatchIndexName = "exact_match_index"
 var bestMatchTestingData = map[string]string{
 	"f758ef56-c40a-3162-91aa-3e8a3aabc494": `{
 		"id": "http://api.ft.com/things/f758ef56-c40a-3162-91aa-3e8a3aabc494",
+		"type": "people",
 		"apiUrl": "http://api.ft.com/people/f758ef56-c40a-3162-91aa-3e8a3aabc494",
 		"prefLabel": "Adam Samson",
 		"types": [
@@ -875,6 +895,7 @@ var bestMatchTestingData = map[string]string{
 
 	"64302452-e369-4ddb-88fa-9adc5124a38c": `{
 		"id": "http://api.ft.com/things/64302452-e369-4ddb-88fa-9adc5124a38c",
+		"type": "people",
 		"apiUrl": "http://api.ft.com/people/64302452-e369-4ddb-88fa-9adc5124a38c",
 		"prefLabel": "Eric Platt",
 		"types": [
@@ -897,6 +918,7 @@ var bestMatchTestingData = map[string]string{
 	"9332270e-f959-3f55-9153-d30acd0d0a51": `{
 		"id": "http://api.ft.com/things/9332270e-f959-3f55-9153-d30acd0d0a51",
 		"apiUrl": "http://api.ft.com/people/9332270e-f959-3f55-9153-d30acd0d0a51",
+		"type": "people",
 		"prefLabel": "Michael Hunter",
 		"types": [
 			"http://www.ft.com/ontology/core/Thing",
@@ -916,6 +938,7 @@ var bestMatchTestingData = map[string]string{
 
 	"40281396-8369-4699-ae48-1ccc0c931a72": `{
 		"id": "http://api.ft.com/things/40281396-8369-4699-ae48-1ccc0c931a72",
+		"type": "people",
 		"apiUrl": "http://api.ft.com/people/40281396-8369-4699-ae48-1ccc0c931a72",
 		"prefLabel": "Eric Platt",
 		"types": [
@@ -937,6 +960,7 @@ var bestMatchTestingData = map[string]string{
 
 	"40281396-8369-4699-ae48-1ccc0c931b50": `{
 		"id": "http://api.ft.com/things/40281396-8369-4699-ae48-1ccc0c931b50",
+		"type": "people",
 		"apiUrl": "http://api.ft.com/people/40281396-8369-4699-ae48-1ccc0c931b50",
 		"prefLabel": "Eric Andrew",
 		"types": [
@@ -956,6 +980,7 @@ var bestMatchTestingData = map[string]string{
 
 	"40281396-8369-4699-ae48-1ccc0c931b55": `{
 		"id": "http://api.ft.com/things/40281396-8369-4699-ae48-1ccc0c931b55",
+		"type": "people",
 		"apiUrl": "http://api.ft.com/people/40281396-8369-4699-ae48-1ccc0c931b55",
 		"prefLabel": "Rick And Morty",
 		"types": [
@@ -985,16 +1010,20 @@ var validResponseBestMatch = `{
                 "failed": 0
             },
             "hits": {
-                "total": 1,
+                "total": {
+					"value": 1,
+					"relation": "eq"
+				},
                 "max_score": 16.835419,
                 "hits": [
                     {
                         "_index": "concepts-0.2.2",
-                        "_type": "people",
+                        "_type": "_doc",
                         "_id": "f758ef56-c40a-3162-91aa-3e8a3aabc494",
                         "_score": 16.835419,
                         "_source": {
                             "id": "http://api.ft.com/things/f758ef56-c40a-3162-91aa-3e8a3aabc494",
+							"type": "people",
                             "apiUrl": "http://api.ft.com/people/f758ef56-c40a-3162-91aa-3e8a3aabc494",
                             "prefLabel": "Adam Samson",
                             "types": [
@@ -1027,16 +1056,20 @@ var validResponseBestMatch = `{
                 "failed": 0
             },
             "hits": {
-                "total": 2,
+                "total": {
+					"value": 2,
+					"relation": "eq"
+				},
                 "max_score": 16.62907,
                 "hits": [
                     {
                         "_index": "concepts-0.2.2",
-                        "_type": "people",
+                        "_type": "_doc",
                         "_id": "40281396-8369-4699-ae48-1ccc0c931a72",
                         "_score": 16.62907,
                         "_source": {
                             "id": "http://api.ft.com/things/40281396-8369-4699-ae48-1ccc0c931a72",
+							"type": "people",
                             "apiUrl": "http://api.ft.com/people/40281396-8369-4699-ae48-1ccc0c931a72",
                             "prefLabel": "Eric Platt",
                             "types": [
@@ -1057,11 +1090,12 @@ var validResponseBestMatch = `{
                     },
                     {
                         "_index": "concepts-0.2.2",
-                        "_type": "people",
+                        "_type": "_doc",
                         "_id": "64302452-e369-4ddb-88fa-9adc5124a38c",
                         "_score": 16.264492,
                         "_source": {
                             "id": "http://api.ft.com/things/64302452-e369-4ddb-88fa-9adc5124a38c",
+							"type": "people",
                             "apiUrl": "http://api.ft.com/people/64302452-e369-4ddb-88fa-9adc5124a38c",
                             "prefLabel": "Eric Platt",
                             "types": [
@@ -1095,16 +1129,20 @@ var validResponseBestMatch = `{
                 "failed": 0
             },
             "hits": {
-                "total": 1,
+                "total": {
+					"value": 1,
+					"relation": "eq"
+				},
                 "max_score": 12.8185625,
                 "hits": [
                     {
                         "_index": "concepts-0.2.2",
-                        "_type": "people",
+                        "_type": "_doc",
                         "_id": "9332270e-f959-3f55-9153-d30acd0d0a51",
                         "_score": 12.8185625,
                         "_source": {
                             "id": "http://api.ft.com/things/9332270e-f959-3f55-9153-d30acd0d0a51",
+							"type": "people",
                             "apiUrl": "http://api.ft.com/people/9332270e-f959-3f55-9153-d30acd0d0a51",
                             "prefLabel": "Michael Hunter",
                             "types": [
@@ -1142,16 +1180,20 @@ var validResponseBestMatchPartialResults = `{
                 "failed": 0
             },
             "hits": {
-                "total": 1,
+                "total": {
+					"value": 1,
+					"relation": "eq"
+				},
                 "max_score": 16.835419,
                 "hits": [
                     {
                         "_index": "concepts-0.2.2",
-                        "_type": "people",
+                        "_type": "_doc",
                         "_id": "f758ef56-c40a-3162-91aa-3e8a3aabc494",
                         "_score": 16.835419,
                         "_source": {
                             "id": "http://api.ft.com/things/f758ef56-c40a-3162-91aa-3e8a3aabc494",
+							"type": "people",
                             "apiUrl": "http://api.ft.com/people/f758ef56-c40a-3162-91aa-3e8a3aabc494",
                             "prefLabel": "Adam Samson",
                             "types": [
@@ -1184,7 +1226,10 @@ var validResponseBestMatchPartialResults = `{
                 "failed": 0
             },
             "hits": {
-                "total": 0,
+                "total": {
+					"value": 0,
+					"relation": "eq"
+				},
                 "max_score": null,
                 "hits": []
             },
@@ -1199,16 +1244,20 @@ var validResponseBestMatchPartialResults = `{
                 "failed": 0
             },
             "hits": {
-                "total": 1,
+                "total": {
+					"value": 1,
+					"relation": "eq"
+				},
                 "max_score": 12.8185625,
                 "hits": [
                     {
                         "_index": "concepts-0.2.2",
-                        "_type": "people",
+                        "_type": "_doc",
                         "_id": "9332270e-f959-3f55-9153-d30acd0d0a51",
                         "_score": 12.8185625,
                         "_source": {
                             "id": "http://api.ft.com/things/9332270e-f959-3f55-9153-d30acd0d0a51",
+							"type": "people",
                             "apiUrl": "http://api.ft.com/people/9332270e-f959-3f55-9153-d30acd0d0a51",
                             "prefLabel": "Michael Hunter",
                             "types": [
@@ -1245,7 +1294,10 @@ var validResponseBestMatchNoResults = `{
                 "failed": 0
             },
             "hits": {
-                "total": 0,
+                "total": { 
+					"value": 0,
+					"relation": "eq"
+				},
                 "max_score": null,
                 "hits": []
             },
@@ -1260,7 +1312,10 @@ var validResponseBestMatchNoResults = `{
                 "failed": 0
             },
             "hits": {
-                "total": 0,
+                "total": {
+					"value": 0,
+					"relation": "eq"
+				},
                 "max_score": null,
                 "hits": []
             },
@@ -1275,7 +1330,10 @@ var validResponseBestMatchNoResults = `{
                 "failed": 0
             },
             "hits": {
-                "total": 0,
+                "total": {
+					"value": 0,
+					"relation": "eq"
+				},
                 "max_score": null,
                 "hits": []
             },

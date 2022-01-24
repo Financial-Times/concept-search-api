@@ -6,9 +6,10 @@ import (
 
 	"github.com/Financial-Times/concept-search-api/util"
 
-	"github.com/Financial-Times/concept-search-api/service"
-	"gopkg.in/olivere/elastic.v5"
 	"strings"
+
+	"github.com/Financial-Times/concept-search-api/service"
+	"github.com/olivere/elastic/v7"
 )
 
 type Handler struct {

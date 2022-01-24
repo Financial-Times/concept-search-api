@@ -8,9 +8,9 @@ import (
 	"sync"
 
 	"github.com/Financial-Times/concept-search-api/util"
-	"github.com/Financial-Times/transactionid-utils-go"
+	transactionidutils "github.com/Financial-Times/transactionid-utils-go"
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/olivere/elastic.v5"
 )
 
 type conceptFinder interface {
@@ -111,7 +111,7 @@ func (service *esConceptFinder) findConceptsWithTerm(writer http.ResponseWriter,
 		}
 	}()
 
-	if searchResult.Hits.TotalHits > 0 {
+	if searchResult.Hits.TotalHits.Value > 0 {
 		writer.Header().Add("Content-Type", "application/json")
 		foundConcepts := getFoundConcepts(searchResult, isScoreIncluded(request), isFTAuthorIncluded(request))
 		encoder := json.NewEncoder(writer)
@@ -153,7 +153,7 @@ func (service *esConceptFinder) findConceptsWithBestMatch(writer http.ResponseWr
 	currentRespIdx := 0
 	finalResults := make(map[string][]concept)
 	for _, searchRequestRes := range res.Responses {
-		if searchRequestRes.Hits.TotalHits > 0 {
+		if searchRequestRes.Hits.TotalHits.Value > 0 {
 			foundConcepts := getFoundConcepts(searchRequestRes, isScoreIncluded(request), isFTAuthorIncluded(request))
 			finalResults[searchWrappers[currentRespIdx].term] = foundConcepts.Results[:1]
 		} else {
@@ -180,7 +180,7 @@ func getFoundConcepts(elasticResult *elastic.SearchResult, isScoreIncluded bool,
 	var foundConcepts []concept
 	for _, hit := range elasticResult.Hits.Hits {
 		var foundConcept concept
-		err := json.Unmarshal(*hit.Source, &foundConcept)
+		err := json.Unmarshal(hit.Source, &foundConcept)
 		if err != nil {
 			log.Errorf("Unable to unmarshall concept, error=[%s]\n", err)
 		} else {
@@ -284,7 +284,7 @@ func createSearchRequestsForBestMatch(request *http.Request, criteria *searchCri
 			if err != nil {
 				return nil, http.StatusBadRequest, err
 			}
-			typeFilter := elastic.NewTermsQuery("_type", util.ToTerms(esTypes)...) // filter by type
+			typeFilter := elastic.NewTermsQuery("type", util.ToTerms(esTypes)...) // filter by type
 			finalQuery = finalQuery.Filter(typeFilter)
 		}
 
