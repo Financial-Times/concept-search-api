@@ -55,15 +55,20 @@ func (s *mockConceptSearchService) SearchConceptByTextAndTypesWithBoost(textQuer
 	return args.Get(0).([]service.Concept), args.Error(1)
 }
 
+func (s *mockConceptSearchService) SearchConceptByTextAndTypesInTextMode(textQuery string, conceptTypes []string, searchAllAuthorities bool, includeDeprecated bool) ([]service.Concept, error) {
+	args := s.Called(textQuery, conceptTypes, searchAllAuthorities, includeDeprecated)
+	return args.Get(0).([]service.Concept), args.Error(1)
+}
+
 func dummyConcepts() []service.Concept {
 	return []service.Concept{
-		service.Concept{
+		{
 			Id:          "http://api.ft.com/things/1",
 			ApiUrl:      "http://api.ft.com/things/1",
 			PrefLabel:   "Test Genre 1",
 			ConceptType: "http://www.ft.com/ontology/Genre",
 		},
-		service.Concept{
+		{
 			Id:          "http://api.ft.com/things/2",
 			ApiUrl:      "http://api.ft.com/things/2",
 			PrefLabel:   "Test Genre 2",
@@ -74,19 +79,19 @@ func dummyConcepts() []service.Concept {
 
 func dummyAllAutoritiesConcepts() []service.Concept {
 	return []service.Concept{
-		service.Concept{
+		{
 			Id:          "http://api.ft.com/things/1",
 			ApiUrl:      "http://api.ft.com/things/1",
 			PrefLabel:   "Test Genre 1",
 			ConceptType: "http://www.ft.com/ontology/Genre",
 		},
-		service.Concept{
+		{
 			Id:          "http://api.ft.com/things/2",
 			ApiUrl:      "http://api.ft.com/things/2",
 			PrefLabel:   "Test Genre 2",
 			ConceptType: "http://www.ft.com/ontology/Genre",
 		},
-		service.Concept{
+		{
 			Id:          "http://api.ft.com/things/3",
 			ApiUrl:      "http://api.ft.com/things/3",
 			PrefLabel:   "Test Genre 3",
@@ -364,6 +369,55 @@ func TestConceptSearchErrorMultipleMode(t *testing.T) {
 	respObject := unmarshallResponseMessage(t, actual)
 
 	assert.Equal(t, "specified multiple mode query parameters in the URL", respObject["message"], "error message")
+	svc.AssertExpectations(t)
+}
+
+func TestConceptSearchTextModeNoQuery(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Forganisation%2FOrganisation&mode=text", nil)
+
+	svc := &mockConceptSearchService{}
+	actual := doHttpCall(svc, req)
+
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := unmarshallResponseMessage(t, actual)
+
+	assert.Equal(t, "invalid or missing parameters for concept search (require q)", respObject["message"], "error message")
+	svc.AssertExpectations(t)
+}
+
+func TestConceptSearchTextModeInvalidConceptType(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?type=http%3A%2F%2Fwww.ft.com%2Fontology%2Fperson%2FPerson&mode=text", nil)
+
+	svc := &mockConceptSearchService{}
+	actual := doHttpCall(svc, req)
+
+	assert.Equal(t, http.StatusBadRequest, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := unmarshallResponseMessage(t, actual)
+
+	assert.Equal(t, "invalid or missing parameters for concept search (text mode but no organisation or public company type)", respObject["message"], "error message")
+	svc.AssertExpectations(t)
+}
+
+func TestConceptSearchTextMode(t *testing.T) {
+	req := httptest.NewRequest("GET", "/concepts?q=test&type=http%3A%2F%2Fwww.ft.com%2Fontology%2Forganisation%2FOrganisation&mode=text", nil)
+
+	svc := &mockConceptSearchService{}
+	concepts := dummyConcepts()
+	svc.On("SearchConceptByTextAndTypesInTextMode", "test", []string{"http://www.ft.com/ontology/organisation/Organisation"}, mock.AnythingOfType("bool"), mock.AnythingOfType("bool")).Return(concepts, nil)
+
+	actual := doHttpCall(svc, req)
+
+	assert.Equal(t, http.StatusOK, actual.StatusCode, "http status")
+	assert.Equal(t, "application/json", actual.Header.Get("Content-Type"), "content-type")
+
+	respObject := unmarshallResponse(t, actual)
+
+	assert.Len(t, respObject["concepts"], 2, "concepts")
+	assert.True(t, reflect.DeepEqual(respObject["concepts"], concepts))
 	svc.AssertExpectations(t)
 }
 
