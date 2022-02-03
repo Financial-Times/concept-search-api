@@ -258,9 +258,11 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypesInTextMode(textQu
 		return nil, err
 	}
 
-	textMatch := elastic.NewMatchPhrasePrefixQuery("prefLabel.exact_match", textQuery)
-	aliasesExactMatchMustQuery := elastic.NewMatchPhrasePrefixQuery("aliases.exact_match", textQuery)
-	mustQuery := elastic.NewBoolQuery().Should(textMatch, aliasesExactMatchMustQuery).MinimumNumberShouldMatch(1)
+	prefLabelMatchMustQuery := elastic.NewMatchQuery("prefLabel.edge_ngram", textQuery).Boost(5)
+	aliasesMatchMustQuery := elastic.NewMatchQuery("aliases.edge_ngram", textQuery).Boost(5)
+	prefixMatchQuery := elastic.NewPrefixQuery("prefLabel.exact_match", textQuery)
+	aliasesPrefixMatchQuery := elastic.NewPrefixQuery("aliases.exact_match", textQuery)
+	mustQuery := elastic.NewBoolQuery().Should(prefLabelMatchMustQuery, aliasesMatchMustQuery, prefixMatchQuery, aliasesPrefixMatchQuery).MinimumNumberShouldMatch(1)
 
 	exactMatchQuery := elastic.NewMatchQuery("prefLabel.edge_ngram", textQuery).Boost(4)
 	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.edge_ngram", textQuery).Boost(6)
@@ -283,13 +285,17 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypesInTextMode(textQu
 	theQuery := elastic.NewBoolQuery().Must(mustQuery).Should(shouldMatch...).MustNot(mustNotMatch...).Filter(typeFilterQuery).MinimumNumberShouldMatch(0).Boost(1)
 
 	index := s.getIndexForAuthoritiesParam(searchAllAuthorities)
-	search := s.esClient.Search(index).Size(s.maxAutoCompleteResults).Query(theQuery).Explain(true)
+	search := s.esClient.Search(index).Size(s.maxAutoCompleteResults).MinScore(1).Query(theQuery).Explain(true)
 	result, err := search.SearchType("dfs_query_then_fetch").Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err
 	}
 	concepts := searchResultToConcepts(result)
+
+	// Once ES cluster is upgraded to 7.10
+	// the sorting can happen as part of the query
+	sortConcepts(concepts)
 	return concepts, nil
 }
 
@@ -333,4 +339,10 @@ func (s *esConceptSearchService) getIndexForAuthoritiesParam(searchAllAuthoritie
 	}
 
 	return s.defaultIndex
+}
+
+func sortConcepts(c Concepts) {
+	sort.Slice(c, func(i, j int) bool {
+		return len(c[i].PrefLabel) < len(c[j].PrefLabel)
+	})
 }
