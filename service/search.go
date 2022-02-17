@@ -268,10 +268,10 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypesInTextMode(textQu
 	exactMatchQuery := elastic.NewMatchQuery("prefLabel.edge_ngram", textQuery).Boost(4)
 	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.edge_ngram", textQuery).Boost(6)
 	publicCompanyBoost := elastic.NewTermQuery("directType", util.PublicCompany).Boost(5)
-	organisationsBoost := elastic.NewTermQuery("_type", "organisations").Boost(5)
+	organisationsBoost := elastic.NewTermQuery("type", "organisations").Boost(5)
 	shouldMatch := []elastic.Query{exactMatchQuery, publicCompanyBoost, organisationsBoost, aliasesExactMatchShouldQuery}
 
-	typeFilters := []elastic.Query{elastic.NewTermsQuery("_type", util.ToTerms(esTypes)...)}
+	typeFilters := []elastic.Query{elastic.NewTermsQuery("type", util.ToTerms(esTypes)...)}
 	if isPublicCompanyType {
 		typeFilters = append(typeFilters, elastic.NewTermQuery("directType", util.PublicCompany))
 	}

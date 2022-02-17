@@ -1016,7 +1016,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesInTextM
 
 	assert.Equal(s.T(), "Google Inc", firstChoiceSearchResult.PrefLabel)
 	assert.Equal(s.T(), "Google Ventures", secondChoiceSearchResult.PrefLabel)
-	cleanup(s.T(), s.ec, esOrganisationType, uuid1, uuid2, uuid3)
+	cleanup(s.T(), s.ec, uuid1, uuid2, uuid3)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesInTextModePublicCompanies() {
