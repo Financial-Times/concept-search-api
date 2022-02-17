@@ -27,6 +27,7 @@ type ConceptSearchService interface {
 	FindAllConceptsByDirectType(conceptType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error)
 	SearchConceptByTextAndTypes(textQuery string, conceptTypes []string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error)
 	SearchConceptByTextAndTypesWithBoost(textQuery string, conceptTypes []string, boostType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error)
+	SearchConceptByTextAndTypesInTextMode(textQuery string, conceptTypes []string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error)
 }
 
 type esConceptSearchService struct {
@@ -134,6 +135,7 @@ func searchResultToConcepts(result *elastic.SearchResult) Concepts {
 			log.Warnf("unmarshallable response from ElasticSearch: %v", err)
 			continue
 		}
+
 		concepts = append(concepts, concept)
 	}
 	return concepts
@@ -149,15 +151,9 @@ func transformToConcept(source json.RawMessage) (Concept, error) {
 }
 
 func (s *esConceptSearchService) SearchConceptByTextAndTypes(textQuery string, conceptTypes []string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error) {
-	if textQuery == "" {
-		return nil, errEmptyTextParameter
-	}
-
-	if len(conceptTypes) == 0 {
-		return nil, util.ErrNoConceptTypeParameter
-	}
-	if err := s.checkElasticClient(); err != nil {
-		return nil, err
+	searchQueryInputErr := s.validateSearchQueryInput(textQuery, conceptTypes)
+	if searchQueryInputErr != nil {
+		return nil, searchQueryInputErr
 	}
 	return s.searchConceptsForMultipleTypes(textQuery, conceptTypes, "", searchAllAuthorities, includeDeprecated)
 }
@@ -166,18 +162,22 @@ func (s *esConceptSearchService) SearchConceptByTextAndTypesWithBoost(textQuery 
 	if err := util.ValidateForAuthorsSearch(conceptTypes, boostType); err != nil {
 		return nil, err
 	}
-	if textQuery == "" {
-		return nil, errEmptyTextParameter
-	}
-	if len(conceptTypes) == 0 {
-		return nil, util.ErrNoConceptTypeParameter
-	}
-	if err := s.checkElasticClient(); err != nil {
-		return nil, err
+	searchQueryInputErr := s.validateSearchQueryInput(textQuery, conceptTypes)
+	if searchQueryInputErr != nil {
+		return nil, searchQueryInputErr
 	}
 	return s.searchConceptsForMultipleTypes(textQuery, conceptTypes, boostType, searchAllAuthorities, includeDeprecated)
 }
 
+func (s *esConceptSearchService) SearchConceptByTextAndTypesInTextMode(textQuery string, conceptTypes []string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error) {
+	searchQueryInputErr := s.validateSearchQueryInput(textQuery, conceptTypes)
+	if searchQueryInputErr != nil {
+		return nil, searchQueryInputErr
+	}
+	return s.searchConceptsForMultipleTypesInTextMode(textQuery, conceptTypes, searchAllAuthorities, includeDeprecated)
+}
+
+// Due to the popularity boost this configuration is mostly suited to topics, locations, and people
 func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string, conceptTypes []string, boostType string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error) {
 	esTypes, isPublicCompanyType, err := util.ValidateAndConvertToEsTypes(conceptTypes)
 	if err != nil {
@@ -251,6 +251,55 @@ func (s *esConceptSearchService) searchConceptsForMultipleTypes(textQuery string
 	return concepts, nil
 }
 
+// This configuration is better suited to types such as organisations and public companies whose popularity is not usually
+// affected by recent (last week) events
+func (s *esConceptSearchService) searchConceptsForMultipleTypesInTextMode(textQuery string, conceptTypes []string, searchAllAuthorities bool, includeDeprecated bool) ([]Concept, error) {
+	esTypes, isPublicCompanyType, err := util.ValidateAndConvertToEsTypes(conceptTypes)
+	if err != nil {
+		return nil, err
+	}
+
+	prefLabelMatchMustQuery := elastic.NewMatchQuery("prefLabel.edge_ngram", textQuery).Boost(5)
+	aliasesMatchMustQuery := elastic.NewMatchQuery("aliases.edge_ngram", textQuery).Boost(5)
+	prefixMatchQuery := elastic.NewPrefixQuery("prefLabel.exact_match", textQuery)
+	aliasesPrefixMatchQuery := elastic.NewPrefixQuery("aliases.exact_match", textQuery)
+	mustQuery := elastic.NewBoolQuery().Should(prefLabelMatchMustQuery, aliasesMatchMustQuery, prefixMatchQuery, aliasesPrefixMatchQuery).MinimumNumberShouldMatch(1)
+
+	exactMatchQuery := elastic.NewMatchQuery("prefLabel.edge_ngram", textQuery).Boost(4)
+	aliasesExactMatchShouldQuery := elastic.NewMatchQuery("aliases.edge_ngram", textQuery).Boost(6)
+	publicCompanyBoost := elastic.NewTermQuery("directType", util.PublicCompany).Boost(5)
+	organisationsBoost := elastic.NewTermQuery("_type", "organisations").Boost(5)
+	shouldMatch := []elastic.Query{exactMatchQuery, publicCompanyBoost, organisationsBoost, aliasesExactMatchShouldQuery}
+
+	typeFilters := []elastic.Query{elastic.NewTermsQuery("_type", util.ToTerms(esTypes)...)}
+	if isPublicCompanyType {
+		typeFilters = append(typeFilters, elastic.NewTermQuery("directType", util.PublicCompany))
+	}
+	typeFilterQuery := elastic.NewBoolQuery().Should(typeFilters...)
+
+	mustNotMatch := []elastic.Query{}
+	// by default (include_deprecated is false) the deprecated entities are excluded
+	if !includeDeprecated {
+		mustNotMatch = append(mustNotMatch, elastic.NewTermQuery("isDeprecated", true)) // exclude deprecated docs
+	}
+
+	theQuery := elastic.NewBoolQuery().Must(mustQuery).Should(shouldMatch...).MustNot(mustNotMatch...).Filter(typeFilterQuery).MinimumNumberShouldMatch(0).Boost(1)
+
+	index := s.getIndexForAuthoritiesParam(searchAllAuthorities)
+	search := s.esClient.Search(index).Size(s.maxAutoCompleteResults).MinScore(1).Query(theQuery).Explain(true)
+	result, err := search.SearchType("dfs_query_then_fetch").Do(context.Background())
+	if err != nil {
+		log.Errorf("error: %v", err)
+		return nil, err
+	}
+	concepts := searchResultToConcepts(result)
+
+	// Once ES cluster is upgraded to 7.10
+	// the sorting can happen as part of the query
+	sortConcepts(concepts)
+	return concepts, nil
+}
+
 func containsOnlyEmptyValues(ids []string) bool {
 	for _, v := range ids {
 		if v != "" {
@@ -258,6 +307,19 @@ func containsOnlyEmptyValues(ids []string) bool {
 		}
 	}
 	return true
+}
+
+func (s *esConceptSearchService) validateSearchQueryInput(textQuery string, conceptTypes []string) error {
+	if textQuery == "" {
+		return errEmptyTextParameter
+	}
+	if len(conceptTypes) == 0 {
+		return util.ErrNoConceptTypeParameter
+	}
+	if err := s.checkElasticClient(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *esConceptSearchService) SetElasticClient(client *elastic.Client) {
@@ -278,4 +340,10 @@ func (s *esConceptSearchService) getIndexForAuthoritiesParam(searchAllAuthoritie
 	}
 
 	return s.defaultIndex
+}
+
+func sortConcepts(c Concepts) {
+	sort.Slice(c, func(i, j int) bool {
+		return len(c[i].PrefLabel) < len(c[j].PrefLabel)
+	})
 }

@@ -251,13 +251,13 @@ func TestConceptFinderForBestMatch(t *testing.T) {
 			requestURL:  defaultRequestURL,
 			requestBody: `{"bestMatchTerms":["Adam Samson", "Eric Platt", "Michael Hunter"], "conceptTypes": ["http://www.ft.com/ontology/person/Person"]}`,
 			expectedUUIDs: map[string][]string{
-				"Adam Samson": []string{
+				"Adam Samson": {
 					"f758ef56-c40a-3162-91aa-3e8a3aabc494",
 				},
-				"Eric Platt": []string{
+				"Eric Platt": {
 					"40281396-8369-4699-ae48-1ccc0c931a72",
 				},
-				"Michael Hunter": []string{
+				"Michael Hunter": {
 					"9332270e-f959-3f55-9153-d30acd0d0a51",
 				},
 			},
@@ -279,11 +279,11 @@ func TestConceptFinderForBestMatch(t *testing.T) {
 			requestURL:  defaultRequestURL,
 			requestBody: `{"bestMatchTerms":["Adam Samson", "Eric Platt", "Michael Hunter"], "conceptTypes": ["http://www.ft.com/ontology/person/Person"]}`,
 			expectedUUIDs: map[string][]string{
-				"Adam Samson": []string{
+				"Adam Samson": {
 					"f758ef56-c40a-3162-91aa-3e8a3aabc494",
 				},
-				"Eric Platt": []string{},
-				"Michael Hunter": []string{
+				"Eric Platt": {},
+				"Michael Hunter": {
 					"9332270e-f959-3f55-9153-d30acd0d0a51",
 				},
 			},
@@ -305,9 +305,9 @@ func TestConceptFinderForBestMatch(t *testing.T) {
 			requestURL:  defaultRequestURL,
 			requestBody: `{"bestMatchTerms":["Adam Samson", "Eric Platt", "Michael Hunter"], "conceptTypes": ["http://www.ft.com/ontology/person/Person"]}`,
 			expectedUUIDs: map[string][]string{
-				"Adam Samson":    []string{},
-				"Eric Platt":     []string{},
-				"Michael Hunter": []string{},
+				"Adam Samson":    {},
+				"Eric Platt":     {},
+				"Michael Hunter": {},
 			},
 			extraAssertionLogic: func(t *testing.T, searchResults map[string][]concept) {
 				for _, concepts := range searchResults {
@@ -327,13 +327,13 @@ func TestConceptFinderForBestMatch(t *testing.T) {
 			requestURL:  defaultRequestURL + "?include_field=authors",
 			requestBody: `{"bestMatchTerms":["Adam Samson", "Eric Platt", "Michael Hunter"], "conceptTypes": ["http://www.ft.com/ontology/person/Person"]}`,
 			expectedUUIDs: map[string][]string{
-				"Adam Samson": []string{
+				"Adam Samson": {
 					"f758ef56-c40a-3162-91aa-3e8a3aabc494",
 				},
-				"Eric Platt": []string{
+				"Eric Platt": {
 					"40281396-8369-4699-ae48-1ccc0c931a72",
 				},
-				"Michael Hunter": []string{
+				"Michael Hunter": {
 					"9332270e-f959-3f55-9153-d30acd0d0a51",
 				},
 			},

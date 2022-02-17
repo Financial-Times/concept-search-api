@@ -94,6 +94,21 @@ func ValidateAndConvertToEsTypes(conceptTypes []string) ([]string, bool, error) 
 	return esTypes, isPublicCompany, nil
 }
 
+func ValidateConceptTypesForTextModeSearch(conceptTypes []string) error {
+	validConceptTypesForTextMode := []string{"http://www.ft.com/ontology/organisation/Organisation", "http://www.ft.com/ontology/company/PublicCompany"}
+
+	for _, conceptType := range conceptTypes {
+		contains, err := contains(validConceptTypesForTextMode, conceptType)
+		if err != nil {
+			return err
+		}
+		if contains {
+			return nil
+		}
+	}
+	return NewInputError("invalid or missing parameters for concept search (text mode but no organisation or public company type)")
+}
+
 type InputError struct {
 	msg string
 }

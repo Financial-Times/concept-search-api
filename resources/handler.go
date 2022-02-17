@@ -37,7 +37,7 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 	var err error
 	var concepts []service.Concept
 
-	mode, foundMode, modeErr := util.GetSingleValueQueryParameter(req, "mode", "search")
+	mode, foundMode, modeErr := util.GetSingleValueQueryParameter(req, "mode", "search", "text")
 	q, foundQ, qErr := util.GetSingleValueQueryParameter(req, "q")
 	conceptTypes, foundConceptTypes := util.GetMultipleValueQueryParameter(req, "type")
 	boostType, foundBoostType, boostTypeErr := util.GetSingleValueQueryParameter(req, "boost") // we currently only accept authors, so ignoring the actual boost value
@@ -63,6 +63,13 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 			} else {
 				if mode == "search" {
 					concepts, err = h.searchConcepts(foundBoostType, boostType, foundQ, q, conceptTypes, searchAllAuthorities, includeDeprecated)
+				} else if mode == "text" {
+					validationErr := util.ValidateConceptTypesForTextModeSearch(conceptTypes)
+					if validationErr != nil {
+						err = validationErr
+					} else {
+						concepts, err = h.searchConceptsInTextMode(foundQ, q, conceptTypes, searchAllAuthorities, includeDeprecated)
+					}
 				}
 			}
 		} else {
@@ -89,7 +96,6 @@ func (h *Handler) ConceptSearch(w http.ResponseWriter, req *http.Request) {
 			if err == util.ErrNoElasticClient || err == elastic.ErrNoClient {
 				writeHTTPError(w, http.StatusServiceUnavailable, err)
 			} else {
-
 				writeHTTPError(w, http.StatusInternalServerError, err)
 			}
 		}
@@ -108,6 +114,13 @@ func (h *Handler) searchConcepts(foundBoostType bool, boostType string, foundQ b
 		return h.service.SearchConceptByTextAndTypesWithBoost(q, conceptTypes, boostType, searchAllAuthorities, includeDeprecated)
 	}
 	return h.service.SearchConceptByTextAndTypes(q, conceptTypes, searchAllAuthorities, includeDeprecated)
+}
+
+func (h *Handler) searchConceptsInTextMode(foundQ bool, q string, conceptTypes []string, searchAllAuthorities bool, includeDeprecated bool) ([]service.Concept, error) {
+	if !foundQ {
+		return nil, NewValidationError("invalid or missing parameters for concept search (require q)")
+	}
+	return h.service.SearchConceptByTextAndTypesInTextMode(q, conceptTypes, searchAllAuthorities, includeDeprecated)
 }
 
 func (h *Handler) findConceptsByType(conceptTypes []string, includeDeprecated bool, searchAllAuthorities bool) ([]service.Concept, error) {

@@ -971,6 +971,80 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoo
 	assert.Nil(s.T(), concepts)
 }
 
+func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesInTextModeNoInputText() {
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 10)
+
+	concepts, err := service.SearchConceptByTextAndTypesInTextMode("", []string{ftOrganisationType}, false, true)
+	assert.EqualError(s.T(), err, errEmptyTextParameter.Error())
+	assert.Nil(s.T(), concepts)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesInTextModeNoTypes() {
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 10)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.SearchConceptByTextAndTypesInTextMode("test", []string{}, false, true)
+	assert.EqualError(s.T(), err, util.ErrNoConceptTypeParameter.Error())
+	assert.Nil(s.T(), concepts)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesInTextMode() {
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 10)
+	service.SetElasticClient(s.ec)
+
+	uuid1 := uuid.New().String()
+	err := writeTestConcept(s.ec, uuid1, esOrganisationType, ftOrganisationType, "Google Inc", []string{"Google LLC"}, &ConceptMetrics{PrevWeekAnnotationsCount: 0, AnnotationsCount: 0}) // In text mode the annotations count is irrelevant
+	require.NoError(s.T(), err)
+
+	uuid2 := uuid.New().String()
+	err = writeTestConcept(s.ec, uuid2, esOrganisationType, ftOrganisationType, "Netflix Inc", []string{"NetFlix.com Inc"}, &ConceptMetrics{PrevWeekAnnotationsCount: 0, AnnotationsCount: 0})
+	require.NoError(s.T(), err)
+
+	uuid3 := uuid.New().String()
+	err = writeTestConcept(s.ec, uuid3, esOrganisationType, ftOrganisationType, "Google Ventures", []string{"GV Management"}, &ConceptMetrics{PrevWeekAnnotationsCount: 0, AnnotationsCount: 0})
+	require.NoError(s.T(), err)
+
+	_, err = s.ec.Refresh(testDefaultIndex).Do(context.Background())
+	require.NoError(s.T(), err)
+
+	concepts, err := service.SearchConceptByTextAndTypesInTextMode("Google", []string{ftOrganisationType}, false, false)
+	require.NoError(s.T(), err)
+	require.Len(s.T(), concepts, 2)
+
+	firstChoiceSearchResult := concepts[0]
+	secondChoiceSearchResult := concepts[1]
+
+	assert.Equal(s.T(), "Google Inc", firstChoiceSearchResult.PrefLabel)
+	assert.Equal(s.T(), "Google Ventures", secondChoiceSearchResult.PrefLabel)
+	cleanup(s.T(), s.ec, esOrganisationType, uuid1, uuid2, uuid3)
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesInTextModePublicCompanies() {
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 10)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.SearchConceptByTextAndTypesInTextMode("test", []string{ftPublicCompanies}, false, true)
+	assert.NoError(s.T(), err)
+	assert.Len(s.T(), concepts, 4)
+
+	for _, concept := range concepts {
+		assert.True(s.T(), concept.ConceptType == ftPublicCompanies, "expect concept to have type PublicCompany")
+	}
+}
+
+func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesMultipleTypesInTextModeWithPublicCompanies() {
+	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 10)
+	service.SetElasticClient(s.ec)
+
+	concepts, err := service.SearchConceptByTextAndTypesInTextMode("test", []string{ftBrandType, ftPublicCompanies}, false, true)
+	assert.NoError(s.T(), err)
+	assert.Len(s.T(), concepts, 8)
+
+	for _, concept := range concepts {
+		assert.True(s.T(), concept.ConceptType == ftBrandType || concept.ConceptType == ftPublicCompanies, "expect concept to be either brand or public company")
+	}
+}
+
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularity() {
 	service := NewEsConceptSearchService(testDefaultIndex, "", 10, 10, 10)
 	service.SetElasticClient(s.ec)
