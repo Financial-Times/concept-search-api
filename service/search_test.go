@@ -12,12 +12,11 @@ import (
 	"testing"
 
 	"github.com/Financial-Times/concept-search-api/util"
+	"github.com/google/uuid"
+	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"gopkg.in/olivere/elastic.v5"
-
-	"github.com/google/uuid"
 )
 
 const (
@@ -129,11 +128,10 @@ func createIndex(ec *elastic.Client, indexName string, mappingFile string) error
 	return nil
 }
 
-func cleanup(t *testing.T, ec *elastic.Client, esType string, uuids ...string) {
+func cleanup(t *testing.T, ec *elastic.Client, uuids ...string) {
 	for _, uuid := range uuids {
 		_, err := ec.Delete().
 			Index(testDefaultIndex).
-			Type(esType).
 			Id(uuid).
 			Do(context.TODO())
 		assert.NoError(t, err)
@@ -150,6 +148,7 @@ func writeTestAuthors(ec *elastic.Client, amount int) error {
 		prefLabel := fmt.Sprintf("Test concept %s %s", esPeopleType, uuid)
 		payload := EsConceptModel{
 			Id:         uuid,
+			Type:       esPeopleType,
 			ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseURL, esPeopleType, uuid),
 			PrefLabel:  prefLabel,
 			Types:      []string{ftPeopleType},
@@ -160,7 +159,6 @@ func writeTestAuthors(ec *elastic.Client, amount int) error {
 
 		_, err := ec.Index().
 			Index(testDefaultIndex).
-			Type(esPeopleType).
 			Id(uuid).
 			BodyJson(payload).
 			Do(context.Background())
@@ -198,6 +196,7 @@ func writeTestConcepts(ec *elastic.Client, esConceptType string, ftConceptType s
 func writeTestPerson(ec *elastic.Client, uuid string, prefLabel string, ftAuthor string) error {
 	payload := EsConceptModel{
 		Id:         uuid,
+		Type:       esPeopleType,
 		ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseURL, esPeopleType, uuid),
 		PrefLabel:  fmt.Sprintf(prefLabel),
 		Types:      []string{ftPeopleType},
@@ -208,7 +207,6 @@ func writeTestPerson(ec *elastic.Client, uuid string, prefLabel string, ftAuthor
 
 	_, err := ec.Index().
 		Index(testDefaultIndex).
-		Type(esPeopleType).
 		Id(uuid).
 		BodyJson(payload).
 		Do(context.Background())
@@ -221,6 +219,7 @@ func writeTestPerson(ec *elastic.Client, uuid string, prefLabel string, ftAuthor
 func writeTestConcept(ec *elastic.Client, uuid string, esConceptType string, ftConceptType string, prefLabel string, aliases []string, metrics *ConceptMetrics) error {
 	payload := EsConceptModel{
 		Id:         uuid,
+		Type:       esConceptType,
 		ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseURL, esConceptType, uuid),
 		PrefLabel:  prefLabel,
 		Types:      []string{ftConceptType},
@@ -231,7 +230,6 @@ func writeTestConcept(ec *elastic.Client, uuid string, esConceptType string, ftC
 
 	_, err := ec.Index().
 		Index(testDefaultIndex).
-		Type(esConceptType).
 		Id(uuid).
 		BodyJson(payload).
 		Do(context.Background())
@@ -247,6 +245,7 @@ func writeTestConceptWithScopeNote(ec *elastic.Client, uuid string, esConceptTyp
 
 	payload := EsConceptModel{
 		Id:         uuid,
+		Type:       esConceptType,
 		ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseURL, esConceptType, uuid),
 		PrefLabel:  prefLabel,
 		Types:      []string{ftConceptType},
@@ -257,7 +256,6 @@ func writeTestConceptWithScopeNote(ec *elastic.Client, uuid string, esConceptTyp
 
 	_, err := ec.Index().
 		Index(testDefaultIndex).
-		Type(esConceptType).
 		Id(uuid).
 		BodyJson(payload).
 		Do(context.Background())
@@ -273,6 +271,7 @@ func writeTestConceptWithCountryCodeAndCountryOfIncorporation(ec *elastic.Client
 
 	payload := EsConceptModel{
 		Id:                     uuid,
+		Type:                   esConceptType,
 		ApiUrl:                 fmt.Sprintf("%s/%s/%s", apiBaseURL, esConceptType, uuid),
 		PrefLabel:              prefLabel,
 		Types:                  []string{ftConceptType},
@@ -284,7 +283,6 @@ func writeTestConceptWithCountryCodeAndCountryOfIncorporation(ec *elastic.Client
 
 	_, err := ec.Index().
 		Index(testDefaultIndex).
-		Type(esConceptType).
 		Id(uuid).
 		BodyJson(payload).
 		Do(context.Background())
@@ -295,10 +293,9 @@ func writeTestConceptWithCountryCodeAndCountryOfIncorporation(ec *elastic.Client
 	return nil
 }
 
-func writeTestConceptModel(ec *elastic.Client, esConceptType string, model EsConceptModel) error {
+func writeTestConceptModel(ec *elastic.Client, model EsConceptModel) error {
 	_, err := ec.Index().
 		Index(testDefaultIndex).
-		Type(esConceptType).
 		Id(model.Id).
 		BodyJson(model).
 		Do(context.Background())
@@ -362,8 +359,9 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeDeprecatedFla
 	uuid := uuid.New().String()
 	prefLabel := "Rick and Morty"
 
-	err := writeTestConceptModel(s.ec, esPeopleType, EsConceptModel{
+	err := writeTestConceptModel(s.ec, EsConceptModel{
 		Id:           uuid,
+		Type:         esPeopleType,
 		ApiUrl:       fmt.Sprintf("%s/%s/%s", apiBaseURL, esPeopleType, uuid),
 		PrefLabel:    prefLabel,
 		Types:        []string{ftPeopleType},
@@ -397,7 +395,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByTypeDeprecatedFla
 	}
 	assert.Equal(s.T(), 1, deprecatedConceptsFound, "expect found concepts")
 
-	cleanup(s.T(), s.ec, esPeopleType, uuid)
+	cleanup(s.T(), s.ec, uuid)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindAllConceptsByDirectType() {
@@ -495,7 +493,7 @@ func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsSingle() {
 	assert.Len(s.T(), concepts, 1, "there should be one concept")
 	assert.Equal(s.T(), uuid1, concepts[0].Id, "retrieved concepts should have id %s ", uuid1)
 
-	cleanup(s.T(), s.ec, esPeopleType, uuid1)
+	cleanup(s.T(), s.ec, uuid1)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsMultiple() {
@@ -525,8 +523,8 @@ func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsMultiple() {
 	}
 	assert.Contains(s.T(), conceptIds, uuid1, "retrieved concepts should contain id %s ", uuid1)
 	assert.Contains(s.T(), conceptIds, uuid2, "retrieved concepts should contain id %s ", uuid2)
-	cleanup(s.T(), s.ec, esOrganisationType, uuid1)
-	cleanup(s.T(), s.ec, esLocationType, uuid2)
+	cleanup(s.T(), s.ec, uuid1)
+	cleanup(s.T(), s.ec, uuid2)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsSingleInvalidUUID() {
@@ -567,8 +565,8 @@ func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsMultipleMixValidI
 	assert.Contains(s.T(), conceptIds, uuid1, "retrieved concepts should contain id %s ", uuid1)
 	assert.Contains(s.T(), conceptIds, uuid2, "retrieved concepts should contain id %s ", uuid2)
 
-	cleanup(s.T(), s.ec, esOrganisationType, uuid1)
-	cleanup(s.T(), s.ec, esLocationType, uuid2)
+	cleanup(s.T(), s.ec, uuid1)
+	cleanup(s.T(), s.ec, uuid2)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindConceptsByIdsEmptyStringValue() {
@@ -643,7 +641,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesTermMat
 
 	assert.Equal(s.T(), elPresidente.PrefLabel, "Donald J Trump", "Failure could indicate that the wrong concept had the higher boost")
 	assert.Equal(s.T(), donaldo.PrefLabel, "Donaldo Trump", "Failure could indicate that the wrong concept had the higher boost")
-	cleanup(s.T(), s.ec, esPeopleType, uuid1, uuid2)
+	cleanup(s.T(), s.ec, uuid1, uuid2)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMatchBoosted() {
@@ -670,7 +668,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMa
 
 	assert.Equal(s.T(), "New York", nyc.PrefLabel, "Failure could indicate that the wrong concept had the higher boost")
 	assert.Equal(s.T(), "New York City Magistrates (New York, New York)", magistrates.PrefLabel, "Failure could indicate that the wrong concept had the higher boost")
-	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
+	cleanup(s.T(), s.ec, uuid1, uuid2)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMatchBoostedWithScopeNotePresent() {
@@ -697,7 +695,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesExactMa
 
 	assert.Equal(s.T(), "New York", nyc.PrefLabel, "Failure could indicate that the wrong concept had the higher boost")
 	assert.Equal(s.T(), "New York City Magistrates (New York, New York)", magistrates.PrefLabel, "Failure could indicate that the wrong concept had the higher boost")
-	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
+	cleanup(s.T(), s.ec, uuid1, uuid2)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesDeprecated() {
@@ -709,8 +707,9 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesDepreca
 	require.NoError(s.T(), err)
 
 	uuid2 := uuid.New().String()
-	err = writeTestConceptModel(s.ec, esLocationType, EsConceptModel{
+	err = writeTestConceptModel(s.ec, EsConceptModel{
 		Id:           uuid2,
+		Type:         esLocationType,
 		ApiUrl:       fmt.Sprintf("%s/%s/%s", apiBaseURL, ftLocationType, uuid2),
 		PrefLabel:    "New York Deprecated",
 		Types:        []string{ftLocationType},
@@ -741,7 +740,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesDepreca
 
 	assert.Equal(s.T(), "New York", nyc.PrefLabel, "Failure could indicate that the wrong concept had the higher boost")
 
-	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
+	cleanup(s.T(), s.ec, uuid1, uuid2)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAuthorsBoost() {
@@ -774,7 +773,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 	assert.Equal(s.T(), "Robert Author Shrimpley", theAuthor.PrefLabel)
 	assert.Equal(s.T(), "Robert Real Shrimpley", theEditor.PrefLabel)
 	assert.Equal(s.T(), "Roberto Shrimpley", theFraud.PrefLabel)
-	cleanup(s.T(), s.ec, esPeopleType, uuid1, uuid2, uuid3)
+	cleanup(s.T(), s.ec, uuid1, uuid2, uuid3)
 }
 
 // If 4 concepts are equivalent, then the type boosts should order them as expected.
@@ -815,10 +814,10 @@ func (s *EsConceptSearchServiceTestSuite) TestSearch__SpecificTypesAreBoosted() 
 	assert.Equal(s.T(), ftPeopleType, person.ConceptType)
 	assert.Equal(s.T(), ftOrganisationType, org.ConceptType)
 
-	cleanup(s.T(), s.ec, esPeopleType, uuid1)
-	cleanup(s.T(), s.ec, esLocationType, uuid2)
-	cleanup(s.T(), s.ec, esOrganisationType, uuid3)
-	cleanup(s.T(), s.ec, esTopicType, uuid4)
+	cleanup(s.T(), s.ec, uuid1)
+	cleanup(s.T(), s.ec, uuid2)
+	cleanup(s.T(), s.ec, uuid3)
+	cleanup(s.T(), s.ec, uuid4)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAuthorsBoostAndDeprecated() {
@@ -839,8 +838,9 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 
 	uuid4 := uuid.New().String()
 	authorFlag := "true"
-	err = writeTestConceptModel(s.ec, esPeopleType, EsConceptModel{
+	err = writeTestConceptModel(s.ec, EsConceptModel{
 		Id:           uuid4,
+		Type:         esPeopleType,
 		ApiUrl:       fmt.Sprintf("%s/%s/%s", apiBaseURL, esPeopleType, uuid4),
 		PrefLabel:    "Robert Shrimpley",
 		Types:        []string{ftPeopleType},
@@ -880,7 +880,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithAut
 	assert.Equal(s.T(), "Robert Real Shrimpley", theRealEditor.PrefLabel)
 	assert.Equal(s.T(), "Roberto Shrimpley", theFake.PrefLabel)
 
-	cleanup(s.T(), s.ec, esPeopleType, uuid1, uuid2, uuid3, uuid4)
+	cleanup(s.T(), s.ec, uuid1, uuid2, uuid3, uuid4)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByExactMatchAliases() {
@@ -907,7 +907,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByExactMatchAliases(
 
 	assert.Equal(s.T(), "United States of America", theCountry.PrefLabel)
 	assert.Equal(s.T(), "USADA", theFraud.PrefLabel)
-	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
+	cleanup(s.T(), s.ec, uuid1, uuid2)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesWithBoostRestrictedSize() {
@@ -1016,7 +1016,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesInTextM
 
 	assert.Equal(s.T(), "Google Inc", firstChoiceSearchResult.PrefLabel)
 	assert.Equal(s.T(), "Google Ventures", secondChoiceSearchResult.PrefLabel)
-	cleanup(s.T(), s.ec, esOrganisationType, uuid1, uuid2, uuid3)
+	cleanup(s.T(), s.ec, uuid1, uuid2, uuid3)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptByTextAndTypesInTextModePublicCompanies() {
@@ -1069,7 +1069,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularity() {
 
 	assert.Equal(s.T(), "United States of America", theCountry.PrefLabel)
 	assert.Equal(s.T(), "USADA", theFraud.PrefLabel)
-	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
+	cleanup(s.T(), s.ec, uuid1, uuid2)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularityAliasMatch() {
@@ -1096,7 +1096,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByPopularityAliasMat
 
 	assert.Equal(s.T(), "Luca Panziera", theDoctor.PrefLabel)
 	assert.Equal(s.T(), "Luca The Fraud", theFraud.PrefLabel)
-	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
+	cleanup(s.T(), s.ec, uuid1, uuid2)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularitySameAnnotationsCount() {
@@ -1123,7 +1123,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularitySa
 
 	assert.Equal(s.T(), "United States of America", theCountry.PrefLabel)
 	assert.Equal(s.T(), "USADA", theFraud.PrefLabel)
-	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
+	cleanup(s.T(), s.ec, uuid1, uuid2)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularityNoRecentAnnotations() {
@@ -1150,7 +1150,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularityNo
 
 	assert.Equal(s.T(), "United States of America", theCountry.PrefLabel)
 	assert.Equal(s.T(), "USADA", theFraud.PrefLabel)
-	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
+	cleanup(s.T(), s.ec, uuid1, uuid2)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularity() {
@@ -1177,7 +1177,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByRecentPopularity()
 
 	assert.Equal(s.T(), "United States of America", theCountry.PrefLabel)
 	assert.Equal(s.T(), "USADA", theFraud.PrefLabel)
-	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
+	cleanup(s.T(), s.ec, uuid1, uuid2)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByAliasPartialMatch() {
@@ -1202,7 +1202,7 @@ func (s *EsConceptSearchServiceTestSuite) TestSearchConceptsByAliasPartialMatch(
 	theCountry := concepts[0]
 
 	assert.Equal(s.T(), "United States of America", theCountry.PrefLabel)
-	cleanup(s.T(), s.ec, esLocationType, uuid1, uuid2)
+	cleanup(s.T(), s.ec, uuid1, uuid2)
 }
 
 func (s *EsConceptSearchServiceTestSuite) TestFindOrganisationWithCountryCodeAndCountryOfIncorporation() {
@@ -1226,5 +1226,5 @@ func (s *EsConceptSearchServiceTestSuite) TestFindOrganisationWithCountryCodeAnd
 	assert.Equal(s.T(), "CA", theCompany.CountryCode)
 	assert.Equal(s.T(), "US", theCompany.CountryOfIncorporation)
 
-	cleanup(s.T(), s.ec, esOrganisationType, uuid)
+	cleanup(s.T(), s.ec, uuid)
 }

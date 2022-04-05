@@ -48,6 +48,7 @@ func TestConvertToSimpleConcept(t *testing.T) {
 	countryOfIncorporation := "US"
 	esConcept := EsConceptModel{
 		Id:                     id,
+		Type:                   "people",
 		ApiUrl:                 apiUrl,
 		PrefLabel:              label,
 		Types:                  []string{"any"},
@@ -76,6 +77,7 @@ func TestConvertToSimpleConceptWithIdCorrect(t *testing.T) {
 
 	esConcept := EsConceptModel{
 		Id:         id,
+		Type:       "people",
 		ApiUrl:     apiUrl,
 		PrefLabel:  label,
 		Types:      []string{"any"},
@@ -95,6 +97,7 @@ func TestConvertToSimpleConceptWithFTAuthor(t *testing.T) {
 
 	esConcept := EsConceptModel{
 		Id:         id,
+		Type:       "people",
 		ApiUrl:     apiUrl,
 		PrefLabel:  label,
 		Types:      []string{"any"},
@@ -117,6 +120,7 @@ func TestConvertToSimpleConceptWithNonBoolFTAuthor(t *testing.T) {
 
 	esConcept := EsConceptModel{
 		Id:         id,
+		Type:       "people",
 		ApiUrl:     apiUrl,
 		PrefLabel:  label,
 		Types:      []string{"any"},

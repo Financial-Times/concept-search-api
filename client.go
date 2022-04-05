@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/olivere/elastic/v7"
 	awsauth "github.com/smartystreets/go-aws-auth"
-	"gopkg.in/olivere/elastic.v5"
 )
 
 type esClient interface {

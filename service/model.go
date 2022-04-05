@@ -9,6 +9,7 @@ import (
 
 type EsConceptModel struct {
 	Id                     string          `json:"id"`
+	Type                   string          `json:"type"`
 	ApiUrl                 string          `json:"apiUrl"`
 	PrefLabel              string          `json:"prefLabel"`
 	Types                  []string        `json:"types"`
