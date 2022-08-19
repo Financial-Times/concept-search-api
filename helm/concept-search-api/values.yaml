@@ -13,3 +13,4 @@ resources:
     memory: 30Mi
   limits:
     memory: 256Mi
+serviceAccountName: eksctl-concept-search-api-serviceaccount
