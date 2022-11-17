@@ -1,10 +1,10 @@
 package service
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -35,24 +35,22 @@ type awsSigningTransport struct {
 
 // RoundTrip implementation
 func (a awsSigningTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	var body io.ReadSeeker
 	clonedRequest := cloneRequest(req)
 	signer := awsSigner.NewSigner(a.Credentials)
+
 	if clonedRequest.Body != nil {
 		b, err := io.ReadAll(clonedRequest.Body)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read request body with error: %w", err)
 		}
-		body := strings.NewReader(string(b))
+		body = bytes.NewReader(b)
 		defer clonedRequest.Body.Close()
-		_, err = signer.Sign(clonedRequest, body, "es", a.Region, time.Now())
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign request: %w", err)
-		}
-	} else {
-		_, err := signer.Sign(clonedRequest, nil, "es", a.Region, time.Now())
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign request: %w", err)
-		}
+	}
+
+	_, err := signer.Sign(clonedRequest, body, "es", a.Region, time.Now())
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign request: %w", err)
 	}
 	return a.HTTPClient.Do(clonedRequest)
 }
