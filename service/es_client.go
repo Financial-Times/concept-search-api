@@ -1,12 +1,16 @@
 package service
 
 import (
+	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	awsSigner "github.com/aws/aws-sdk-go/aws/signer/v4"
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
-	awsauth "github.com/smartystreets/go-aws-auth"
 )
 
 type ESService interface {
@@ -14,23 +18,43 @@ type ESService interface {
 }
 
 type awsESAccessConfig struct {
-	accessKey  string
-	secretKey  string
+	awsCreds   *credentials.Credentials
+	region     string
 	esEndpoint string
 }
 
-func newAWSAccessConfig(accessKey string, secretKey string, endpoint string) awsESAccessConfig {
-	return awsESAccessConfig{accessKey: accessKey, secretKey: secretKey, esEndpoint: endpoint}
+func newAWSAccessConfig(awsCreds *credentials.Credentials, endpoint string, region string) awsESAccessConfig {
+	return awsESAccessConfig{awsCreds: awsCreds, esEndpoint: endpoint, region: region}
 }
 
 type awsSigningTransport struct {
 	HTTPClient  *http.Client
-	Credentials awsauth.Credentials
+	Credentials *credentials.Credentials
+	Region      string
 }
 
 // RoundTrip implementation
 func (a awsSigningTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	return a.HTTPClient.Do(awsauth.Sign4(cloneRequest(req), a.Credentials))
+	clonedRequest := cloneRequest(req)
+	signer := awsSigner.NewSigner(a.Credentials)
+	if clonedRequest.Body != nil {
+		b, err := io.ReadAll(clonedRequest.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read request body with error: %w", err)
+		}
+		body := strings.NewReader(string(b))
+		defer clonedRequest.Body.Close()
+		_, err = signer.Sign(clonedRequest, body, "es", a.Region, time.Now())
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign request: %w", err)
+		}
+	} else {
+		_, err := signer.Sign(clonedRequest, nil, "es", a.Region, time.Now())
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign request: %w", err)
+		}
+	}
+	return a.HTTPClient.Do(clonedRequest)
 }
 
 // cloneRequest returns a clone of the provided *http.Request.
@@ -52,11 +76,9 @@ func cloneRequest(r *http.Request) *http.Request {
 
 func NewAWSClient(config awsESAccessConfig, traceLogging bool) (*elastic.Client, error) {
 	signingTransport := awsSigningTransport{
-		Credentials: awsauth.Credentials{
-			AccessKeyID:     config.accessKey,
-			SecretAccessKey: config.secretKey,
-		},
-		HTTPClient: http.DefaultClient,
+		Credentials: config.awsCreds,
+		HTTPClient:  http.DefaultClient,
+		Region:      config.region,
 	}
 	signingClient := &http.Client{Transport: http.RoundTripper(signingTransport)}
 
@@ -101,8 +123,8 @@ func SimpleClientSetup(endpoint string, traceLogging bool, tryEvery time.Duratio
 	}
 }
 
-func AWSClientSetup(accessKey string, secretKey string, endpoint string, traceLogging bool, tryEvery time.Duration, services ...ESService) {
-	accessConfig := newAWSAccessConfig(accessKey, secretKey, endpoint)
+func AWSClientSetup(awsCreds *credentials.Credentials, endpoint string, region string, traceLogging bool, tryEvery time.Duration, services ...ESService) {
+	accessConfig := newAWSAccessConfig(awsCreds, endpoint, region)
 	for {
 		ec, err := NewAWSClient(accessConfig, traceLogging)
 		if err != nil {

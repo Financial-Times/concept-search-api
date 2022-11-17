@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/olivere/elastic/v7"
 
 	"github.com/stretchr/testify/assert"
@@ -27,8 +28,8 @@ func TestHappyAWSClientSetup(t *testing.T) {
 	esInternalServices := newESServiceMock(3)
 	es := newHappyAWSESMock(t)
 	defer es.Close()
-	go AWSClientSetup("a-key", "a-secret", es.URL, false, time.Second, esInternalServices[0], esInternalServices[1], esInternalServices[2])
-	time.Sleep(100 * time.Millisecond)
+	go AWSClientSetup(credentials.NewStaticCredentials("test", "test", ""), es.URL, "", false, time.Second, esInternalServices[0], esInternalServices[1], esInternalServices[2])
+	time.Sleep(1000 * time.Millisecond)
 	for _, s := range esInternalServices {
 		s.AssertExpectations(t)
 	}
@@ -41,7 +42,7 @@ func TestUnhappyAWSClientSetup(t *testing.T) {
 	esInternalServices := newESServiceMock(3)
 	es := newUnhappyAWSESMockForNAttempts(t, 10)
 	defer es.Close()
-	go AWSClientSetup("a-key", "a-secret", es.URL, true, time.Second, esInternalServices[0], esInternalServices[1], esInternalServices[2])
+	go AWSClientSetup(credentials.NewStaticCredentials("test", "test", ""), es.URL, "", true, time.Second, esInternalServices[0], esInternalServices[1], esInternalServices[2])
 	for i := 0; i < 12; i++ { // NB elastic.Client retries by default 5 times every second by itself.
 		for _, s := range esInternalServices {
 			s.AssertNotCalled(t, "SetElasticClient", mock.AnythingOfType("*elastic.Client"))

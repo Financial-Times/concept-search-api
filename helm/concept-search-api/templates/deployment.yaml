@@ -40,6 +40,11 @@ spec:
           value: concepts
         - name: ELASTICSEARCH_EXTENDED_SEARCH_INDEX
           value: all-concepts
+        - name: ELASTICSEARCH_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: aws.region
         - name: RESULT_LIMIT
           value: "50"
         - name: MAX_IDS_LIMIT
