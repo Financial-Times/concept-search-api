@@ -105,7 +105,7 @@ func main() {
 			log.WithError(err).Fatal("Failed to obtain AWS credentials values")
 		}
 		awsCreds := awsSession.Config.Credentials
-		log.Infof("Obtaining AWS credentials by using [%s] as provider", credValues.ProviderName)
+		log.WithField("Provider", credValues.ProviderName).Info("Establishing AWS session using authentication provider", credValues.ProviderName)
 
 		if *esAuth == "aws" {
 			go service.AWSClientSetup(awsCreds, *esEndpoint, *esRegion, *esTraceLogging, time.Minute, search, conceptFinder, healthcheck)
