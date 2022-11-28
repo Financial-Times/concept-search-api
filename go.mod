@@ -11,7 +11,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-version v1.2.0 // indirect
-	github.com/husobee/vestigo v1.1.0
+	github.com/husobee/vestigo v1.1.1
 	github.com/jawher/mow.cli v1.0.4
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/olivere/elastic/v7 v7.0.31
@@ -27,7 +27,10 @@ require (
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 )
 
+require github.com/aws/aws-sdk-go v1.42.23
+
 require (
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	golang.org/x/net v0.0.0-20211209124913-491a49abca63 // indirect
 	golang.org/x/sys v0.0.0-20210423082822-04245dca01da // indirect

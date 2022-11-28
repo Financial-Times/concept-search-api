@@ -28,6 +28,7 @@ spec:
                 values:
                 - {{ .Values.service.name }}
             topologyKey: "kubernetes.io/hostname"
+      serviceAccountName: {{ .Values.serviceAccountName }}
       containers:
       - name: {{ .Values.service.name }}
         image: "{{ .Values.image.repository }}:{{ .Chart.Version }}"
@@ -39,6 +40,11 @@ spec:
           value: concepts
         - name: ELASTICSEARCH_EXTENDED_SEARCH_INDEX
           value: all-concepts
+        - name: ELASTICSEARCH_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: aws.region
         - name: RESULT_LIMIT
           value: "50"
         - name: MAX_IDS_LIMIT
@@ -50,16 +56,6 @@ spec:
             configMapKeyRef:
               name: global-config
               key: aws.concepts.elasticsearch.endpoint
-        - name: AWS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: global-secrets
-              key: aws.access_key_id
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: global-secrets
-              key: aws.secret_access_key
         ports:
         - containerPort: 8080
         livenessProbe:
