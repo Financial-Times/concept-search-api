@@ -113,7 +113,7 @@ func ValidateConceptTypesForTextModeSearch(conceptTypes []string) error {
 func ExtractUUID(id string) (string, error) {
 	idLength := len(id)
 	if idLength <= UUIDLength {
-		return "", fmt.Errorf("cannot extract UUID because Id too short: %v", id)
+		return "", fmt.Errorf("cannot extract UUID because Id is too short: %v", id)
 	}
 	after := idLength - UUIDLength
 	return id[after:], nil

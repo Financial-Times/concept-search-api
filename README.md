@@ -92,6 +92,7 @@ Exact matches are preferred over partial ones and an example of search results w
 [
   {
     "id": "http://api.ft.com/things/d79f6383-9271-3a03-aacd-5ce8e57d6f5e",
+    "uuid": "d79f6383-9271-3a03-aacd-5ce8e57d6f5e",
     "apiUrl": "http://api.ft.com/organisations/d79f6383-9271-3a03-aacd-5ce8e57d6f5e",
     "prefLabel": "FOO LLC",
     "types": [
@@ -109,6 +110,7 @@ Exact matches are preferred over partial ones and an example of search results w
   },
   {
     "id": "http://api.ft.com/things/87c69c2c-ad53-3888-9958-835098db4dae",
+    "uuid": "87c69c2c-ad53-3888-9958-835098db4dae",
     "apiUrl": "http://api.ft.com/organisations/87c69c2c-ad53-3888-9958-835098db4dae",
     "prefLabel": "FOO International",
     "types": [

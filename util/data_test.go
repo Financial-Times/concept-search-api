@@ -32,12 +32,12 @@ func TestExtractUUID(t *testing.T) {
 		},
 		{
 			name: "empty id causes error",
-			err:  errors.New("cannot extract UUID because Id too short: "),
+			err:  errors.New("cannot extract UUID because Id is too short: "),
 		},
 		{
 			name: "invalid id causes error",
 			id:   "invalid id",
-			err:  errors.New("cannot extract UUID because Id too short: invalid id"),
+			err:  errors.New("cannot extract UUID because Id is too short: invalid id"),
 		},
 	}
 
