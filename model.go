@@ -14,6 +14,7 @@ type searchCriteria struct {
 
 type concept struct {
 	ID                     string   `json:"id"`
+	UUID                   string   `json:"uuid"`
 	APIUrl                 string   `json:"apiUrl"`
 	PrefLabel              string   `json:"prefLabel"`
 	Types                  []string `json:"types"`

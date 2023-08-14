@@ -1,6 +1,7 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -15,6 +16,56 @@ func TestEsType(t *testing.T) {
 func TestFtType(t *testing.T) {
 	assert.Equal(t, "http://www.ft.com/ontology/Genre", FtType("genres"), "known type conversion")
 	assert.Equal(t, "", FtType("tardigrades"), "unknown type conversion")
+}
+
+func TestExtractUUID(t *testing.T) {
+	tests := []struct {
+		name         string
+		id           string
+		expectedUUID string
+		err          error
+	}{
+		{
+			name:         "valid id to UUID",
+			id:           "http://api.ft.com/things/82cba3ce-329b-3010-b29d-4282a215889f",
+			expectedUUID: "82cba3ce-329b-3010-b29d-4282a215889f",
+		},
+		{
+			name: "empty id causes error",
+			err:  errors.New("cannot extract UUID because Id too short: "),
+		},
+		{
+			name: "invalid id causes error",
+			id:   "invalid id",
+			err:  errors.New("cannot extract UUID because Id too short: invalid id"),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			uuid, err := ExtractUUID(test.id)
+			if err != nil {
+				if test.err == nil {
+					t.Errorf("unexpected error occurred: %v", err)
+					return
+				}
+
+				if err.Error() != test.err.Error() {
+					t.Errorf("expected error: %v, but got: %v", test.err, err)
+				}
+				return
+			}
+
+			if test.err != nil {
+				t.Errorf("expected error did not occur: %v", test.err)
+				return
+			}
+
+			if uuid != test.expectedUUID {
+				t.Errorf("expected UUID: %v, but got: %v", test.expectedUUID, uuid)
+			}
+		})
+	}
 }
 
 func TestValidateAuthors(t *testing.T) {

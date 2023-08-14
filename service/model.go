@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Financial-Times/concept-search-api/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -30,6 +31,7 @@ type ConceptMetrics struct {
 
 type Concept struct {
 	Id                     string `json:"id"`
+	UUID                   string `json:"uuid"`
 	ApiUrl                 string `json:"apiUrl"`
 	PrefLabel              string `json:"prefLabel"`
 	ConceptType            string `json:"type"`
@@ -64,6 +66,11 @@ func ConvertToSimpleConcept(esConcept EsConceptModel) Concept {
 		}
 	}
 	c.IsDeprecated = esConcept.IsDeprecated
+	uuid, err := util.ExtractUUID(esConcept.Id)
+	if err != nil {
+		log.Warnf("couldn't extract concept UUID from ID: %s", esConcept.Id)
+	}
+	c.UUID = uuid
 	return c
 }
 

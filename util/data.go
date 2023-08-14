@@ -7,6 +7,7 @@ import (
 
 const (
 	PublicCompany = "http://www.ft.com/ontology/company/PublicCompany"
+	UUIDLength    = 36
 )
 
 var (
@@ -107,6 +108,15 @@ func ValidateConceptTypesForTextModeSearch(conceptTypes []string) error {
 		}
 	}
 	return NewInputError("invalid or missing parameters for concept search (text mode but no organisation or public company type)")
+}
+
+func ExtractUUID(id string) (string, error) {
+	idLength := len(id)
+	if idLength <= UUIDLength {
+		return "", fmt.Errorf("cannot extract UUID because Id too short: %v", id)
+	}
+	after := idLength - UUIDLength
+	return id[after:], nil
 }
 
 type InputError struct {
