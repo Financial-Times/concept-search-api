@@ -3,11 +3,15 @@ package util
 import (
 	"errors"
 	"fmt"
+	"regexp"
 )
 
 const (
 	PublicCompany = "http://www.ft.com/ontology/company/PublicCompany"
-	UUIDLength    = 36
+)
+
+var (
+	conceptUUIDRegex = regexp.MustCompile(`[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}`)
 )
 
 var (
@@ -111,12 +115,11 @@ func ValidateConceptTypesForTextModeSearch(conceptTypes []string) error {
 }
 
 func ExtractUUID(id string) (string, error) {
-	idLength := len(id)
-	if idLength <= UUIDLength {
-		return "", fmt.Errorf("cannot extract UUID because Id is too short: %v", id)
+	uuid := conceptUUIDRegex.FindString(id)
+	if uuid == "" {
+		return "", fmt.Errorf("cannot extract UUID because Id doesn't contain a valid UUID substring: %v", id)
 	}
-	after := idLength - UUIDLength
-	return id[after:], nil
+	return uuid, nil
 }
 
 type InputError struct {

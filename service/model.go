@@ -68,7 +68,7 @@ func ConvertToSimpleConcept(esConcept EsConceptModel) Concept {
 	c.IsDeprecated = esConcept.IsDeprecated
 	uuid, err := util.ExtractUUID(esConcept.Id)
 	if err != nil {
-		log.Warnf("couldn't extract concept UUID from ID: %s", esConcept.Id)
+		log.WithField("id", esConcept.Id).Warn("couldn't extract concept UUID from ID")
 	}
 	c.UUID = uuid
 	return c
