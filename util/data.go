@@ -3,10 +3,15 @@ package util
 import (
 	"errors"
 	"fmt"
+	"regexp"
 )
 
 const (
 	PublicCompany = "http://www.ft.com/ontology/company/PublicCompany"
+)
+
+var (
+	conceptUUIDRegex = regexp.MustCompile(`[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}`)
 )
 
 var (
@@ -107,6 +112,14 @@ func ValidateConceptTypesForTextModeSearch(conceptTypes []string) error {
 		}
 	}
 	return NewInputError("invalid or missing parameters for concept search (text mode but no organisation or public company type)")
+}
+
+func ExtractUUID(id string) (string, error) {
+	uuid := conceptUUIDRegex.FindString(id)
+	if uuid == "" {
+		return "", fmt.Errorf("cannot extract UUID because Id doesn't contain a valid UUID substring: %v", id)
+	}
+	return uuid, nil
 }
 
 type InputError struct {

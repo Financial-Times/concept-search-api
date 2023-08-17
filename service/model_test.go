@@ -39,7 +39,7 @@ func TestConceptsSortInterface(t *testing.T) {
 }
 
 func TestConvertToSimpleConcept(t *testing.T) {
-	id := "http://www.ft.com/thing/id"
+	id := "http://www.ft.com/thing/82cba3ce-329b-3010-b29d-4282a215889f"
 	apiUrl := "http://www.example.com/1"
 	label := "Test Concept"
 	directType := "http://www.ft.com/ontology/GenreSubClass"
@@ -62,6 +62,7 @@ func TestConvertToSimpleConcept(t *testing.T) {
 	actual := ConvertToSimpleConcept(esConcept)
 
 	assert.Equal(t, id, actual.Id, "http://www.ft.com/thing/id")
+	assert.Equal(t, "82cba3ce-329b-3010-b29d-4282a215889f", actual.UUID, "UUID")
 	assert.Equal(t, apiUrl, actual.ApiUrl, "apiUrl")
 	assert.Equal(t, directType, actual.ConceptType, "the type is not correct")
 	assert.Equal(t, label, actual.PrefLabel, "prefLabel")
@@ -71,7 +72,7 @@ func TestConvertToSimpleConcept(t *testing.T) {
 }
 
 func TestConvertToSimpleConceptWithIdCorrect(t *testing.T) {
-	id := "http://api.ft.com/things/id"
+	id := "http://api.ft.com/things/82cba3ce-329b-3010-b29d-4282a215889f"
 	apiUrl := "http://www.example.com/1"
 	label := "Another Test Concept"
 
@@ -86,11 +87,11 @@ func TestConvertToSimpleConceptWithIdCorrect(t *testing.T) {
 	}
 
 	actual := ConvertToSimpleConcept(esConcept)
-	assert.Equal(t, "http://www.ft.com/thing/id", actual.Id, "The id did not get converted properly")
+	assert.Equal(t, "http://www.ft.com/thing/82cba3ce-329b-3010-b29d-4282a215889f", actual.Id, "The id did not get converted properly")
 }
 
 func TestConvertToSimpleConceptWithFTAuthor(t *testing.T) {
-	id := "http://api.ft.com/things/id"
+	id := "http://api.ft.com/things/82cba3ce-329b-3010-b29d-4282a215889a"
 	apiUrl := "http://www.example.com/1"
 	label := "Another Test Concept"
 	isFtAuthor := "true"
@@ -113,7 +114,7 @@ func TestConvertToSimpleConceptWithFTAuthor(t *testing.T) {
 }
 
 func TestConvertToSimpleConceptWithNonBoolFTAuthor(t *testing.T) {
-	id := "http://api.ft.com/things/id"
+	id := "http://api.ft.com/things/82cba3ce-329b-3010-b29d-4282a215889a"
 	apiUrl := "http://www.example.com/1"
 	label := "Another Test Concept"
 	isFtAuthor := "ahhh i'm not a bool!"

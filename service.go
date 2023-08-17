@@ -191,6 +191,11 @@ func getFoundConcepts(elasticResult *elastic.SearchResult, isScoreIncluded bool,
 			if !isFTAuthorIncluded {
 				foundConcept.IsFTAuthor = ""
 			}
+			uuid, err := util.ExtractUUID(foundConcept.ID)
+			if err != nil {
+				log.Error(err)
+			}
+			foundConcept.UUID = uuid
 			foundConcepts = append(foundConcepts, foundConcept)
 		}
 	}
