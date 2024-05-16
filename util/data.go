@@ -23,6 +23,11 @@ var (
 		"http://www.ft.com/ontology/Location":                  "locations",
 		"http://www.ft.com/ontology/Topic":                     "topics",
 		"http://www.ft.com/ontology/AlphavilleSeries":          "alphaville-series",
+		"http://www.ft.com/ontology/SVCategory":                "sv-categories",
+		"http://www.ft.com/ontology/provision/SVProvision":     "sv-provisions",
+		"http://www.ft.com/ontology/FTABrand":                  "fta-brands",
+		"http://www.ft.com/ontology/FTAGenre":                  "fta-genres",
+		"http://www.ft.com/ontology/FTATopic":                  "fta-topics",
 	}
 
 	ErrInvalidConceptTypeFormat              = "invalid concept type %v"
