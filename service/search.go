@@ -118,7 +118,7 @@ func (s *esConceptSearchService) FindConceptsById(ids []string) ([]Concept, erro
 		return nil, err
 	}
 	idsQuery := elastic.NewIdsQuery().Ids(ids...)
-	result, err := s.esClient.Search(s.defaultIndex).Size(len(ids)).Query(idsQuery).Do(context.Background())
+	result, err := s.esClient.Search(s.extendedSearchIndex).Size(len(ids)).Query(idsQuery).Do(context.Background())
 	if err != nil {
 		log.Errorf("error: %v", err)
 		return nil, err
